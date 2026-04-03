@@ -33,7 +33,9 @@ import { useSearchParams } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { RootState, ThreeEvent } from "@react-three/fiber";
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -41,6 +43,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { MutableRefObject, ReactNode } from "react";
 import type { CSSProperties } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -652,13 +655,49 @@ function onCanvasCreated({ camera, gl, scene }: RootState) {
   camera.updateMatrixWorld();
 }
 
-function CameraRig({ spawnCenter }: { spawnCenter: Vec3 }) {
+/** Seconds for linear camera + spawn move when `gameSpawn` jumps (orbit disabled until done). */
+const TELEPORT_DURATION_SEC = 0.5;
+
+function sameVec3(a: Vec3, b: Vec3): boolean {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+
+const VisualSpawnContext = createContext<MutableRefObject<THREE.Vector3> | null>(
+  null
+);
+
+function SpawnVisualGroup({ children }: { children: ReactNode }) {
+  const visualRef = useContext(VisualSpawnContext);
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(() => {
+    const g = groupRef.current;
+    if (!g || !visualRef) return;
+    const v = visualRef.current;
+    g.position.set(v.x, v.y, v.z);
+  });
+  return <group ref={groupRef}>{children}</group>;
+}
+
+function TeleportOrbitRig({
+  gameSpawn,
+  children,
+}: {
+  gameSpawn: Vec3;
+  children: ReactNode;
+}) {
   const { camera, gl } = useThree();
   const controlsRef = useRef<OrbitControls | null>(null);
-  const prevSpawnRef = useRef<Vec3 | null>(null);
-  const sx = spawnCenter[0];
-  const sy = spawnCenter[1];
-  const sz = spawnCenter[2];
+  const visualRef = useRef(
+    new THREE.Vector3(gameSpawn[0], gameSpawn[1], gameSpawn[2])
+  );
+  const fromRef = useRef(new THREE.Vector3());
+  const toRef = useRef(new THREE.Vector3());
+  const progressRef = useRef(0);
+  const transitioningRef = useRef(false);
+  const prevGameRef = useRef<Vec3 | null>(null);
+  const camStartRef = useRef(new THREE.Vector3());
+  const tgtStartRef = useRef(new THREE.Vector3());
+  const deltaVRef = useRef(new THREE.Vector3());
 
   useLayoutEffect(() => {
     const controls = new OrbitControls(camera, gl.domElement);
@@ -677,35 +716,67 @@ function CameraRig({ spawnCenter }: { spawnCenter: Vec3 }) {
   useLayoutEffect(() => {
     const controls = controlsRef.current;
     if (!controls) return;
-
-    const prev = prevSpawnRef.current;
+    const prev = prevGameRef.current;
     if (prev === null) {
+      const sx = gameSpawn[0];
+      const sy = gameSpawn[1];
+      const sz = gameSpawn[2];
       camera.position.set(
         sx + CAMERA_OFFSET_FROM_SPAWN[0],
         sy + CAMERA_OFFSET_FROM_SPAWN[1],
         sz + CAMERA_OFFSET_FROM_SPAWN[2]
       );
-    } else {
-      const dx = sx - prev[0];
-      const dy = sy - prev[1];
-      const dz = sz - prev[2];
-      camera.position.x += dx;
-      camera.position.y += dy;
-      camera.position.z += dz;
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
+      visualRef.current.set(sx, sy, sz);
+      controls.update();
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      prevGameRef.current = [sx, sy, sz];
+      return;
     }
-    prevSpawnRef.current = [sx, sy, sz];
+    if (sameVec3(prev, gameSpawn)) return;
+    fromRef.current.copy(visualRef.current);
+    toRef.current.set(gameSpawn[0], gameSpawn[1], gameSpawn[2]);
+    progressRef.current = 0;
+    transitioningRef.current = true;
+    camStartRef.current.copy(camera.position);
+    tgtStartRef.current.copy(controls.target);
+    deltaVRef.current.subVectors(toRef.current, fromRef.current);
+    controls.enabled = false;
+    prevGameRef.current = [...gameSpawn];
+  }, [camera, gameSpawn]);
 
-    controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
-    controls.update();
-    camera.updateProjectionMatrix();
-    camera.updateMatrixWorld();
-  }, [camera, sx, sy, sz]);
-
-  useFrame(() => {
-    controlsRef.current?.update();
+  useFrame((_, delta) => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    if (transitioningRef.current) {
+      progressRef.current += delta;
+      const t = Math.min(1, progressRef.current / TELEPORT_DURATION_SEC);
+      visualRef.current.lerpVectors(fromRef.current, toRef.current, t);
+      deltaVRef.current.subVectors(toRef.current, fromRef.current);
+      camera.position.copy(camStartRef.current).addScaledVector(deltaVRef.current, t);
+      controls.target
+        .copy(tgtStartRef.current)
+        .addScaledVector(deltaVRef.current, t);
+      controls.update();
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      if (t >= 1) {
+        transitioningRef.current = false;
+        visualRef.current.copy(toRef.current);
+        controls.enabled = true;
+        controls.update();
+      }
+    } else {
+      controls.update();
+    }
   });
 
-  return null;
+  return (
+    <VisualSpawnContext.Provider value={visualRef}>
+      {children}
+    </VisualSpawnContext.Provider>
+  );
 }
 
 /** Mid Z for goal corridor; used by static goal-area light (does not follow rolling goal X/Z). */
@@ -1399,7 +1470,7 @@ function SceneContent({
   return (
     <>
       <SpawnTeePad />
-      <group position={[...spawnCenter]}>
+      <SpawnVisualGroup>
         <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
           <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
           <meshStandardMaterial
@@ -1416,14 +1487,14 @@ function SceneContent({
             color={accentColor}
           />
         ))}
-      </group>
-      <AimYawPrism
-        spawnCenter={spawnCenter}
-        aimYawRad={aimYawRad}
-        defaultVerticalAngleRad={vehicle.launchAngleRad}
-        prismLength={aimPrismLengthForStrength(vehicle.strengthPerBaseClick)}
-        color={accentColor}
-      />
+        <AimYawPrism
+          spawnCenter={[0, 0, 0]}
+          aimYawRad={aimYawRad}
+          defaultVerticalAngleRad={vehicle.launchAngleRad}
+          prismLength={aimPrismLengthForStrength(vehicle.strengthPerBaseClick)}
+          color={accentColor}
+        />
+      </SpawnVisualGroup>
       <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />
       {ponds.map((pond, i) => (
         <PenaltyPond
@@ -2367,23 +2438,24 @@ export default function CubeScene() {
         dpr={[1, 2]}
         shadows="soft"
       >
-        <CameraRig spawnCenter={game.spawnCenter} />
         <StaticSceneLights />
         <InitialFieldGround />
-        <SceneContent
-          spawnCenter={game.spawnCenter}
-          goalCenter={goalCenter}
-          ponds={game.ponds}
-          aimYawRad={aimYawRad}
-          cooldownUntil={cooldownUntil}
-          roundLocked={showFinishModal}
-          vehicle={playerVehicle}
-          onChargeHudUpdate={onChargeHudUpdate}
-          onShootStart={onShootStart}
-          onProjectileEnd={onProjectileEnd}
-          getPowerupMultiplier={getPowerupMultiplier}
-          resetPowerupStack={resetPowerupStack}
-        />
+        <TeleportOrbitRig gameSpawn={game.spawnCenter}>
+          <SceneContent
+            spawnCenter={game.spawnCenter}
+            goalCenter={goalCenter}
+            ponds={game.ponds}
+            aimYawRad={aimYawRad}
+            cooldownUntil={cooldownUntil}
+            roundLocked={showFinishModal}
+            vehicle={playerVehicle}
+            onChargeHudUpdate={onChargeHudUpdate}
+            onShootStart={onShootStart}
+            onProjectileEnd={onProjectileEnd}
+            getPowerupMultiplier={getPowerupMultiplier}
+            resetPowerupStack={resetPowerupStack}
+          />
+        </TeleportOrbitRig>
       </Canvas>
       <ToastNotif showToken={waterToastToken} message="Water hazard" />
       <StatsHud

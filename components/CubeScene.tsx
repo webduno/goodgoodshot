@@ -83,25 +83,261 @@ function randomIntInclusive(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/** Random pond footprint half-extents (world units); physics + mesh use the same values. */
+const POND_HALF_X_MIN = 3;
+const POND_HALF_X_MAX = 21;
+const POND_HALF_Z_MIN = 4;
+const POND_HALF_Z_MAX = 24;
+
+const PLAYER_GROUND_HALF = BLOCK_SIZE / 2;
+
+function rectsOverlapXZ(
+  ax: number,
+  az: number,
+  ahx: number,
+  ahz: number,
+  bx: number,
+  bz: number,
+  bhx: number,
+  bhz: number
+): boolean {
+  return (
+    Math.abs(ax - bx) <= ahx + bhx && Math.abs(az - bz) <= ahz + bhz
+  );
+}
+
+function pondOverlapsPlayerCell(
+  pondCx: number,
+  pondCz: number,
+  halfX: number,
+  halfZ: number,
+  spawnX: number,
+  spawnZ: number
+): boolean {
+  return rectsOverlapXZ(
+    pondCx,
+    pondCz,
+    halfX,
+    halfZ,
+    spawnX,
+    spawnZ,
+    PLAYER_GROUND_HALF,
+    PLAYER_GROUND_HALF
+  );
+}
+
+function pondOverlapsGoalBlock(
+  pondCx: number,
+  pondCz: number,
+  halfX: number,
+  halfZ: number,
+  goalX: number,
+  goalZ: number
+): boolean {
+  const gh = BLOCK_SIZE / 2;
+  return rectsOverlapXZ(
+    pondCx,
+    pondCz,
+    halfX,
+    halfZ,
+    goalX,
+    goalZ,
+    gh,
+    gh
+  );
+}
+
+function pondsOverlapEachOther(
+  ax: number,
+  az: number,
+  ahx: number,
+  ahz: number,
+  bx: number,
+  bz: number,
+  bhx: number,
+  bhz: number
+): boolean {
+  return rectsOverlapXZ(ax, az, ahx, ahz, bx, bz, bhx, bhz);
+}
+
+type PondSpec = {
+  worldX: number;
+  worldZ: number;
+  halfX: number;
+  halfZ: number;
+  /** Second pond is drawn slightly lower so coplanar water surfaces do not z-fight. */
+  surfaceLayer: 0 | 1;
+};
+
+function validPondPosition(
+  x: number,
+  z: number,
+  halfX: number,
+  halfZ: number,
+  spawnX: number,
+  spawnZ: number,
+  goalX: number,
+  goalZ: number,
+  placed: readonly PondSpec[]
+): boolean {
+  if (pondOverlapsGoalBlock(x, z, halfX, halfZ, goalX, goalZ)) return false;
+  if (pondOverlapsPlayerCell(x, z, halfX, halfZ, spawnX, spawnZ)) return false;
+  for (const p of placed) {
+    if (
+      pondsOverlapEachOther(
+        x,
+        z,
+        halfX,
+        halfZ,
+        p.worldX,
+        p.worldZ,
+        p.halfX,
+        p.halfZ
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function tryPlacePond(
+  halfX: number,
+  halfZ: number,
+  spawnX: number,
+  spawnZ: number,
+  goalX: number,
+  goalZ: number,
+  placed: readonly PondSpec[]
+): { x: number; z: number } | null {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const o = randomObstacleBetween(spawnZ, goalZ);
+    if (
+      validPondPosition(o.x, o.z, halfX, halfZ, spawnX, spawnZ, goalX, goalZ, placed)
+    ) {
+      return o;
+    }
+  }
+  const tMin = Math.min(spawnZ, goalZ);
+  const tMax = Math.max(spawnZ, goalZ);
+  const lo = Math.round(tMin) + 4;
+  const hi = Math.round(tMax) - 4;
+  const tryZList: number[] =
+    lo > hi
+      ? [Math.round((spawnZ + goalZ) / 2)]
+      : Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+  for (const zz of tryZList) {
+    for (let x = GOAL_X_MIN; x <= GOAL_X_MAX; x++) {
+      if (
+        validPondPosition(x, zz, halfX, halfZ, spawnX, spawnZ, goalX, goalZ, placed)
+      ) {
+        return { x, z: zz };
+      }
+    }
+  }
+  return null;
+}
+
+/** One or two ponds with random sizes; rerolled with goal on hole-out. */
+function pickPondsLayout(
+  spawnX: number,
+  spawnZ: number,
+  goalX: number,
+  goalZ: number
+): PondSpec[] {
+  const count = randomIntInclusive(1, 2);
+  const out: PondSpec[] = [];
+  for (let i = 0; i < count; i++) {
+    let hx = randomIntInclusive(POND_HALF_X_MIN, POND_HALF_X_MAX);
+    let hz = randomIntInclusive(POND_HALF_Z_MIN, POND_HALF_Z_MAX);
+    let pos = tryPlacePond(hx, hz, spawnX, spawnZ, goalX, goalZ, out);
+    let tries = 0;
+    while (!pos && tries < 28) {
+      hx = randomIntInclusive(POND_HALF_X_MIN, POND_HALF_X_MAX);
+      hz = randomIntInclusive(POND_HALF_Z_MIN, POND_HALF_Z_MAX);
+      pos = tryPlacePond(hx, hz, spawnX, spawnZ, goalX, goalZ, out);
+      tries++;
+    }
+    if (!pos) break;
+    out.push({
+      worldX: pos.x,
+      worldZ: pos.z,
+      halfX: hx,
+      halfZ: hz,
+      surfaceLayer: i === 0 ? 0 : 1,
+    });
+  }
+  if (out.length === 0) {
+    for (const hx of [4, 5, 3, 6]) {
+      for (const hz of [5, 6, 4, 7]) {
+        const pos = tryPlacePond(hx, hz, spawnX, spawnZ, goalX, goalZ, []);
+        if (pos) {
+          out.push({
+            worldX: pos.x,
+            worldZ: pos.z,
+            halfX: hx,
+            halfZ: hz,
+            surfaceLayer: 0,
+          });
+          return out;
+        }
+      }
+    }
+  }
+  return out;
+}
+
 type GameState = {
   spawnCenter: Vec3;
   /** World-space Z of green goal center; unchanged on miss, rerolled only on hit. */
   goalWorldZ: number;
   /** World-space X of green goal center; unchanged on miss, rerolled only on hit. */
   goalWorldX: number;
+  /** Penalty ponds (0–2); rerolled with goal on hole-out. */
+  ponds: readonly PondSpec[];
 };
 
 type GameAction = {
   type: "PROJECTILE_END";
-  outcome: "hit" | "miss";
+  outcome: "hit" | "miss" | "penalty";
   landing?: Vec3;
+  /** Spawn position before the shot that hit the penalty (snapped). */
+  revertSpawn?: Vec3;
 };
 
+/** Hazard placement along the lane between spawn and goal (grid Z). */
+function randomObstacleBetween(
+  spawnZ: number,
+  goalZ: number
+): { x: number; z: number } {
+  const tMin = Math.min(spawnZ, goalZ);
+  const tMax = Math.max(spawnZ, goalZ);
+  const lo = Math.round(tMin) + 4;
+  const hi = Math.round(tMax) - 4;
+  if (lo > hi) {
+    const mid = Math.round((spawnZ + goalZ) / 2);
+    return {
+      x: randomIntInclusive(GOAL_X_MIN, GOAL_X_MAX),
+      z: mid,
+    };
+  }
+  return {
+    x: randomIntInclusive(GOAL_X_MIN, GOAL_X_MAX),
+    z: randomIntInclusive(lo, hi),
+  };
+}
+
 function createInitialGameState(): GameState {
+  const goalWorldZ = randomIntInclusive(GOAL_Z_MIN, GOAL_Z_MAX);
+  const goalWorldX = randomIntInclusive(GOAL_X_MIN, GOAL_X_MAX);
+  const spawnX = 0;
+  const spawnZ = 0;
+  const ponds = pickPondsLayout(spawnX, spawnZ, goalWorldX, goalWorldZ);
   return {
     spawnCenter: [0, 0, 0],
-    goalWorldZ: randomIntInclusive(GOAL_Z_MIN, GOAL_Z_MAX),
-    goalWorldX: randomIntInclusive(GOAL_X_MIN, GOAL_X_MAX),
+    goalWorldZ,
+    goalWorldX,
+    ponds,
   };
 }
 
@@ -115,6 +351,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   let next: Vec3;
   let nextGoalWorldZ = state.goalWorldZ;
   let nextGoalWorldX = state.goalWorldX;
+  let nextPonds = state.ponds;
 
   if (action.outcome === "hit") {
     next = snapBlockCenterToGrid([
@@ -124,6 +361,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     ]);
     nextGoalWorldZ = next[2] + randomIntInclusive(GOAL_Z_MIN, GOAL_Z_MAX);
     nextGoalWorldX = randomIntInclusive(GOAL_X_MIN, GOAL_X_MAX);
+    nextPonds = pickPondsLayout(
+      next[0],
+      next[2],
+      nextGoalWorldX,
+      nextGoalWorldZ
+    );
+  } else if (action.outcome === "penalty" && action.revertSpawn) {
+    next = snapBlockCenterToGrid(action.revertSpawn);
   } else if (action.landing) {
     next = snapBlockCenterToGrid(action.landing);
   } else {
@@ -135,11 +380,38 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     spawnCenter: next,
     goalWorldZ: nextGoalWorldZ,
     goalWorldX: nextGoalWorldX,
+    ponds: nextPonds,
   };
 }
 
-/** Green goal box AABB (same as the mesh: center + half extents). */
+/** Goal block / hazard box AABB (same as the mesh: center + half extents). */
 const GOAL_HALF = BLOCK_SIZE / 2;
+
+/** Clear color + page chrome — Frutiger Aero sky; penalty ponds use the same tint. */
+const BG = "#78d4ff";
+
+/**
+ * Penalty hazard: wide/long on XZ (pond). Physics uses block height on Y so the ball
+ * registers like the goal; the mesh is a thin slab barely above the turf plane.
+ */
+/** Visual half-thickness on Y; mesh extends downward from `POND_VIS_TOP_Y` — does not move the surface. */
+const POND_HALF_Y_VIS = 0.9;
+/** Lift bottom slightly above the grass plane to avoid z-fighting / clipping with the field. */
+const POND_TURF_GAP = 0;
+/** Y of the water surface (top of pond) above `-BLOCK_SIZE/2 + POND_TURF_GAP`; independent of `POND_HALF_Y_VIS`. */
+const POND_SURFACE_LIFT = 0.056;
+const POND_VIS_TOP_Y = -BLOCK_SIZE / 2 + POND_TURF_GAP + POND_SURFACE_LIFT;
+const POND_VIS_CENTER_Y = POND_VIS_TOP_Y - POND_HALF_Y_VIS;
+const POND_VIS_BOTTOM_Y = POND_VIS_TOP_Y - 2 * POND_HALF_Y_VIS;
+/** Lower the second pond mesh slightly so two water slabs do not z-fight when overlapping in XZ. */
+const POND_SECOND_SURFACE_DROP = 0.028;
+
+/** Tee marker at hole start (origin): putting green, just above pond surface height. */
+const GOAL_GREEN = "#39b54a";
+/** End-of-hole goal block (hit target). */
+const GOAL_BLOCK_COLOR = "#c62828";
+const TEE_GAP_ABOVE_WATER = 0.02;
+const TEE_PAD_HALF_Y = 0.035;
 
 /** Yellow lane markers between spawn and green goal (progress cues). */
 const LANE_MARKER_COUNT_PER_SIDE = 5;
@@ -153,6 +425,17 @@ const VEHICLE_CORNER_BLOCK_SIZE = 0.38;
 const VEHICLE_WHEEL_OUTWARD = 0.08;
 /** Lift wheel bottoms slightly above the green plane so they are not drawn under it. */
 const VEHICLE_WHEEL_FLOOR_Y_EPS = 0.02;
+
+/** Wheel outer radius from spawn center (body half + arm + wheel half). */
+const VEHICLE_FOOTPRINT_HALF_XZ =
+  BLOCK_SIZE / 2 +
+  VEHICLE_WHEEL_OUTWARD +
+  VEHICLE_CORNER_BLOCK_SIZE / 2;
+/** Full player span on XZ ≈ 2× this; tee is 4× that width → half-extent = 4× footprint half. */
+const TEE_PAD_HALF_X = VEHICLE_FOOTPRINT_HALF_XZ * 4;
+const TEE_PAD_HALF_Z = VEHICLE_FOOTPRINT_HALF_XZ * 4;
+const TEE_PAD_CENTER_Y =
+  TEE_PAD_HALF_Y;
 
 /** Prism length for the weakest predetermined vehicle; stronger builds scale up linearly. */
 const AIM_PRISM_LENGTH = 0.85;
@@ -177,22 +460,25 @@ const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
 const FIELD_GROUND_MUTED_GREEN = "#3a9d4a";
 
-function sphereIntersectsGoalBox(
+function sphereIntersectsAabb(
   px: number,
   py: number,
   pz: number,
   radius: number,
-  goalCenter: Vec3
+  center: Vec3,
+  halfX: number,
+  halfY: number,
+  halfZ: number
 ): boolean {
-  const cx = goalCenter[0];
-  const cy = goalCenter[1];
-  const cz = goalCenter[2];
-  const minX = cx - GOAL_HALF;
-  const maxX = cx + GOAL_HALF;
-  const minY = cy - GOAL_HALF;
-  const maxY = cy + GOAL_HALF;
-  const minZ = cz - GOAL_HALF;
-  const maxZ = cz + GOAL_HALF;
+  const cx = center[0];
+  const cy = center[1];
+  const cz = center[2];
+  const minX = cx - halfX;
+  const maxX = cx + halfX;
+  const minY = cy - halfY;
+  const maxY = cy + halfY;
+  const minZ = cz - halfZ;
+  const maxZ = cz + halfZ;
 
   const qx = THREE.MathUtils.clamp(px, minX, maxX);
   const qy = THREE.MathUtils.clamp(py, minY, maxY);
@@ -201,6 +487,25 @@ function sphereIntersectsGoalBox(
   const dy = py - qy;
   const dz = pz - qz;
   return dx * dx + dy * dy + dz * dz < radius * radius;
+}
+
+function sphereIntersectsGoalBox(
+  px: number,
+  py: number,
+  pz: number,
+  radius: number,
+  goalCenter: Vec3
+): boolean {
+  return sphereIntersectsAabb(
+    px,
+    py,
+    pz,
+    radius,
+    goalCenter,
+    GOAL_HALF,
+    GOAL_HALF,
+    GOAL_HALF
+  );
 }
 
 /** Starting inventory; each strength power-up use doubles launch for that shot (stacks: 2×, 4×, …). */
@@ -312,21 +617,27 @@ type Projectile = {
   vz: number;
 };
 
-/** Clear color + page chrome — Frutiger Aero sky (matches page gradient mid-tone). */
-const BG = "#78d4ff";
-
 /**
  * Camera offset from spawn block center (lane stays to +X so the goal stays visible).
  */
 const CAMERA_OFFSET_FROM_SPAWN: Vec3 = [0.95, 1.22, -3.1];
 /** Orbit pivot Y: one block above the spawn block center. */
 const ORBIT_TARGET_Y_OFFSET = BLOCK_SIZE;
+/**
+ * Near/far clip: far must exceed longest sight lines (long holes, orbited camera) or
+ * meshes clip by distance regardless of height. Logarithmic depth buffer keeps usable
+ * precision for nearly coplanar ground / tee / hazard slabs when far is large.
+ */
+const CAMERA_NEAR = 0.45;
+const CAMERA_FAR = 6000;
 function onCanvasCreated({ camera, gl, scene }: RootState) {
   scene.background = new THREE.Color(BG);
   gl.setClearColor(new THREE.Color(BG), 1);
 
-  if ("fov" in camera) {
+  if (camera instanceof THREE.PerspectiveCamera) {
     camera.fov = 72;
+    camera.near = CAMERA_NEAR;
+    camera.far = CAMERA_FAR;
     camera.updateProjectionMatrix();
   }
   camera.updateMatrixWorld();
@@ -466,6 +777,76 @@ function Block({ center, color }: { center: Vec3; color: string }) {
         color={color}
         roughness={0.65}
         metalness={0.08}
+      />
+    </mesh>
+  );
+}
+
+/** Wide, flat water hazard — sky-colored slab barely above the green field plane. */
+function PenaltyPond({
+  center,
+  halfX,
+  halfZ,
+  surfaceLayer,
+}: {
+  center: Vec3;
+  halfX: number;
+  halfZ: number;
+  surfaceLayer: 0 | 1;
+}) {
+  const drop = surfaceLayer === 0 ? 0 : POND_SECOND_SURFACE_DROP;
+  return (
+    <mesh
+      position={[center[0], POND_VIS_CENTER_Y - drop, center[2]]}
+      receiveShadow
+      renderOrder={1 + surfaceLayer}
+    >
+      <boxGeometry
+        args={[halfX * 2, POND_HALF_Y_VIS * 2, halfZ * 2]}
+      />
+      <meshStandardMaterial
+        color={BG}
+        roughness={0.26}
+        metalness={0.16}
+        polygonOffset
+        polygonOffsetFactor={3 + surfaceLayer}
+        polygonOffsetUnits={4 + surfaceLayer}
+      />
+    </mesh>
+  );
+}
+
+/** Fixed tee pad at initial spawn (world origin): same green as goal, slightly above pond top. */
+function SpawnTeePad() {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useLayoutEffect(() => {
+    const m = meshRef.current;
+    if (!m) return;
+    m.raycast = () => {};
+  }, []);
+
+  return (
+    <mesh
+      ref={meshRef}
+      position={[0, TEE_PAD_CENTER_Y - .55, 0]}
+      receiveShadow
+      castShadow
+    >
+      <boxGeometry
+        args={[
+          TEE_PAD_HALF_X * 2,
+          TEE_PAD_HALF_Y * 6,
+          TEE_PAD_HALF_Z * 2,
+        ]}
+      />
+      <meshStandardMaterial
+        color={GOAL_GREEN}
+        roughness={0.65}
+        metalness={0.08}
+        polygonOffset
+        polygonOffsetFactor={1}
+        polygonOffsetUnits={1}
       />
     </mesh>
   );
@@ -644,6 +1025,7 @@ function SphereToGoal({
   meshRef,
   projectileRef,
   spawnCenter,
+  ponds,
   goalCenter,
   gravityY,
   onProjectileEnd,
@@ -651,9 +1033,10 @@ function SphereToGoal({
   meshRef: React.RefObject<THREE.Mesh | null>;
   projectileRef: React.MutableRefObject<Projectile | null>;
   spawnCenter: Vec3;
+  ponds: readonly PondSpec[];
   goalCenter: Vec3;
   gravityY: number;
-  onProjectileEnd: (outcome: "hit" | "miss", landing?: Vec3) => void;
+  onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
 }) {
   const sx = spawnCenter[0];
   const spawnTopY = spawnTopYFromBlockCenterY(spawnCenter[1]);
@@ -673,6 +1056,30 @@ function SphereToGoal({
     p.y += p.vy * dt;
     p.z += p.vz * dt;
     mesh.position.set(p.x, p.y, p.z);
+
+    for (const pond of ponds) {
+      const obstacleCenter: Vec3 = [
+        pond.worldX,
+        INITIAL_LANE_ORIGIN[1],
+        pond.worldZ,
+      ];
+      const hitObstacle = sphereIntersectsAabb(
+        p.x,
+        p.y,
+        p.z,
+        SPHERE_RADIUS,
+        obstacleCenter,
+        pond.halfX,
+        GOAL_HALF,
+        pond.halfZ
+      );
+      if (hitObstacle) {
+        projectileRef.current = null;
+        mesh.visible = false;
+        onProjectileEnd("penalty");
+        return;
+      }
+    }
 
     const hitGoal = sphereIntersectsGoalBox(
       p.x,
@@ -726,6 +1133,7 @@ function SphereToGoal({
 function SceneContent({
   spawnCenter,
   goalCenter,
+  ponds,
   aimYawRad,
   cooldownUntil,
   roundLocked,
@@ -738,6 +1146,7 @@ function SceneContent({
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
+  ponds: readonly PondSpec[];
   aimYawRad: number;
   cooldownUntil: number | null;
   roundLocked: boolean;
@@ -746,7 +1155,7 @@ function SceneContent({
     next: { remainingMs: number; clicks: number } | null
   ) => void;
   onShootStart: () => void;
-  onProjectileEnd: (outcome: "hit" | "miss", landing?: Vec3) => void;
+  onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
   getPowerupMultiplier: () => number;
   resetPowerupStack: () => void;
 }) {
@@ -881,6 +1290,7 @@ function SceneContent({
 
   return (
     <>
+      <SpawnTeePad />
       <group position={[...spawnCenter]}>
         <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
           <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
@@ -906,7 +1316,20 @@ function SceneContent({
         prismLength={aimPrismLengthForStrength(vehicle.strengthPerBaseClick)}
         color={accentColor}
       />
-      <Block center={goalCenter} color="#39b54a" />
+      <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />
+      {ponds.map((pond, i) => (
+        <PenaltyPond
+          key={`pond-${i}-${pond.worldX}-${pond.worldZ}-${pond.halfX}-${pond.halfZ}`}
+          center={[
+            pond.worldX,
+            INITIAL_LANE_ORIGIN[1],
+            pond.worldZ,
+          ]}
+          halfX={pond.halfX}
+          halfZ={pond.halfZ}
+          surfaceLayer={pond.surfaceLayer}
+        />
+      ))}
       {yellowLaneMarkers.map((center, i) => (
         <mesh key={`lane-${i}`} position={[...center]} castShadow receiveShadow>
           <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
@@ -921,6 +1344,7 @@ function SceneContent({
         meshRef={meshRef}
         projectileRef={projectileRef}
         spawnCenter={spawnCenter}
+        ponds={ponds}
         goalCenter={goalCenter}
         gravityY={vehicle.gravityY}
         onProjectileEnd={onProjectileEnd}
@@ -1134,7 +1558,13 @@ function HelpModal({
   );
 }
 
-function FinishGameModal({ open }: { open: boolean }) {
+function FinishGameModal({
+  open,
+  sessionShots,
+}: {
+  open: boolean;
+  sessionShots: number;
+}) {
   if (!open) return null;
 
   return (
@@ -1158,13 +1588,25 @@ function FinishGameModal({ open }: { open: boolean }) {
         </h2>
         <p
           style={{
-            margin: "0 0 16px",
+            margin: "0 0 10px",
             fontSize: 13,
             color: hudColors.muted,
             lineHeight: 1.5,
           }}
         >
           You hit the goal. More levels coming later.
+        </p>
+        <p
+          style={{
+            margin: "0 0 16px",
+            fontSize: 13,
+            color: hudColors.label,
+            lineHeight: 1.5,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          Shots this round:{" "}
+          <strong style={{ color: hudColors.value }}>{sessionShots}</strong>
         </p>
         <button
           type="button"
@@ -1216,6 +1658,7 @@ function HudIdleBoltIcon({ color }: { color: string }) {
 
 function StatsHud({
   spawnCenter,
+  sessionShots,
   chargeHud,
   shotInFlight,
   cooldownUntil,
@@ -1224,6 +1667,7 @@ function StatsHud({
   vehicle,
 }: {
   spawnCenter: Vec3;
+  sessionShots: number;
   chargeHud: { remainingMs: number; clicks: number } | null;
   shotInFlight: boolean;
   cooldownUntil: number | null;
@@ -1259,6 +1703,29 @@ function StatsHud({
         lineHeight: 1.4,
       }}
     >
+      <div
+        style={{
+          color: hudColors.muted,
+          marginBottom: 2,
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+        }}
+      >
+        Shots (session)
+      </div>
+      <div
+        style={{
+          color: hudColors.value,
+          fontWeight: 700,
+          fontSize: 14,
+          fontVariantNumeric: "tabular-nums",
+          marginBottom: 10,
+        }}
+      >
+        {sessionShots}
+      </div>
       <div
         style={{
           color: hudColors.muted,
@@ -1672,10 +2139,14 @@ export default function CubeScene() {
     INITIAL_LANE_ORIGIN[1],
     game.goalWorldZ,
   ];
+  const gameSpawnRef = useRef<Vec3>(game.spawnCenter);
+  gameSpawnRef.current = game.spawnCenter;
+  const spawnBeforeShotRef = useRef<Vec3>(game.spawnCenter);
 
   const [aimYawRad, setAimYawRad] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [shotInFlight, setShotInFlight] = useState(false);
+  const [sessionShots, setSessionShots] = useState(0);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [chargeHud, setChargeHud] = useState<{
@@ -1713,15 +2184,28 @@ export default function CubeScene() {
     []
   );
 
-  const onShootStart = useCallback(() => setShotInFlight(true), []);
+  const onShootStart = useCallback(() => {
+    setShotInFlight(true);
+    spawnBeforeShotRef.current = gameSpawnRef.current;
+    setSessionShots((n) => n + 1);
+  }, []);
+
   const onProjectileEnd = useCallback(
-    (outcome: "hit" | "miss", landing?: Vec3) => {
+    (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => {
       setShotInFlight(false);
-      dispatch({
-        type: "PROJECTILE_END",
-        outcome,
-        landing,
-      });
+      if (outcome === "penalty") {
+        dispatch({
+          type: "PROJECTILE_END",
+          outcome: "penalty",
+          revertSpawn: [...spawnBeforeShotRef.current] as Vec3,
+        });
+      } else {
+        dispatch({
+          type: "PROJECTILE_END",
+          outcome,
+          landing,
+        });
+      }
       if (outcome === "hit") {
         setShowFinishModal(true);
         return;
@@ -1767,7 +2251,7 @@ export default function CubeScene() {
       <Canvas
         style={{ width: "100%", height: "100%", display: "block" }}
         onCreated={onCanvasCreated}
-        gl={{ antialias: true, alpha: false }}
+        gl={{ antialias: true, alpha: false, logarithmicDepthBuffer: true }}
         dpr={[1, 2]}
         shadows="soft"
       >
@@ -1777,6 +2261,7 @@ export default function CubeScene() {
         <SceneContent
           spawnCenter={game.spawnCenter}
           goalCenter={goalCenter}
+          ponds={game.ponds}
           aimYawRad={aimYawRad}
           cooldownUntil={cooldownUntil}
           roundLocked={showFinishModal}
@@ -1790,6 +2275,7 @@ export default function CubeScene() {
       </Canvas>
       <StatsHud
         spawnCenter={game.spawnCenter}
+        sessionShots={sessionShots}
         chargeHud={chargeHud}
         shotInFlight={shotInFlight}
         cooldownUntil={cooldownUntil}
@@ -1869,7 +2355,7 @@ export default function CubeScene() {
           </div>
         </div>
       )}
-      <FinishGameModal open={showFinishModal} />
+      <FinishGameModal open={showFinishModal} sessionShots={sessionShots} />
       <HelpModal
         open={showHelpModal}
         onClose={() => setShowHelpModal(false)}

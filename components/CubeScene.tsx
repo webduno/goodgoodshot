@@ -73,8 +73,12 @@ function spawnTopYFromBlockCenterY(blockCenterY: number): number {
   return blockCenterY + BLOCK_SIZE / 2 + SPHERE_RADIUS;
 }
 
-/** Sphere center Y when the ball rests on world floor y = 0 (bottom of sphere at floor). */
-const FLOOR_CONTACT_CENTER_Y = SPHERE_RADIUS;
+/** Top of the green field mesh (`InitialFieldGround`); aligns with block bottom at y = 0. */
+const TURF_TOP_Y = -BLOCK_SIZE / 2;
+/** Sphere center Y when the ball rests on the turf (bottom of sphere at `TURF_TOP_Y`). */
+const FLOOR_CONTACT_CENTER_Y = TURF_TOP_Y + SPHERE_RADIUS;
+/** End ground roll when horizontal speed drops below this (world units/s). */
+const ROLL_STOP_SPEED = 0.04;
 
 function snapBlockCenterToGrid(v: readonly [number, number, number]): Vec3 {
   return [Math.round(v[0]), Math.round(v[1]), Math.round(v[2])];
@@ -616,6 +620,10 @@ type Projectile = {
   vx: number;
   vy: number;
   vz: number;
+  /** Remaining rebounds allowed after current ground contact resolves. */
+  bouncesRemaining: number;
+  /** Sliding/rolling on the floor with horizontal friction (no gravity). */
+  rolling: boolean;
 };
 
 /**
@@ -1029,6 +1037,8 @@ function SphereToGoal({
   ponds,
   goalCenter,
   gravityY,
+  bounceRestitution,
+  rollDeceleration,
   onProjectileEnd,
 }: {
   meshRef: React.RefObject<THREE.Mesh | null>;
@@ -1037,6 +1047,8 @@ function SphereToGoal({
   ponds: readonly PondSpec[];
   goalCenter: Vec3;
   gravityY: number;
+  bounceRestitution: number;
+  rollDeceleration: number;
   onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
 }) {
   const sx = spawnCenter[0];
@@ -1047,14 +1059,81 @@ function SphereToGoal({
     const p = projectileRef.current;
     if (!mesh || !p) return;
 
+    const dt = Math.min(delta, 0.05);
+
+    if (p.rolling) {
+      const h = Math.hypot(p.vx, p.vz);
+      const decel = rollDeceleration * dt;
+      const hNew = h > 0 ? Math.max(0, h - decel) : 0;
+      if (h > 1e-8) {
+        const scale = hNew / h;
+        p.vx *= scale;
+        p.vz *= scale;
+      } else {
+        p.vx = 0;
+        p.vz = 0;
+      }
+      p.x += p.vx * dt;
+      p.z += p.vz * dt;
+      p.y = FLOOR_CONTACT_CENTER_Y;
+      mesh.rotation.x += (p.vz * dt) / SPHERE_RADIUS;
+      mesh.rotation.z -= (p.vx * dt) / SPHERE_RADIUS;
+      mesh.position.set(p.x, p.y, p.z);
+
+      for (const pond of ponds) {
+        const obstacleCenter: Vec3 = [
+          pond.worldX,
+          INITIAL_LANE_ORIGIN[1],
+          pond.worldZ,
+        ];
+        const hitObstacle = sphereIntersectsAabb(
+          p.x,
+          p.y,
+          p.z,
+          SPHERE_RADIUS,
+          obstacleCenter,
+          pond.halfX,
+          GOAL_HALF,
+          pond.halfZ
+        );
+        if (hitObstacle) {
+          projectileRef.current = null;
+          mesh.visible = false;
+          onProjectileEnd("penalty");
+          return;
+        }
+      }
+
+      const hitGoal = sphereIntersectsGoalBox(
+        p.x,
+        p.y,
+        p.z,
+        SPHERE_RADIUS,
+        goalCenter
+      );
+      if (hitGoal) {
+        projectileRef.current = null;
+        mesh.visible = false;
+        onProjectileEnd("hit");
+        return;
+      }
+
+      if (Math.hypot(p.vx, p.vz) <= ROLL_STOP_SPEED) {
+        projectileRef.current = null;
+        mesh.visible = false;
+        onProjectileEnd("miss", [p.x, spawnCenter[1], p.z]);
+      }
+      return;
+    }
+
     const x0 = p.x;
     const y0 = p.y;
     const z0 = p.z;
 
-    const dt = Math.min(delta, 0.05);
     p.vy += gravityY * dt;
+    const vyAfterGravity = p.vy;
     p.x += p.vx * dt;
-    p.y += p.vy * dt;
+    p.y += vyAfterGravity * dt;
     p.z += p.vz * dt;
     mesh.position.set(p.x, p.y, p.z);
 
@@ -1105,6 +1184,31 @@ function SphereToGoal({
         (FLOOR_CONTACT_CENTER_Y - y0) / (p.y - y0);
       landingX = x0 + t * (p.x - x0);
       landingZ = z0 + t * (p.z - z0);
+    }
+
+    const canBounce =
+      p.bouncesRemaining > 0 &&
+      vyAfterGravity < 0 &&
+      bounceRestitution > 0;
+    if (canBounce) {
+      p.x = landingX;
+      p.y = FLOOR_CONTACT_CENTER_Y;
+      p.z = landingZ;
+      p.vy = -vyAfterGravity * bounceRestitution;
+      p.bouncesRemaining -= 1;
+      mesh.position.set(p.x, p.y, p.z);
+      return;
+    }
+
+    const hPlan = Math.hypot(p.vx, p.vz);
+    if (rollDeceleration > 0 && hPlan > ROLL_STOP_SPEED) {
+      p.x = landingX;
+      p.y = FLOOR_CONTACT_CENTER_Y;
+      p.z = landingZ;
+      p.vy = 0;
+      p.rolling = true;
+      mesh.position.set(p.x, p.y, p.z);
+      return;
     }
 
     projectileRef.current = null;
@@ -1192,10 +1296,13 @@ function SceneContent({
         vx: horizontalMag * Math.sin(aimYawRad),
         vy,
         vz: horizontalMag * Math.cos(aimYawRad),
+        bouncesRemaining: vehicle.landingBounces,
+        rolling: false,
       };
       const mesh = meshRef.current;
       if (!mesh) return;
       mesh.visible = true;
+      mesh.rotation.set(0, 0, 0);
       mesh.position.set(topX, topY, topZ);
       onShootStart();
     },
@@ -1348,6 +1455,8 @@ function SceneContent({
         ponds={ponds}
         goalCenter={goalCenter}
         gravityY={vehicle.gravityY}
+        bounceRestitution={vehicle.bounceRestitution}
+        rollDeceleration={vehicle.rollDeceleration}
         onProjectileEnd={onProjectileEnd}
       />
     </>

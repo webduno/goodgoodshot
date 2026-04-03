@@ -21,6 +21,16 @@ type JsonVehicle = {
   gravityY: number;
   /** Degrees above horizontal; converted to radians at load time. */
   launchAngleDeg: number;
+  /**
+   * How many times the ball may leave the ground after the first impact (0 = stops on first touch).
+   */
+  landingBounces?: number;
+  /** Vertical speed multiplier on each bounce (0–1). Defaults when omitted. */
+  bounceRestitution?: number;
+  /**
+   * Horizontal speed loss while rolling on the ground (world units/s²). 0 = no roll; ball stops on final touch.
+   */
+  rollDeceleration?: number;
 };
 
 type DefaultVehiclesFile = {
@@ -43,11 +53,21 @@ export type PlayerVehicleConfig = {
   shotCooldownSeconds: number;
   gravityY: number;
   launchAngleRad: number;
+  /** Rebound count after first ground contact (0 = no bounces). */
+  landingBounces: number;
+  /** Inbound vertical speed multiplier on each bounce. */
+  bounceRestitution: number;
+  /** Ground roll: magnitude deceleration on horizontal velocity (0 = none). */
+  rollDeceleration: number;
 };
 
 export function rgbTupleToCss(rgb: RgbTuple): string {
   return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
 }
+
+const DEFAULT_LANDING_BOUNCES = 0;
+const DEFAULT_BOUNCE_RESTITUTION = 0.55;
+const DEFAULT_ROLL_DECELERATION = 0;
 
 function jsonVehicleToConfig(entry: JsonVehicle): PlayerVehicleConfig {
   return {
@@ -61,6 +81,9 @@ function jsonVehicleToConfig(entry: JsonVehicle): PlayerVehicleConfig {
     shotCooldownSeconds: entry.shotCooldownSeconds,
     gravityY: entry.gravityY,
     launchAngleRad: degToRad(entry.launchAngleDeg),
+    landingBounces: entry.landingBounces ?? DEFAULT_LANDING_BOUNCES,
+    bounceRestitution: entry.bounceRestitution ?? DEFAULT_BOUNCE_RESTITUTION,
+    rollDeceleration: entry.rollDeceleration ?? DEFAULT_ROLL_DECELERATION,
   };
 }
 

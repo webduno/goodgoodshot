@@ -10,7 +10,10 @@
       "secondsBeforeShotTrigger": 2,
       "shotCooldownSeconds": 5,
       "gravityY": -22,
-      "launchAngleDeg": 48
+      "launchAngleDeg": 48,
+      "landingBounces": 1,
+      "bounceRestitution": 0.52,
+      "rollDeceleration": 9
     },
     {
       "v_id": "scrap-crawler",
@@ -22,7 +25,10 @@
       "secondsBeforeShotTrigger": 3.5,
       "shotCooldownSeconds": 7,
       "gravityY": -24,
-      "launchAngleDeg": 35
+      "launchAngleDeg": 35,
+      "landingBounces": 0,
+      "bounceRestitution": 0.42,
+      "rollDeceleration": 14
     },
     {
       "v_id": "drift-sprinter",
@@ -34,7 +40,10 @@
       "secondsBeforeShotTrigger": 1,
       "shotCooldownSeconds": 3.5,
       "gravityY": -20,
-      "launchAngleDeg": 62
+      "launchAngleDeg": 62,
+      "landingBounces": 3,
+      "bounceRestitution": 0.58,
+      "rollDeceleration": 5.5
     },
     {
       "v_id": "arc-lobber",
@@ -46,7 +55,10 @@
       "secondsBeforeShotTrigger": 2.85,
       "shotCooldownSeconds": 5.5,
       "gravityY": -21,
-      "launchAngleDeg": 75
+      "launchAngleDeg": 75,
+      "landingBounces": 2,
+      "bounceRestitution": 0.5,
+      "rollDeceleration": 7.5
     }
   ]
 }

@@ -18,6 +18,7 @@ import {
   progressFillStyle,
   progressTrack,
 } from "@/components/gameHudStyles";
+import { ToastNotif } from "@/components/ToastNotif";
 import {
   DEFAULT_V_ID,
   PREDETERMINED_VEHICLES,
@@ -2149,6 +2150,7 @@ export default function CubeScene() {
   const [sessionShots, setSessionShots] = useState(0);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [waterToastToken, setWaterToastToken] = useState(0);
   const [chargeHud, setChargeHud] = useState<{
     remainingMs: number;
     clicks: number;
@@ -2194,6 +2196,7 @@ export default function CubeScene() {
     (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => {
       setShotInFlight(false);
       if (outcome === "penalty") {
+        setWaterToastToken((t) => t + 1);
         dispatch({
           type: "PROJECTILE_END",
           outcome: "penalty",
@@ -2273,6 +2276,7 @@ export default function CubeScene() {
           resetPowerupStack={resetPowerupStack}
         />
       </Canvas>
+      <ToastNotif showToken={waterToastToken} message="Water hazard" />
       <StatsHud
         spawnCenter={game.spawnCenter}
         sessionShots={sessionShots}

@@ -8,7 +8,7 @@ export default function Home() {
         height: "100vh",
         margin: 0,
         padding: 0,
-        background: "#0a0a0a",
+        background: "#87CEEB",
       }}
     >
       <HomeCanvas />

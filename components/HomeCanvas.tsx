@@ -7,7 +7,7 @@ const CubeScene = dynamic(() => import("@/components/CubeScene"), {
   loading: () => (
     <div
       className="flex items-center justify-center text-zinc-400"
-      style={{ width: "100vw", height: "100vh", background: "#0a0a0a" }}
+      style={{ width: "100vw", height: "100vh", background: "#87CEEB" }}
     >
       Loading scene…
     </div>

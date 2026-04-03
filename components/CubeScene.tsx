@@ -45,6 +45,7 @@ const GOAL_X_MAX = 8;
 
 /** Horizontal aim: radians from +Z toward +X (left button increases yaw, right decreases). */
 const AIM_YAW_STEP_RAD = THREE.MathUtils.degToRad(5);
+const AIM_YAW_QUARTER_TURN_RAD = THREE.MathUtils.degToRad(90);
 
 /** Keep yaw in [-π, π] (~-180° … +180°) after stepping. */
 function wrapYawRad(a: number): number {
@@ -134,7 +135,7 @@ const LANE_MARKER_COLOR = "#eab308";
 
 /** Small cubes at the four bottom corners of the purple block (vehicle wheels). */
 const VEHICLE_CORNER_BLOCK_SIZE = 0.38;
-const VEHICLE_CORNER_BLOCK_COLOR = "#1D3178";
+const VEHICLE_CORNER_BLOCK_COLOR = "#5D3178";
 /** Inset from purple side + wheel half so inner wheel face clears the body (reduces z-fighting). */
 const VEHICLE_WHEEL_OUTWARD = 0.08;
 /** Lift wheel bottoms slightly above the green plane so they are not drawn under it. */
@@ -940,9 +941,9 @@ function HelpModal({
           }}
         >
           <li style={{ marginBottom: 8 }}>
-            <strong style={{ color: hudColors.value }}>Aim</strong> — ← →
-            adjusts horizontal aim ({yawDeg.toFixed(0)}° per tap). The white
-            wedge points where the shot goes.
+            <strong style={{ color: hudColors.value }}>Aim</strong> — ⇐ / ⇒
+            jump a quarter turn; ← → nudge ({yawDeg.toFixed(0)}° per tap). The
+            white wedge points where the shot goes.
           </li>
           <li style={{ marginBottom: 8 }}>
             <strong style={{ color: hudColors.value }}>Shoot</strong> — Click
@@ -1286,16 +1287,32 @@ function StatsHud({
   );
 }
 
+function aimQuarterButtonStyle(disabled: boolean): CSSProperties {
+  return {
+    ...goldIconButtonStyle(disabled),
+    minWidth: 36,
+    width: 36,
+    paddingLeft: 0,
+    paddingRight: 0,
+    fontSize: 16,
+    fontWeight: 900,
+  };
+}
+
 function AimHud({
   aimYawRad,
   disabled,
+  onMinus90,
   onLeft,
   onRight,
+  onPlus90,
 }: {
   aimYawRad: number;
   disabled: boolean;
+  onMinus90: () => void;
   onLeft: () => void;
   onRight: () => void;
+  onPlus90: () => void;
 }) {
   const deg = THREE.MathUtils.radToDeg(aimYawRad);
   return (
@@ -1310,6 +1327,15 @@ function AimHud({
         ...hudFont,
       }}
     >
+      <button
+        type="button"
+        aria-label="Aim plus 90 degrees"
+        disabled={disabled}
+        onClick={onPlus90}
+        style={aimQuarterButtonStyle(disabled)}
+      >
+        ⇐
+      </button>
       <button
         type="button"
         aria-label="Aim left"
@@ -1343,6 +1369,15 @@ function AimHud({
         style={goldIconButtonStyle(disabled)}
       >
         →
+      </button>
+      <button
+        type="button"
+        aria-label="Aim minus 90 degrees"
+        disabled={disabled}
+        onClick={onMinus90}
+        style={aimQuarterButtonStyle(disabled)}
+      >
+        ⇒
       </button>
     </div>
   );
@@ -1655,11 +1690,21 @@ export default function CubeScene() {
               <AimHud
                 aimYawRad={aimYawRad}
                 disabled={shotInFlight}
+                onMinus90={() =>
+                  setAimYawRad((a) =>
+                    wrapYawRad(a - AIM_YAW_QUARTER_TURN_RAD)
+                  )
+                }
                 onLeft={() =>
                   setAimYawRad((a) => wrapYawRad(a + AIM_YAW_STEP_RAD))
                 }
                 onRight={() =>
                   setAimYawRad((a) => wrapYawRad(a - AIM_YAW_STEP_RAD))
+                }
+                onPlus90={() =>
+                  setAimYawRad((a) =>
+                    wrapYawRad(a + AIM_YAW_QUARTER_TURN_RAD)
+                  )
                 }
               />
             )}

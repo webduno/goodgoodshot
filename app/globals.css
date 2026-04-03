@@ -24,8 +24,9 @@
 }
 
 @media (max-width: 640px) {
+  /* +100px vs desktop offset: sit above mobile browser chrome / avoid scroll jank */
   .hud-bottom-dock {
-    bottom: max(28px, env(safe-area-inset-bottom, 0px) + 22px);
+    bottom: calc(max(28px, env(safe-area-inset-bottom, 0px) + 22px) + 50px);
   }
 }
 

@@ -154,10 +154,21 @@ const VEHICLE_WHEEL_OUTWARD = 0.08;
 /** Lift wheel bottoms slightly above the green plane so they are not drawn under it. */
 const VEHICLE_WHEEL_FLOOR_Y_EPS = 0.02;
 
-/** Triangular prism on the spawn block: points along horizontal aim (+Z at 0° yaw). */
+/** Prism length for the weakest predetermined vehicle; stronger builds scale up linearly. */
 const AIM_PRISM_LENGTH = 0.85;
 const AIM_PRISM_RADIUS = 0.14;
 const AIM_PRISM_COLOR = "#f0fcff";
+
+const MIN_PREDETERMINED_STRENGTH_PER_BASE_CLICK = Math.min(
+  ...PREDETERMINED_VEHICLES.map((v) => v.strengthPerBaseClick)
+);
+
+function aimPrismLengthForStrength(strengthPerBaseClick: number): number {
+  return (
+    AIM_PRISM_LENGTH *
+    (strengthPerBaseClick / MIN_PREDETERMINED_STRENGTH_PER_BASE_CLICK)
+  );
+}
 
 /** Ground plane for the initial field: wider than yellow lane span, longer than spawn→goal. */
 const FIELD_PLANE_HALF_WIDTH_X =
@@ -491,16 +502,23 @@ function VehicleCornerBlock({
 }
 
 /**
- * 3-sided cylinder (triangular prism) on top of the spawn block, aligned with yaw in the XZ plane.
- * Raycast disabled so it does not steal clicks from the spawn block.
+ * 3-sided cylinder (triangular prism) along the shot direction from the cube center.
+ * Default elevation comes from the vehicle; horizontal aim is `aimYawRad`. Pivot is the
+ * spawn block center (middle of the cube). Raycast disabled so it does not steal clicks.
  */
 function AimYawPrism({
   spawnCenter,
   aimYawRad,
+  defaultVerticalAngleRad,
+  prismLength,
   color = AIM_PRISM_COLOR,
 }: {
   spawnCenter: Vec3;
   aimYawRad: number;
+  /** Pitch above horizontal (radians), from vehicle config — matches launch trajectory. */
+  defaultVerticalAngleRad: number;
+  /** Cylinder height along aim; scales with vehicle base strength. */
+  prismLength: number;
   /** Aim wedge tint; defaults to light cyan when omitted. */
   color?: string;
 }) {
@@ -513,25 +531,28 @@ function AimYawPrism({
   }, []);
 
   const { position, quaternion } = useMemo(() => {
+    const cosP = Math.cos(defaultVerticalAngleRad);
+    const sinP = Math.sin(defaultVerticalAngleRad);
+    const sinY = Math.sin(aimYawRad);
+    const cosY = Math.cos(aimYawRad);
     const dir = new THREE.Vector3(
-      Math.sin(aimYawRad),
-      0,
-      Math.cos(aimYawRad)
+      sinY * cosP,
+      sinP,
+      cosY * cosP
     ).normalize();
     const sx = spawnCenter[0];
     const sy = spawnCenter[1];
     const sz = spawnCenter[2];
-    const topY = sy + BLOCK_SIZE / 2 + 0.002;
-    const h = AIM_PRISM_LENGTH;
+    const h = prismLength;
     const pos = new THREE.Vector3(
       sx + dir.x * (h / 2),
-      topY,
+      sy + dir.y * (h / 2),
       sz + dir.z * (h / 2)
     );
     const q = new THREE.Quaternion();
     q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
     return { position: pos, quaternion: q };
-  }, [spawnCenter, aimYawRad]);
+  }, [spawnCenter, aimYawRad, defaultVerticalAngleRad, prismLength]);
 
   return (
     <mesh
@@ -542,7 +563,7 @@ function AimYawPrism({
       receiveShadow
     >
       <cylinderGeometry
-        args={[AIM_PRISM_RADIUS, AIM_PRISM_RADIUS, AIM_PRISM_LENGTH, 3]}
+        args={[AIM_PRISM_RADIUS, AIM_PRISM_RADIUS, prismLength, 3]}
       />
       <meshStandardMaterial
         color={color}
@@ -881,6 +902,8 @@ function SceneContent({
       <AimYawPrism
         spawnCenter={spawnCenter}
         aimYawRad={aimYawRad}
+        defaultVerticalAngleRad={vehicle.launchAngleRad}
+        prismLength={aimPrismLengthForStrength(vehicle.strengthPerBaseClick)}
         color={accentColor}
       />
       <Block center={goalCenter} color="#39b54a" />

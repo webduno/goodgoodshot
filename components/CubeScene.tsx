@@ -4,7 +4,10 @@ import {
   goldChipButtonStyle,
   goldIconButtonStyle,
   goldPillButtonStyle,
+  hudAimPanelStrip,
   hudBottomPanel,
+  hudBottomReadoutLabel,
+  hudBottomReadoutValue,
   hudColors,
   hudFont,
   hudMiniPanel,
@@ -91,7 +94,7 @@ function createInitialGameState(): GameState {
   };
 }
 
-/** Yellow lane markers and goal stay here in world space; only the purple block uses `spawnCenter`. */
+/** Yellow lane markers and goal stay here in world space; only the spawn block uses `spawnCenter`. */
 const INITIAL_LANE_ORIGIN: Vec3 = [0, 0, 0];
 
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -127,31 +130,31 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 /** Green goal box AABB (same as the mesh: center + half extents). */
 const GOAL_HALF = BLOCK_SIZE / 2;
 
-/** Yellow lane markers between purple spawn and green goal (progress cues). */
+/** Yellow lane markers between spawn and green goal (progress cues). */
 const LANE_MARKER_COUNT_PER_SIDE = 5;
 /** Distance from lane center (X) — ten unit blocks to each side. */
 const LANE_MARKER_SIDE_OFFSET_X = 10 * BLOCK_SIZE;
-const LANE_MARKER_COLOR = "#eab308";
+const LANE_MARKER_COLOR = "#fce62e";
 
-/** Small cubes at the four bottom corners of the purple block (vehicle wheels). */
+/** Small cubes at the four bottom corners of the spawn block (vehicle wheels). */
 const VEHICLE_CORNER_BLOCK_SIZE = 0.38;
-const VEHICLE_CORNER_BLOCK_COLOR = "#5D3178";
-/** Inset from purple side + wheel half so inner wheel face clears the body (reduces z-fighting). */
+const VEHICLE_CORNER_BLOCK_COLOR = "#005a8c";
+/** Inset from vehicle side + wheel half so inner wheel face clears the body (reduces z-fighting). */
 const VEHICLE_WHEEL_OUTWARD = 0.08;
 /** Lift wheel bottoms slightly above the green plane so they are not drawn under it. */
 const VEHICLE_WHEEL_FLOOR_Y_EPS = 0.02;
 
-/** Triangular prism on the purple block: points along horizontal aim (+Z at 0° yaw). */
+/** Triangular prism on the spawn block: points along horizontal aim (+Z at 0° yaw). */
 const AIM_PRISM_LENGTH = 0.85;
 const AIM_PRISM_RADIUS = 0.14;
-const AIM_PRISM_COLOR = "#f4f4f5";
+const AIM_PRISM_COLOR = "#f0fcff";
 
 /** Ground plane for the initial field: wider than yellow lane span, longer than spawn→goal. */
 const FIELD_PLANE_HALF_WIDTH_X =
   2 * (LANE_MARKER_SIDE_OFFSET_X / 2 + BLOCK_SIZE * 1.5);
 const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
-const FIELD_GROUND_MUTED_GREEN = "#3d5a47";
+const FIELD_GROUND_MUTED_GREEN = "#3a9d4a";
 
 function sphereIntersectsGoalBox(
   px: number,
@@ -311,14 +314,14 @@ type Projectile = {
   vz: number;
 };
 
-/** Clear color + page chrome — sky blue instead of black. */
-const BG = "#87CEEB";
+/** Clear color + page chrome — Frutiger Aero sky (matches page gradient mid-tone). */
+const BG = "#78d4ff";
 
 /**
  * Camera offset from spawn block center (lane stays to +X so the goal stays visible).
  */
-const CAMERA_OFFSET_FROM_SPAWN: Vec3 = [0.9, 1.15, -2.35];
-/** Orbit pivot Y: one block above the purple block center. */
+const CAMERA_OFFSET_FROM_SPAWN: Vec3 = [0.95, 1.22, -3.1];
+/** Orbit pivot Y: one block above the spawn block center. */
 const ORBIT_TARGET_Y_OFFSET = BLOCK_SIZE;
 function onCanvasCreated({ camera, gl, scene }: RootState) {
   scene.background = new THREE.Color(BG);
@@ -343,7 +346,7 @@ function CameraRig({ spawnCenter }: { spawnCenter: Vec3 }) {
     const controls = new OrbitControls(camera, gl.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.minDistance = 1.75;
+    controls.minDistance = 2.1;
     controls.maxDistance = 120;
     controls.enablePan = false;
     controlsRef.current = controls;
@@ -434,7 +437,12 @@ function StaticSceneLights() {
 
   return (
     <>
-      <ambientLight intensity={0.38} />
+      <ambientLight intensity={0.42} />
+      <hemisphereLight
+        color="#bfe8ff"
+        groundColor="#4a9d52"
+        intensity={0.32}
+      />
       <directionalLight
         ref={spawnLightRef}
         position={[-12, 30, -16]}
@@ -465,7 +473,7 @@ function Block({ center, color }: { center: Vec3; color: string }) {
   );
 }
 
-/** Corner “wheels”: no raycast so clicks still hit the purple body. */
+/** Corner “wheels”: no raycast so clicks still hit the vehicle body. */
 function VehicleCornerBlock({
   position: pos,
   size,
@@ -497,7 +505,7 @@ function VehicleCornerBlock({
 
 /**
  * 3-sided cylinder (triangular prism) on top of the spawn block, aligned with yaw in the XZ plane.
- * Raycast disabled so it does not steal clicks from the purple block.
+ * Raycast disabled so it does not steal clicks from the spawn block.
  */
 function AimYawPrism({
   spawnCenter,
@@ -548,8 +556,8 @@ function AimYawPrism({
       />
       <meshStandardMaterial
         color={AIM_PRISM_COLOR}
-        roughness={0.45}
-        metalness={0.15}
+        roughness={0.28}
+        metalness={0.22}
       />
     </mesh>
   );
@@ -694,9 +702,9 @@ function SphereToGoal({
     >
       <sphereGeometry args={[SPHERE_RADIUS, 24, 24]} />
       <meshStandardMaterial
-        color="#e4e4e7"
-        roughness={0.35}
-        metalness={0.2}
+        color="#e8f8ff"
+        roughness={0.28}
+        metalness={0.24}
       />
     </mesh>
   );
@@ -842,9 +850,9 @@ function SceneContent({
   const wh = 0 ;
   /** Wheel center Y: bottom at −half + eps (flush with / just above green plane at y = −half). */
   const wheelCenterY = -half + wh + VEHICLE_WHEEL_FLOOR_Y_EPS;
-  /** Axis distance so inner wheel face sits past the purple hull (+ outward gap). */
+  /** Axis distance so inner wheel face sits past the vehicle hull (+ outward gap). */
   const wheelArm = half + VEHICLE_WHEEL_OUTWARD + wh;
-  /** Bottom-corner wheel centers in local space (group origin = purple block center). */
+  /** Bottom-corner wheel centers in local space (group origin = spawn block center). */
   const vehicleCornerOffsets: Vec3[] = [
     [-wheelArm, wheelCenterY, -wheelArm],
     [wheelArm, wheelCenterY, -wheelArm],
@@ -858,9 +866,9 @@ function SceneContent({
         <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
           <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
           <meshStandardMaterial
-            color="#6366f1"
-            roughness={0.55}
-            metalness={0.12}
+            color="#0072bc"
+            roughness={0.32}
+            metalness={0.2}
           />
         </mesh>
         {vehicleCornerOffsets.map((pos, i) => (
@@ -873,7 +881,7 @@ function SceneContent({
         ))}
       </group>
       <AimYawPrism spawnCenter={spawnCenter} aimYawRad={aimYawRad} />
-      <Block center={goalCenter} color="#22c55e" />
+      <Block center={goalCenter} color="#39b54a" />
       {yellowLaneMarkers.map((center, i) => (
         <mesh key={`lane-${i}`} position={[...center]} castShadow receiveShadow>
           <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
@@ -947,7 +955,7 @@ function HelpModal({
           </li>
           <li style={{ marginBottom: 8 }}>
             <strong style={{ color: hudColors.value }}>Shoot</strong> — Click
-            the purple block. The first click starts a {chargeSec}s charge
+            the spawn block. The first click starts a {chargeSec}s charge
             window.
           </li>
           <li style={{ marginBottom: 8 }}>
@@ -1124,7 +1132,7 @@ function StatsHud({
   const metricsDivider: CSSProperties = {
     marginTop: 8,
     paddingTop: 8,
-    borderTop: "1px solid rgba(120, 113, 108, 0.2)",
+    borderTop: "1px solid rgba(0, 80, 110, 0.12)",
   };
 
   return (
@@ -1136,7 +1144,7 @@ function StatsHud({
         zIndex: 40,
         pointerEvents: "none",
         userSelect: "none",
-        padding: "8px 10px",
+        padding: "6px 8px",
         maxWidth: 220,
         ...hudMiniPanel,
         fontSize: 10,
@@ -1318,12 +1326,7 @@ function AimHud({
   return (
     <div
       style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: 8,
-        pointerEvents: "auto",
-        userSelect: "none",
+        ...hudAimPanelStrip,
         ...hudFont,
       }}
     >
@@ -1347,16 +1350,23 @@ function AimHud({
       </button>
       <span
         style={{
-          minWidth: 76,
+          minWidth: 92,
           textAlign: "center",
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 600,
-          color: hudColors.label,
           fontVariantNumeric: "tabular-nums",
+          letterSpacing: "0.01em",
+          ...hudBottomReadoutLabel,
         }}
       >
         Aim{" "}
-        <span style={{ color: hudColors.value }}>
+        <span
+          style={{
+            ...hudBottomReadoutValue,
+            fontWeight: 700,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
           {deg >= 0 ? "+" : ""}
           {deg.toFixed(1)}°
         </span>
@@ -1452,10 +1462,7 @@ function ShotHud({
                       variant: canUsePowerup ? "ready" : "depleted",
                     })}
                   >
-                    <PowerupHudIcon
-                      slotId={slot.id}
-                      color={hudColors.value}
-                    />
+                    <PowerupHudIcon slotId={slot.id} color="currentColor" />
                     <span
                       style={{
                         fontVariantNumeric: "tabular-nums",
@@ -1477,10 +1484,7 @@ function ShotHud({
                   disabled
                   style={powerupSlotStyle({ variant: "locked" })}
                 >
-                  <PowerupHudIcon
-                    slotId={slot.id}
-                    color={hudColors.value}
-                  />
+                  <PowerupHudIcon slotId={slot.id} color="currentColor" />
                 </button>
               );
             })}
@@ -1665,11 +1669,11 @@ export default function CubeScene() {
       )}
       {!showFinishModal && (
         <div
+          className="hud-bottom-dock"
           style={{
             position: "absolute",
             left: 0,
             right: 0,
-            bottom: 14,
             display: "flex",
             justifyContent: "center",
             zIndex: 41,
@@ -1683,7 +1687,7 @@ export default function CubeScene() {
               display: "flex",
               flexDirection: "column",
               alignItems: "stretch",
-              gap: 8,
+              gap: 4,
             }}
           >
             {chargeHud === null && (

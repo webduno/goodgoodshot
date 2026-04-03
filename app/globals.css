@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Frutiger Aero — sky + horizon */
+  --aero-sky-deep: #0072bc;
+  --aero-sky-mid: #00aeef;
+  --aero-sky-bright: #7dd3fc;
+  --aero-horizon: #d4f1ff;
+  --aero-clear: #78d4ff;
+  --background: var(--aero-horizon);
+  --foreground: #003d5c;
 }
 
 @theme inline {
@@ -12,15 +18,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/** Bottom HUD: clear home gesture / thumb reach on narrow viewports */
+.hud-bottom-dock {
+  bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .hud-bottom-dock {
+    bottom: max(28px, env(safe-area-inset-bottom, 0px) + 22px);
   }
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    var(--aero-horizon) 0%,
+    var(--aero-sky-bright) 38%,
+    var(--aero-sky-mid) 72%,
+    var(--aero-sky-deep) 100%
+  );
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, "Segoe UI", Arial, Helvetica, sans-serif;
 }

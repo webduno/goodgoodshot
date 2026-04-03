@@ -18,6 +18,17 @@ import {
   progressFillStyle,
   progressTrack,
 } from "@/components/gameHudStyles";
+import {
+  DEFAULT_V_ID,
+  PREDETERMINED_VEHICLES,
+  launchStrengthFromClicks,
+  resolveVehicleFromUrlParam,
+  rgbTupleToCss,
+  vehicleChargeMs,
+  vehicleShotCooldownMs,
+  type PlayerVehicleConfig,
+} from "@/components/playerVehicleConfig";
+import { useSearchParams } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { RootState, ThreeEvent } from "@react-three/fiber";
 import {
@@ -138,7 +149,6 @@ const LANE_MARKER_COLOR = "#fce62e";
 
 /** Small cubes at the four bottom corners of the spawn block (vehicle wheels). */
 const VEHICLE_CORNER_BLOCK_SIZE = 0.38;
-const VEHICLE_CORNER_BLOCK_COLOR = "#005a8c";
 /** Inset from vehicle side + wheel half so inner wheel face clears the body (reduces z-fighting). */
 const VEHICLE_WHEEL_OUTWARD = 0.08;
 /** Lift wheel bottoms slightly above the green plane so they are not drawn under it. */
@@ -181,29 +191,6 @@ function sphereIntersectsGoalBox(
   const dz = pz - qz;
   return dx * dx + dy * dy + dz * dz < radius * radius;
 }
-
-/** 45° above horizontal in the YZ plane (toward +Z, +Y). */
-const LAUNCH_ANGLE_RAD = Math.PI / 4;
-/**
- * Base launch speed for the 45° direction (used when click count = 1).
- * Not derived from goal distance.
- */
-const LAUNCH_STRENGTH = 8;
-/**
- * How much each extra click (after the first) adds, as a fraction of LAUNCH_STRENGTH.
- * Lower = finer control (was linear ×clicks, which made 2 clicks twice as strong as 1).
- */
-const CLICK_FORCE_PER_EXTRA = 0.1;
-/** Gravity along −Y (scene units / s²). */
-const GRAVITY = -22;
-
-function launchStrengthFromClicks(clicks: number): number {
-  const n = Math.max(1, clicks);
-  return LAUNCH_STRENGTH * (1 + CLICK_FORCE_PER_EXTRA * (n - 1));
-}
-
-const CHARGE_MS = 2000;
-const COOLDOWN_MS = 5000;
 
 /** Starting inventory; each strength power-up use doubles launch for that shot (stacks: 2×, 4×, …). */
 const INITIAL_POWERUP_CHARGES = 2;
@@ -510,9 +497,12 @@ function VehicleCornerBlock({
 function AimYawPrism({
   spawnCenter,
   aimYawRad,
+  color = AIM_PRISM_COLOR,
 }: {
   spawnCenter: Vec3;
   aimYawRad: number;
+  /** Aim wedge tint; defaults to light cyan when omitted. */
+  color?: string;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -555,7 +545,7 @@ function AimYawPrism({
         args={[AIM_PRISM_RADIUS, AIM_PRISM_RADIUS, AIM_PRISM_LENGTH, 3]}
       />
       <meshStandardMaterial
-        color={AIM_PRISM_COLOR}
+        color={color}
         roughness={0.28}
         metalness={0.22}
       />
@@ -634,12 +624,14 @@ function SphereToGoal({
   projectileRef,
   spawnCenter,
   goalCenter,
+  gravityY,
   onProjectileEnd,
 }: {
   meshRef: React.RefObject<THREE.Mesh | null>;
   projectileRef: React.MutableRefObject<Projectile | null>;
   spawnCenter: Vec3;
   goalCenter: Vec3;
+  gravityY: number;
   onProjectileEnd: (outcome: "hit" | "miss", landing?: Vec3) => void;
 }) {
   const sx = spawnCenter[0];
@@ -655,7 +647,7 @@ function SphereToGoal({
     const z0 = p.z;
 
     const dt = Math.min(delta, 0.05);
-    p.vy += GRAVITY * dt;
+    p.vy += gravityY * dt;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     p.z += p.vz * dt;
@@ -716,6 +708,7 @@ function SceneContent({
   aimYawRad,
   cooldownUntil,
   roundLocked,
+  vehicle,
   onChargeHudUpdate,
   onShootStart,
   onProjectileEnd,
@@ -727,6 +720,7 @@ function SceneContent({
   aimYawRad: number;
   cooldownUntil: number | null;
   roundLocked: boolean;
+  vehicle: PlayerVehicleConfig;
   onChargeHudUpdate: (
     next: { remainingMs: number; clicks: number } | null
   ) => void;
@@ -753,10 +747,10 @@ function SceneContent({
   const fireProjectile = useCallback(
     (clicks: number) => {
       const force =
-        launchStrengthFromClicks(clicks) * getPowerupMultiplier();
+        launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
       resetPowerupStack();
-      const horizontalMag = force * Math.cos(LAUNCH_ANGLE_RAD);
-      const vy = force * Math.sin(LAUNCH_ANGLE_RAD);
+      const horizontalMag = force * Math.cos(vehicle.launchAngleRad);
+      const vy = force * Math.sin(vehicle.launchAngleRad);
       const topY = spawnTopYFromBlockCenterY(spawnCenter[1]);
       const topZ = spawnCenter[2];
       const topX = spawnCenter[0];
@@ -774,19 +768,20 @@ function SceneContent({
       mesh.position.set(topX, topY, topZ);
       onShootStart();
     },
-    [aimYawRad, getPowerupMultiplier, onShootStart, resetPowerupStack, spawnCenter]
+    [aimYawRad, getPowerupMultiplier, onShootStart, resetPowerupStack, spawnCenter, vehicle]
   );
 
   const beginChargeWindow = useCallback(() => {
+    const chargeMs = vehicleChargeMs(vehicle);
     if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
     if (chargeTickRef.current) clearInterval(chargeTickRef.current);
 
     resetPowerupStack();
     clickCountRef.current = 1;
     chargingRef.current = true;
-    chargeEndsAtRef.current = performance.now() + CHARGE_MS;
+    chargeEndsAtRef.current = performance.now() + chargeMs;
     onChargeHudUpdate({
-      remainingMs: CHARGE_MS,
+      remainingMs: chargeMs,
       clicks: 1,
     });
 
@@ -813,8 +808,8 @@ function SceneContent({
       const n = clickCountRef.current;
       onChargeHudUpdate(null);
       fireProjectile(n);
-    }, CHARGE_MS);
-  }, [fireProjectile, onChargeHudUpdate, resetPowerupStack]);
+    }, chargeMs);
+  }, [fireProjectile, onChargeHudUpdate, resetPowerupStack, vehicle]);
 
   const yellowLaneMarkers = useMemo(
     () => laneMarkerCenters(INITIAL_LANE_ORIGIN, goalCenter),
@@ -860,13 +855,16 @@ function SceneContent({
     [wheelArm, wheelCenterY, wheelArm],
   ];
 
+  const bodyColor = rgbTupleToCss(vehicle.mainRgb);
+  const accentColor = rgbTupleToCss(vehicle.accentRgb);
+
   return (
     <>
       <group position={[...spawnCenter]}>
         <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
           <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
           <meshStandardMaterial
-            color="#0072bc"
+            color={bodyColor}
             roughness={0.32}
             metalness={0.2}
           />
@@ -876,11 +874,15 @@ function SceneContent({
             key={`wheel-${i}`}
             position={pos}
             size={VEHICLE_CORNER_BLOCK_SIZE}
-            color={VEHICLE_CORNER_BLOCK_COLOR}
+            color={accentColor}
           />
         ))}
       </group>
-      <AimYawPrism spawnCenter={spawnCenter} aimYawRad={aimYawRad} />
+      <AimYawPrism
+        spawnCenter={spawnCenter}
+        aimYawRad={aimYawRad}
+        color={accentColor}
+      />
       <Block center={goalCenter} color="#39b54a" />
       {yellowLaneMarkers.map((center, i) => (
         <mesh key={`lane-${i}`} position={[...center]} castShadow receiveShadow>
@@ -897,6 +899,7 @@ function SceneContent({
         projectileRef={projectileRef}
         spawnCenter={spawnCenter}
         goalCenter={goalCenter}
+        gravityY={vehicle.gravityY}
         onProjectileEnd={onProjectileEnd}
       />
     </>
@@ -906,15 +909,28 @@ function SceneContent({
 function HelpModal({
   open,
   onClose,
+  vehicle,
 }: {
   open: boolean;
   onClose: () => void;
+  vehicle: PlayerVehicleConfig;
 }) {
   if (!open) return null;
 
-  const chargeSec = CHARGE_MS / 1000;
-  const cooldownSec = COOLDOWN_MS / 1000;
+  const chargeSec = vehicle.secondsBeforeShotTrigger;
+  const cooldownSec = vehicle.shotCooldownSeconds;
+  const launchDeg = THREE.MathUtils.radToDeg(vehicle.launchAngleRad);
   const yawDeg = THREE.MathUtils.radToDeg(AIM_YAW_STEP_RAD);
+
+  const reloadWithVehicle = (vId: string) => {
+    const url = new URL(window.location.href);
+    if (vId === DEFAULT_V_ID) {
+      url.searchParams.delete("vehicle");
+    } else {
+      url.searchParams.set("vehicle", vId);
+    }
+    window.location.assign(url.toString());
+  };
 
   return (
     <div
@@ -961,8 +977,9 @@ function HelpModal({
           <li style={{ marginBottom: 8 }}>
             <strong style={{ color: hudColors.value }}>Power</strong> — Extra
             clicks in that window add about +
-            {Math.round(CLICK_FORCE_PER_EXTRA * 100)}% strength each. When the
-            timer ends, the ball launches at 45° along your aim.
+            {Math.round(vehicle.extraClickStrengthFraction * 100)}% strength
+            each. When the timer ends, the ball launches at {launchDeg.toFixed(0)}
+            ° along your aim.
           </li>
           <li style={{ marginBottom: 8 }}>
             <strong style={{ color: hudColors.value }}>Power-ups</strong> —
@@ -1013,6 +1030,72 @@ function HelpModal({
             orbit, scroll to zoom.
           </li>
         </ul>
+        <div style={{ marginTop: 14 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: hudColors.label,
+              marginBottom: 8,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Vehicles
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+            }}
+          >
+            {PREDETERMINED_VEHICLES.map((v) => {
+              const isCurrent = v.id === vehicle.id;
+              const mainCss = rgbTupleToCss(v.mainRgb);
+              const accentCss = rgbTupleToCss(v.accentRgb);
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => reloadWithVehicle(v.id)}
+                  title={`Load ${v.name} and start a new round`}
+                  style={{
+                    ...goldChipButtonStyle(),
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: "6px 12px",
+                    backgroundImage: `linear-gradient(135deg, ${mainCss} 0%, ${accentCss} 100%)`,
+                    border: "1px solid rgba(255,255,255,0.88)",
+                    color: "#ffffff",
+                    textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+                    ...(isCurrent
+                      ? {
+                          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 12px rgba(0,0,0,0.28), 0 0 0 2px ${accentCss}, 0 0 14px ${accentCss}`,
+                        }
+                      : {
+                          boxShadow:
+                            "inset 0 1px 0 rgba(255,255,255,0.35), 0 3px 10px rgba(0,0,0,0.22)",
+                        }),
+                  }}
+                >
+                  {v.name}
+                </button>
+              );
+            })}
+          </div>
+          <p
+            style={{
+              margin: "8px 0 0",
+              fontSize: 10,
+              lineHeight: 1.4,
+              color: hudColors.muted,
+            }}
+          >
+            Picks the URL query and reloads the page so you start fresh with
+            that vehicle&apos;s shot stats.
+          </p>
+        </div>
         <button
           type="button"
           onClick={onClose}
@@ -1115,6 +1198,7 @@ function StatsHud({
   cooldownUntil,
   powerupCharges,
   powerupStackCount,
+  vehicle,
 }: {
   spawnCenter: Vec3;
   chargeHud: { remainingMs: number; clicks: number } | null;
@@ -1122,6 +1206,7 @@ function StatsHud({
   cooldownUntil: number | null;
   powerupCharges: number;
   powerupStackCount: number;
+  vehicle: PlayerVehicleConfig;
 }) {
   const remainingMs =
     cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
@@ -1151,6 +1236,28 @@ function StatsHud({
         lineHeight: 1.4,
       }}
     >
+      <div
+        style={{
+          color: hudColors.muted,
+          marginBottom: 2,
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+        }}
+      >
+        Vehicle
+      </div>
+      <div
+        style={{
+          color: hudColors.value,
+          fontWeight: 600,
+          fontSize: 10,
+          marginBottom: 6,
+        }}
+      >
+        {vehicle.name}
+      </div>
       <div
         style={{
           color: hudColors.muted,
@@ -1221,7 +1328,8 @@ function StatsHud({
               }}
             >
               {(
-                launchStrengthFromClicks(chargeHud.clicks) * powerupMult
+                launchStrengthFromClicks(chargeHud.clicks, vehicle) *
+                powerupMult
               ).toFixed(2)}
             </strong>
             {powerupStackCount > 0 && (
@@ -1229,7 +1337,9 @@ function StatsHud({
             )}
             <span style={{ color: hudColors.muted }}>
               {" "}
-              · +{Math.round(CLICK_FORCE_PER_EXTRA * 100)}% / extra click
+              · +
+              {Math.round(vehicle.extraClickStrengthFraction * 100)}% / extra
+              click
             </span>
           </div>
         </div>
@@ -1254,7 +1364,7 @@ function StatsHud({
       {!shotInFlight && !inCooldown && !charging && (
         <div
           role="status"
-          aria-label={`Charge window ${CHARGE_MS / 1000} seconds, ${powerupCharges} boost charges available`}
+          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds, ${powerupCharges} boost charges available`}
           style={{
             ...metricsDivider,
             display: "flex",
@@ -1275,7 +1385,7 @@ function StatsHud({
             title="Charge window length"
           >
             <HudIdleClockIcon color={hudColors.accent} />
-            {CHARGE_MS / 1000}s
+            {vehicle.secondsBeforeShotTrigger}s
           </span>
           <span
             style={{
@@ -1399,21 +1509,25 @@ function ShotHud({
   chargeHud,
   powerupCharges,
   onPowerup,
+  vehicle,
 }: {
   shotInFlight: boolean;
   cooldownUntil: number | null;
   chargeHud: { remainingMs: number; clicks: number } | null;
   powerupCharges: number;
   onPowerup: () => void;
+  vehicle: PlayerVehicleConfig;
 }) {
+  const chargeMs = vehicleChargeMs(vehicle);
+  const cooldownMs = vehicleShotCooldownMs(vehicle);
   const remainingMs =
     cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
   const inCooldown = cooldownUntil !== null && remainingMs > 0;
   const progress =
-    inCooldown && COOLDOWN_MS > 0 ? remainingMs / COOLDOWN_MS : 0;
+    inCooldown && cooldownMs > 0 ? remainingMs / cooldownMs : 0;
   const charging = chargeHud !== null;
   const chargeProgress =
-    charging && CHARGE_MS > 0 ? chargeHud.remainingMs / CHARGE_MS : 0;
+    charging && chargeMs > 0 ? chargeHud.remainingMs / chargeMs : 0;
   const canUsePowerup =
     charging && !shotInFlight && powerupCharges > 0;
 
@@ -1517,6 +1631,13 @@ function ShotHud({
 }
 
 export default function CubeScene() {
+  const searchParams = useSearchParams();
+  const vehicleParam = searchParams.get("vehicle");
+  const playerVehicle = useMemo(
+    () => resolveVehicleFromUrlParam(vehicleParam),
+    [vehicleParam]
+  );
+
   const [game, dispatch] = useReducer(
     gameReducer,
     undefined,
@@ -1582,9 +1703,9 @@ export default function CubeScene() {
         setShowFinishModal(true);
         return;
       }
-      setCooldownUntil(performance.now() + COOLDOWN_MS);
+      setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
     },
-    []
+    [playerVehicle]
   );
 
   useEffect(() => {
@@ -1636,6 +1757,7 @@ export default function CubeScene() {
           aimYawRad={aimYawRad}
           cooldownUntil={cooldownUntil}
           roundLocked={showFinishModal}
+          vehicle={playerVehicle}
           onChargeHudUpdate={onChargeHudUpdate}
           onShootStart={onShootStart}
           onProjectileEnd={onProjectileEnd}
@@ -1650,6 +1772,7 @@ export default function CubeScene() {
         cooldownUntil={cooldownUntil}
         powerupCharges={powerupCharges}
         powerupStackCount={powerupStackCount}
+        vehicle={playerVehicle}
       />
       {!showFinishModal && (
         <button
@@ -1718,12 +1841,17 @@ export default function CubeScene() {
               chargeHud={chargeHud}
               powerupCharges={powerupCharges}
               onPowerup={activatePowerup}
+              vehicle={playerVehicle}
             />
           </div>
         </div>
       )}
       <FinishGameModal open={showFinishModal} />
-      <HelpModal open={showHelpModal} onClose={() => setShowHelpModal(false)} />
+      <HelpModal
+        open={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        vehicle={playerVehicle}
+      />
     </div>
   );
 }

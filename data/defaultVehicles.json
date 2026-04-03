@@ -1,0 +1,52 @@
+{
+  "vehicles": [
+    {
+      "v_id": "default",
+      "name": "Grid Runner",
+      "mainRgb": [0, 114, 188],
+      "accentRgb": [0, 174, 239],
+      "strengthPerBaseClick": 8,
+      "extraClickStrengthFraction": 0.1,
+      "secondsBeforeShotTrigger": 2,
+      "shotCooldownSeconds": 5,
+      "gravityY": -22,
+      "launchAngleDeg": 45
+    },
+    {
+      "v_id": "scrap-crawler",
+      "name": "Scrap Crawler",
+      "mainRgb": [168, 72, 32],
+      "accentRgb": [255, 152, 72],
+      "strengthPerBaseClick": 10,
+      "extraClickStrengthFraction": 0.08,
+      "secondsBeforeShotTrigger": 2.5,
+      "shotCooldownSeconds": 7,
+      "gravityY": -24,
+      "launchAngleDeg": 42
+    },
+    {
+      "v_id": "drift-sprinter",
+      "name": "Drift Sprinter",
+      "mainRgb": [196, 28, 112],
+      "accentRgb": [255, 120, 200],
+      "strengthPerBaseClick": 6,
+      "extraClickStrengthFraction": 0.12,
+      "secondsBeforeShotTrigger": 1.4,
+      "shotCooldownSeconds": 3.5,
+      "gravityY": -20,
+      "launchAngleDeg": 48
+    },
+    {
+      "v_id": "arc-lobber",
+      "name": "Arc Lobber",
+      "mainRgb": [88, 48, 168],
+      "accentRgb": [176, 132, 255],
+      "strengthPerBaseClick": 7,
+      "extraClickStrengthFraction": 0.1,
+      "secondsBeforeShotTrigger": 2.2,
+      "shotCooldownSeconds": 5.5,
+      "gravityY": -21,
+      "launchAngleDeg": 55
+    }
+  ]
+}

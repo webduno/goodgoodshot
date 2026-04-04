@@ -159,13 +159,73 @@ export function goldChipButtonStyle(): CSSProperties {
   };
 }
 
+/** Distinct glass tints for Strength vs No bounce (HUD + toasts). */
+export const POWERUP_SLOT_ACCENT: Record<
+  "strength" | "noBounce",
+  { ready: string; depleted: string; shadow: string }
+> = {
+  strength: {
+    ready:
+      "linear-gradient(165deg, #ffffff 0%, #fff7ed 12%, #fed7aa 38%, #fb923c 62%, #ea580c 100%)",
+    depleted:
+      "linear-gradient(165deg, #edece8 0%, #d4c8bc 100%)",
+    shadow: `${edgeLight}, 0 3px 10px rgba(220, 100, 20, 0.35)`,
+  },
+  noBounce: {
+    ready:
+      "linear-gradient(165deg, #ffffff 0%, #f5f3ff 14%, #ddd6fe 40%, #a78bfa 65%, #7c3aed 100%)",
+    depleted:
+      "linear-gradient(165deg, #edeaf0 0%, #c4b8d4 100%)",
+    shadow: `${edgeLight}, 0 3px 10px rgba(124, 58, 237, 0.32)`,
+  },
+};
+
+/** Toast bubble styling matching the corresponding power-up slot. */
+export function powerupToastAccentStyle(
+  slot: "strength" | "noBounce"
+): Pick<
+  CSSProperties,
+  "color" | "textShadow" | "background" | "border" | "boxShadow"
+> {
+  const a = POWERUP_SLOT_ACCENT[slot];
+  return {
+    color: slot === "strength" ? "#7c2d12" : "#4c1d95",
+    textShadow: "0 1px 0 rgba(255,255,255,0.45)",
+    background: a.ready,
+    border: "1px solid rgba(255,255,255,0.88)",
+    boxShadow: `${edgeLight}, 0 4px 14px ${
+      slot === "strength"
+        ? "rgba(234, 88, 12, 0.28)"
+        : "rgba(124, 58, 237, 0.28)"
+    }`,
+  };
+}
+
 /** One of five compact power-up slots in the aim panel (icon + value). */
 export function powerupSlotStyle(opts: {
   variant: "ready" | "depleted" | "locked";
+  /** When set, ready/depleted use a distinct tint (Strength vs No bounce). */
+  accentSlot?: "strength" | "noBounce";
 }): CSSProperties {
-  const { variant } = opts;
+  const { variant, accentSlot } = opts;
   const locked = variant === "locked";
   const depleted = variant === "depleted";
+  const accent = accentSlot ? POWERUP_SLOT_ACCENT[accentSlot] : null;
+
+  const backgroundImage =
+    locked
+      ? glassDisabled
+      : accent
+        ? depleted
+          ? accent.depleted
+          : accent.ready
+        : depleted
+          ? glassDisabled
+          : glassFace;
+
+  const boxShadow =
+    !locked && !depleted && accent ? accent.shadow : `${edgeLight}, ${dropSm}`;
+
   return {
     ...hudFont,
     ...(locked || depleted ? textOnGlossButtonDisabled : textOnGlossButton),
@@ -180,13 +240,13 @@ export function powerupSlotStyle(opts: {
     padding: "5px 3px",
     borderRadius: 11,
     border: locked || depleted ? "1px solid #9ca8b4" : "1px solid rgba(255,255,255,0.9)",
-    backgroundImage: locked || depleted ? glassDisabled : glassFace,
+    backgroundImage,
     fontSize: 11,
     fontWeight: 700,
     lineHeight: 1,
     cursor: locked ? "not-allowed" : depleted ? "not-allowed" : "pointer",
     opacity: locked ? 0.5 : depleted ? 0.58 : 1,
-    boxShadow: `${edgeLight}, ${dropSm}`,
+    boxShadow,
   };
 }
 

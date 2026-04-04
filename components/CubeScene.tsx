@@ -79,6 +79,11 @@ export default function CubeScene() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
   const [waterToastToken, setWaterToastToken] = useState(0);
+  const [powerupToastToken, setPowerupToastToken] = useState(0);
+  const [powerupToastMessage, setPowerupToastMessage] = useState("");
+  const [powerupToastAccent, setPowerupToastAccent] = useState<
+    "strength" | "noBounce"
+  >("strength");
   const [chargeHud, setChargeHud] = useState<{
     remainingMs: number;
     clicks: number;
@@ -129,6 +134,10 @@ export default function CubeScene() {
         powerupStackRef.current += 1;
         setPowerupStackCount(powerupStackRef.current);
         setStrengthCharges((c) => (c <= 0 ? c : c - 1));
+        const mult = Math.pow(2, powerupStackRef.current);
+        setPowerupToastAccent("strength");
+        setPowerupToastMessage(`"Strength" used (×${mult})`);
+        setPowerupToastToken((t) => t + 1);
         return;
       }
 
@@ -139,6 +148,9 @@ export default function CubeScene() {
         noBounceRef.current = true;
         setNoBounceActive(true);
         setNoBounceCharges((c) => (c <= 0 ? c : c - 1));
+        setPowerupToastAccent("noBounce");
+        setPowerupToastMessage(`"No bounce" used`);
+        setPowerupToastToken((t) => t + 1);
       }
     },
     [shotInFlight, showFinishModal]
@@ -284,6 +296,12 @@ export default function CubeScene() {
         </TeleportOrbitRig>
       </Canvas>
       <ToastNotif showToken={waterToastToken} message="Water hazard" />
+      <ToastNotif
+        showToken={powerupToastToken}
+        message={powerupToastMessage}
+        top={56}
+        accent={powerupToastAccent}
+      />
       <StatsHud
         spawnCenter={game.spawnCenter}
         sessionShots={sessionShots}

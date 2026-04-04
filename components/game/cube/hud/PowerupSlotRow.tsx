@@ -61,6 +61,10 @@ export function PowerupSlotRow({
               }}
               style={powerupSlotStyle({
                 variant: slotReady ? "ready" : "depleted",
+                accentSlot:
+                  slot.id === "strength" || slot.id === "noBounce"
+                    ? slot.id
+                    : undefined,
               })}
             >
               <PowerupHudIcon slotId={slot.id} color="currentColor" />

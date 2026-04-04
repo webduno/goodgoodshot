@@ -16,6 +16,7 @@ import {
 } from "react";
 import * as THREE from "three";
 
+import { TerrainTextured } from "@/components/game/TerrainTextured";
 import { Block } from "@/components/game/cube/meshes/Block";
 import { AimYawPrism } from "@/components/game/cube/meshes/AimYawPrism";
 import { PenaltyPond } from "@/components/game/cube/meshes/PenaltyPond";
@@ -26,7 +27,12 @@ import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
 import { SpawnVisualGroup } from "@/components/game/cube/TeleportOrbitRig";
 import {
   BLOCK_SIZE,
+  FIELD_PLANE_HALF_WIDTH_X,
+  FIELD_PLANE_Z_BEFORE_SPAWN,
+  FIELD_PLANE_Z_PAST_GOAL,
   GOAL_BLOCK_COLOR,
+  GOAL_Z_MAX,
+  TURF_TOP_Y,
   VEHICLE_CORNER_BLOCK_SIZE,
   VEHICLE_WHEEL_FLOOR_Y_EPS,
   VEHICLE_WHEEL_OUTWARD,
@@ -239,8 +245,24 @@ export function SceneContent({
     [aimYawRad]
   );
 
+  const fieldWidth = 2 * (2 * FIELD_PLANE_HALF_WIDTH_X);
+  const z0 = -FIELD_PLANE_Z_BEFORE_SPAWN;
+  const z1 = GOAL_Z_MAX + FIELD_PLANE_Z_PAST_GOAL;
+  const fieldDepth = 2 * (z1 - z0);
+  const fieldZCenter = (z0 + z1) / 2;
+
+  const onTerrainTexturedClick = useCallback((_coords: { lat: number; lng: number }) => {
+    // Reserved for future map / terrain interactions
+  }, []);
+
   return (
     <>
+      <group
+        position={[0, TURF_TOP_Y, fieldZCenter]}
+        scale={[fieldWidth / 120, 1, fieldDepth / 80]}
+      >
+        <TerrainTextured clickedHandler={onTerrainTexturedClick} />
+      </group>
       <SpawnTeePad />
       <SpawnVisualGroup>
         <group rotation={[0, bodyYawRad, 0]}>

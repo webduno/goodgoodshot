@@ -347,7 +347,6 @@ export default function CubeScene() {
       >
         <StaticSceneLights />
         <SkyClouds />
-        <InitialFieldGround />
         <TeleportOrbitRig gameSpawn={game.spawnCenter}>
           <SceneContent
             spawnCenter={game.spawnCenter}
@@ -370,6 +369,8 @@ export default function CubeScene() {
             onCoinCollected={onCoinCollected}
           />
         </TeleportOrbitRig>
+        {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
+        <InitialFieldGround />
       </Canvas>
       <ToastNotif
         showToken={hudToastToken}

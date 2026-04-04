@@ -1,5 +1,5 @@
 "use client";
-import { useTexture, Sphere, Plane } from "@react-three/drei";
+import { useTexture, Plane } from "@react-three/drei";
 
 
 export const TerrainTextured = ({ clickedHandler }: { clickedHandler: (e: any) => void; }) => {
@@ -31,12 +31,18 @@ export const TerrainTextured = ({ clickedHandler }: { clickedHandler: (e: any) =
   };
 
   return (<>
-    <Plane args={[120, 80,64,64]} castShadow onClick={(e: any) => {
+    {/** PlaneGeometry is XY (vertical); rotate to XZ to match `InitialFieldGround`. */}
+    <Plane
+      rotation={[-Math.PI / 2, 0, 0]}
+      args={[120, 80, 64, 64]}
+      castShadow
+      onClick={(e: any) => {
       e.stopPropagation();
       const point = e.point;
       const coords = cartesianToLatLng(point.x, point.y, point.z);
       clickedHandler(coords);
-    }}>
+    }}
+    >
       <meshStandardMaterial map={earth_jpg} 
         color={"#aaaaaa"} 
         displacementScale={60} displacementMap={bump2} />
@@ -75,12 +81,17 @@ export const AvilaTerrainTextured = ({ clickedHandler }: { clickedHandler: (e: a
   };
 
   return (<>
-    <Plane args={[120, 80,64,64]} castShadow onClick={(e: any) => {
+    <Plane
+      rotation={[-Math.PI / 2, 0, 0]}
+      args={[120, 80, 64, 64]}
+      castShadow
+      onClick={(e: any) => {
       e.stopPropagation();
       const point = e.point;
       const coords = cartesianToLatLng(point.x, point.y, point.z);
       clickedHandler(coords);
-    }}>
+    }}
+    >
       <meshStandardMaterial map={earth_jpg} 
         color={"#aaaaaa"} 
         displacementScale={60} displacementMap={bump2} />
@@ -119,12 +130,18 @@ export const MapTerrainTextured = ({ clickedHandler }: { clickedHandler: (e: any
   };
 
   return (<>
-    <Plane args={[120, 80,64,64]} castShadow receiveShadow onClick={(e: any ) => {
+    <Plane
+      rotation={[-Math.PI / 2, 0, 0]}
+      args={[120, 80, 64, 64]}
+      castShadow
+      receiveShadow
+      onClick={(e: any) => {
       e.stopPropagation();
       const point = e.point;
       const coords = cartesianToLatLng(point.x, point.y, point.z);
       clickedHandler(coords);
-    }}>
+    }}
+    >
       <meshStandardMaterial map={earth_jpg} 
       
         // color={"#777777"} 

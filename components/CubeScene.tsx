@@ -1583,7 +1583,7 @@ function HelpModal({
         >
           Help
         </h2>
-        <details open>
+        <details>
           <summary
             style={{
               color: hudColors.value,
@@ -1672,7 +1672,6 @@ function HelpModal({
           </ul>
         </details>
         <details
-          open
           style={{
             marginTop: 14,
           }}

@@ -1581,96 +1581,113 @@ function HelpModal({
             color: hudColors.value,
           }}
         >
-          How to play
+          Help
         </h2>
-        <ul
+        <details open>
+          <summary
+            style={{
+              color: hudColors.value,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginBottom: 8,
+            }}
+          >
+            How to play
+          </summary>
+          <ul
+            style={{
+              margin: 0,
+              paddingLeft: 18,
+              color: hudColors.label,
+              fontSize: 12,
+              lineHeight: 1.55,
+            }}
+          >
+            <li style={{ marginBottom: 8 }}>
+              <strong style={{ color: hudColors.value }}>Aim</strong> — ⇐ / ⇒
+              jump a quarter turn; ← → nudge ({yawDeg.toFixed(0)}° per tap). The
+              white wedge points where the shot goes.
+            </li>
+            <li style={{ marginBottom: 8 }}>
+              <strong style={{ color: hudColors.value }}>Shoot</strong> — Click
+              the spawn block. The first click starts a {chargeSec}s charge
+              window.
+            </li>
+            <li style={{ marginBottom: 8 }}>
+              <strong style={{ color: hudColors.value }}>Power</strong> — Extra
+              clicks in that window add about +
+              {Math.round(vehicle.extraClickStrengthFraction * 100)}% strength
+              each. When the timer ends, the ball launches at {launchDeg.toFixed(0)}
+              ° along your aim.
+            </li>
+            <li style={{ marginBottom: 8 }}>
+              <strong style={{ color: hudColors.value }}>Power-ups</strong> —
+              five slots in the aim panel (left to right). Only{" "}
+              <strong style={{ color: hudColors.value }}>Strength</strong> is
+              available for now.
+              <ul
+                style={{
+                  margin: "8px 0 0",
+                  paddingLeft: 16,
+                  listStyleType: "disc",
+                }}
+              >
+                <li style={{ marginBottom: 6 }}>
+                  <strong style={{ color: hudColors.value }}>Strength</strong>{" "}
+                  (lightning icon) — The number under the icon is how many charges
+                  you have. Each tap multiplies launch strength by 2 for this shot
+                  and spends one charge (you start with {INITIAL_POWERUP_CHARGES}).
+                  Stacks multiply (2×, 4×, 8×, …).
+                </li>
+                <li style={{ marginBottom: 6, opacity: 0.85 }}>
+                  <strong style={{ color: hudColors.value }}>Precision</strong>{" "}
+                  (crosshair icon) — Coming soon: tighter aim so the ball tracks
+                  closer to your wedge direction.
+                </li>
+                <li style={{ marginBottom: 6, opacity: 0.85 }}>
+                  <strong style={{ color: hudColors.value }}>Time</strong> (clock
+                  icon) — Coming soon: briefly extends the charge window.
+                </li>
+                <li style={{ marginBottom: 6, opacity: 0.85 }}>
+                  <strong style={{ color: hudColors.value }}>Magnet</strong> (magnet
+                  icon) — Coming soon: slight pull toward the goal while the ball is
+                  in flight.
+                </li>
+                <li style={{ opacity: 0.85 }}>
+                  <strong style={{ color: hudColors.value }}>Lucky</strong> (star
+                  icon) — Coming soon: random bonus on goal contact or bounce.
+                </li>
+              </ul>
+            </li>
+            <li style={{ marginBottom: 8 }}>
+              <strong style={{ color: hudColors.value }}>Goal</strong> — Hit the
+              green cube to finish the round. If you miss, you get a{" "}
+              {cooldownSec}s cooldown; your spawn moves to where the ball landed.
+            </li>
+            <li>
+              <strong style={{ color: hudColors.value }}>Camera</strong> — Drag to
+              orbit, scroll to zoom.
+            </li>
+          </ul>
+        </details>
+        <details
+          open
           style={{
-            margin: 0,
-            paddingLeft: 18,
-            color: hudColors.label,
-            fontSize: 12,
-            lineHeight: 1.55,
+            marginTop: 14,
           }}
         >
-          <li style={{ marginBottom: 8 }}>
-            <strong style={{ color: hudColors.value }}>Aim</strong> — ⇐ / ⇒
-            jump a quarter turn; ← → nudge ({yawDeg.toFixed(0)}° per tap). The
-            white wedge points where the shot goes.
-          </li>
-          <li style={{ marginBottom: 8 }}>
-            <strong style={{ color: hudColors.value }}>Shoot</strong> — Click
-            the spawn block. The first click starts a {chargeSec}s charge
-            window.
-          </li>
-          <li style={{ marginBottom: 8 }}>
-            <strong style={{ color: hudColors.value }}>Power</strong> — Extra
-            clicks in that window add about +
-            {Math.round(vehicle.extraClickStrengthFraction * 100)}% strength
-            each. When the timer ends, the ball launches at {launchDeg.toFixed(0)}
-            ° along your aim.
-          </li>
-          <li style={{ marginBottom: 8 }}>
-            <strong style={{ color: hudColors.value }}>Power-ups</strong> —
-            five slots in the aim panel (left to right). Only{" "}
-            <strong style={{ color: hudColors.value }}>Strength</strong> is
-            available for now.
-            <ul
-              style={{
-                margin: "8px 0 0",
-                paddingLeft: 16,
-                listStyleType: "disc",
-              }}
-            >
-              <li style={{ marginBottom: 6 }}>
-                <strong style={{ color: hudColors.value }}>Strength</strong>{" "}
-                (lightning icon) — The number under the icon is how many charges
-                you have. Each tap multiplies launch strength by 2 for this shot
-                and spends one charge (you start with {INITIAL_POWERUP_CHARGES}).
-                Stacks multiply (2×, 4×, 8×, …).
-              </li>
-              <li style={{ marginBottom: 6, opacity: 0.85 }}>
-                <strong style={{ color: hudColors.value }}>Precision</strong>{" "}
-                (crosshair icon) — Coming soon: tighter aim so the ball tracks
-                closer to your wedge direction.
-              </li>
-              <li style={{ marginBottom: 6, opacity: 0.85 }}>
-                <strong style={{ color: hudColors.value }}>Time</strong> (clock
-                icon) — Coming soon: briefly extends the charge window.
-              </li>
-              <li style={{ marginBottom: 6, opacity: 0.85 }}>
-                <strong style={{ color: hudColors.value }}>Magnet</strong> (magnet
-                icon) — Coming soon: slight pull toward the goal while the ball is
-                in flight.
-              </li>
-              <li style={{ opacity: 0.85 }}>
-                <strong style={{ color: hudColors.value }}>Lucky</strong> (star
-                icon) — Coming soon: random bonus on goal contact or bounce.
-              </li>
-            </ul>
-          </li>
-          <li style={{ marginBottom: 8 }}>
-            <strong style={{ color: hudColors.value }}>Goal</strong> — Hit the
-            green cube to finish the round. If you miss, you get a{" "}
-            {cooldownSec}s cooldown; your spawn moves to where the ball landed.
-          </li>
-          <li>
-            <strong style={{ color: hudColors.value }}>Camera</strong> — Drag to
-            orbit, scroll to zoom.
-          </li>
-        </ul>
-        <div style={{ marginTop: 14 }}>
-          <div
+          <summary
             style={{
-              fontSize: 10,
-              fontWeight: 600,
-              color: hudColors.label,
+              color: hudColors.value,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
               marginBottom: 8,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
             }}
           >
             Vehicles
-          </div>
+          </summary>
           <div
             style={{
               display: "flex",
@@ -1723,7 +1740,7 @@ function HelpModal({
             Picks the URL query and reloads the page so you start fresh with
             that vehicle&apos;s shot stats.
           </p>
-        </div>
+        </details>
         <button
           type="button"
           onClick={onClose}

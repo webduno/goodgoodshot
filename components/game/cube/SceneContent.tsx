@@ -51,6 +51,7 @@ export function SceneContent({
   onShootStart,
   onProjectileEnd,
   getPowerupMultiplier,
+  getNoBounceActive,
   resetPowerupStack,
 }: {
   spawnCenter: Vec3;
@@ -66,6 +67,7 @@ export function SceneContent({
   onShootStart: () => void;
   onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
   getPowerupMultiplier: () => number;
+  getNoBounceActive: () => boolean;
   resetPowerupStack: () => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -87,6 +89,7 @@ export function SceneContent({
     (clicks: number) => {
       const force =
         launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
+      const noBounceShot = getNoBounceActive();
       resetPowerupStack();
       const horizontalMag = force * Math.cos(vehicle.launchAngleRad);
       const vy = force * Math.sin(vehicle.launchAngleRad);
@@ -100,8 +103,9 @@ export function SceneContent({
         vx: horizontalMag * Math.sin(aimYawRad),
         vy,
         vz: horizontalMag * Math.cos(aimYawRad),
-        bouncesRemaining: vehicle.landingBounces,
+        bouncesRemaining: noBounceShot ? 0 : vehicle.landingBounces,
         rolling: false,
+        allowRoll: !noBounceShot,
       };
       const mesh = meshRef.current;
       if (!mesh) return;
@@ -110,7 +114,15 @@ export function SceneContent({
       mesh.position.set(topX, topY, topZ);
       onShootStart();
     },
-    [aimYawRad, getPowerupMultiplier, onShootStart, resetPowerupStack, spawnCenter, vehicle]
+    [
+      aimYawRad,
+      getNoBounceActive,
+      getPowerupMultiplier,
+      onShootStart,
+      resetPowerupStack,
+      spawnCenter,
+      vehicle,
+    ]
   );
 
   const beginChargeWindow = useCallback(() => {
@@ -118,7 +130,6 @@ export function SceneContent({
     if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
     if (chargeTickRef.current) clearInterval(chargeTickRef.current);
 
-    resetPowerupStack();
     clickCountRef.current = 1;
     chargingRef.current = true;
     chargeEndsAtRef.current = performance.now() + chargeMs;
@@ -151,7 +162,7 @@ export function SceneContent({
       onChargeHudUpdate(null);
       fireProjectile(n);
     }, chargeMs);
-  }, [fireProjectile, onChargeHudUpdate, resetPowerupStack, vehicle]);
+  }, [fireProjectile, onChargeHudUpdate, vehicle]);
 
   const yellowLaneMarkers = useMemo(
     () => laneMarkerCenters(INITIAL_LANE_ORIGIN, goalCenter),

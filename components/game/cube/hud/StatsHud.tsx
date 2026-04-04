@@ -21,8 +21,10 @@ export function StatsHud({
   chargeHud,
   shotInFlight,
   cooldownUntil,
-  powerupCharges,
+  strengthCharges,
+  noBounceCharges,
   powerupStackCount,
+  noBounceActive,
   vehicle,
 }: {
   spawnCenter: Vec3;
@@ -30,8 +32,10 @@ export function StatsHud({
   chargeHud: { remainingMs: number; clicks: number } | null;
   shotInFlight: boolean;
   cooldownUntil: number | null;
-  powerupCharges: number;
+  strengthCharges: number;
+  noBounceCharges: number;
   powerupStackCount: number;
+  noBounceActive: boolean;
   vehicle: PlayerVehicleConfig;
 }) {
   const remainingMs =
@@ -191,6 +195,22 @@ export function StatsHud({
               click
             </span>
           </div>
+          {noBounceActive && (
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 9,
+                lineHeight: 1.35,
+                color: hudColors.label,
+              }}
+            >
+              No bounce / roll{" "}
+              <strong style={{ color: hudColors.accent, fontWeight: 600 }}>
+                on
+              </strong>{" "}
+              for this shot
+            </div>
+          )}
         </div>
       )}
 
@@ -206,14 +226,14 @@ export function StatsHud({
           >
             {(remainingMs / 1000).toFixed(1)}
           </strong>
-          s · Boost left: {powerupCharges}
+          s · Boost left: Str {strengthCharges} · Nb {noBounceCharges}
         </div>
       )}
 
       {!shotInFlight && !inCooldown && !charging && (
         <div
           role="status"
-          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds, ${powerupCharges} boost charges available`}
+          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds, ${strengthCharges} strength charges and ${noBounceCharges} no-bounce charges available`}
           style={{
             ...metricsDivider,
             display: "flex",
@@ -243,10 +263,10 @@ export function StatsHud({
               gap: 4,
               fontVariantNumeric: "tabular-nums",
             }}
-            title="Boost charges left"
+            title="Boost charges left (strength / no-bounce)"
           >
             <HudIdleBoltIcon color={hudColors.accent} />
-            {powerupCharges}
+            {strengthCharges}/{noBounceCharges}
           </span>
         </div>
       )}

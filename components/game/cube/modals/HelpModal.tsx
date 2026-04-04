@@ -106,9 +106,13 @@ export function HelpModal({
             </li>
             <li style={{ marginBottom: 8 }}>
               <strong style={{ color: hudColors.value }}>Power-ups</strong> —
-              five slots in the aim panel (left to right). Only{" "}
-              <strong style={{ color: hudColors.value }}>Strength</strong> is
-              available for now.
+              use the <strong style={{ color: hudColors.value }}>Power-ups</strong>{" "}
+              chip above the aim row when you are not charging to pick boosts before
+              your first click; the same slots also appear during the charge
+              window. Five slots (left to right):{" "}
+              <strong style={{ color: hudColors.value }}>Strength</strong> and{" "}
+              <strong style={{ color: hudColors.value }}>No bounce</strong> are
+              available; the rest are coming later.
               <ul
                 style={{
                   margin: "8px 0 0",
@@ -118,15 +122,20 @@ export function HelpModal({
               >
                 <li style={{ marginBottom: 6 }}>
                   <strong style={{ color: hudColors.value }}>Strength</strong>{" "}
-                  (lightning icon) — The number under the icon is how many charges
-                  you have. Each tap multiplies launch strength by 2 for this shot
-                  and spends one charge (you start with {INITIAL_POWERUP_CHARGES}).
-                  Stacks multiply (2×, 4×, 8×, …).
+                  (lightning icon) — The number under the icon is your{" "}
+                  <strong style={{ color: hudColors.value }}>strength</strong>{" "}
+                  charges only. Each tap multiplies launch strength by 2 for this
+                  shot and spends one strength charge (you start with{" "}
+                  {INITIAL_POWERUP_CHARGES}). Stacks multiply (2×, 4×, 8×, …).
                 </li>
-                <li style={{ marginBottom: 6, opacity: 0.85 }}>
-                  <strong style={{ color: hudColors.value }}>Precision</strong>{" "}
-                  (crosshair icon) — Coming soon: tighter aim so the ball tracks
-                  closer to your wedge direction.
+                <li style={{ marginBottom: 6 }}>
+                  <strong style={{ color: hudColors.value }}>No bounce</strong>{" "}
+                  (ball + floor line) — Uses a separate{" "}
+                  <strong style={{ color: hudColors.value }}>no-bounce</strong>{" "}
+                  pool (same starting count). One tap before the shot spends one
+                  no-bounce charge and removes bounces and rolling for that shot:
+                  the ball stops where it first touches the ground (no rebound, no
+                  roll-out).
                 </li>
                 <li style={{ marginBottom: 6, opacity: 0.85 }}>
                   <strong style={{ color: hudColors.value }}>Time</strong> (clock

@@ -8,27 +8,30 @@ import {
 
 import {
   hudFont,
-  powerupSlotStyle,
   progressFillStyle,
   progressTrack,
 } from "@/components/gameHudStyles";
 
-import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
-import { POWERUP_SLOTS } from "@/lib/game/constants";
+import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
+import type { PowerupSlotId } from "@/lib/game/types";
 
 export function ShotHud({
   shotInFlight,
   cooldownUntil,
   chargeHud,
-  powerupCharges,
+  strengthCharges,
+  noBounceCharges,
+  noBounceActive,
   onPowerup,
   vehicle,
 }: {
   shotInFlight: boolean;
   cooldownUntil: number | null;
   chargeHud: { remainingMs: number; clicks: number } | null;
-  powerupCharges: number;
-  onPowerup: () => void;
+  strengthCharges: number;
+  noBounceCharges: number;
+  noBounceActive: boolean;
+  onPowerup: (slotId: PowerupSlotId) => void;
   vehicle: PlayerVehicleConfig;
 }) {
   const chargeMs = vehicleChargeMs(vehicle);
@@ -41,8 +44,10 @@ export function ShotHud({
   const charging = chargeHud !== null;
   const chargeProgress =
     charging && chargeMs > 0 ? chargeHud.remainingMs / chargeMs : 0;
-  const canUsePowerup =
-    charging && !shotInFlight && powerupCharges > 0;
+  const canUseStrength =
+    charging && !shotInFlight && strengthCharges > 0;
+  const canUseNoBounce =
+    charging && !shotInFlight && noBounceCharges > 0 && !noBounceActive;
 
   if (charging && !shotInFlight && chargeHud) {
     return (
@@ -67,55 +72,13 @@ export function ShotHud({
             gap: 4,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "stretch",
-              gap: 4,
-              width: "100%",
-            }}
-          >
-            {POWERUP_SLOTS.map((slot) => {
-              if (slot.implemented) {
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    aria-label={`${slot.name}: multiply strength by 2 for this shot (${powerupCharges} charges left)`}
-                    title={`${slot.name}: ×2 per tap · ${powerupCharges} charge${powerupCharges === 1 ? "" : "s"}`}
-                    disabled={!canUsePowerup}
-                    onClick={onPowerup}
-                    style={powerupSlotStyle({
-                      variant: canUsePowerup ? "ready" : "depleted",
-                    })}
-                  >
-                    <PowerupHudIcon slotId={slot.id} color="currentColor" />
-                    <span
-                      style={{
-                        fontVariantNumeric: "tabular-nums",
-                        fontSize: 11,
-                        lineHeight: 1,
-                      }}
-                    >
-                      {powerupCharges}
-                    </span>
-                  </button>
-                );
-              }
-              return (
-                <button
-                  key={slot.id}
-                  type="button"
-                  aria-label={`${slot.name}: not available yet`}
-                  title={`${slot.name} — coming soon`}
-                  disabled
-                  style={powerupSlotStyle({ variant: "locked" })}
-                >
-                  <PowerupHudIcon slotId={slot.id} color="currentColor" />
-                </button>
-              );
-            })}
-          </div>
+          <PowerupSlotRow
+            strengthCharges={strengthCharges}
+            noBounceCharges={noBounceCharges}
+            canUseStrength={canUseStrength}
+            canUseNoBounce={canUseNoBounce}
+            onPowerup={onPowerup}
+          />
         </div>
         <div style={{ ...progressTrack, overflow: "hidden" }}>
           <div style={progressFillStyle(chargeProgress, "charge")} />

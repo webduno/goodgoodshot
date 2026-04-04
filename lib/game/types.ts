@@ -43,6 +43,8 @@ export type Projectile = {
   bouncesRemaining: number;
   /** Sliding/rolling on the floor with horizontal friction (no gravity). */
   rolling: boolean;
+  /** If false, first ground contact ends the shot (no roll phase). */
+  allowRoll: boolean;
 };
 
 export type PowerupSlotId = (typeof POWERUP_SLOTS)[number]["id"];

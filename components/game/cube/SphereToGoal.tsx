@@ -193,7 +193,11 @@ export function SphereToGoal({
     }
 
     const hPlan = Math.hypot(p.vx, p.vz);
-    if (rollDeceleration > 0 && hPlan > ROLL_STOP_SPEED) {
+    if (
+      p.allowRoll &&
+      rollDeceleration > 0 &&
+      hPlan > ROLL_STOP_SPEED
+    ) {
       p.x = landingX;
       p.y = FLOOR_CONTACT_CENTER_Y;
       p.z = landingZ;

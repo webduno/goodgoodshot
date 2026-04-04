@@ -101,13 +101,13 @@ export const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 export const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
 export const FIELD_GROUND_MUTED_GREEN = "#3a9d4a";
 
-/** Starting inventory; each strength power-up use doubles launch for that shot (stacks: 2×, 4×, …). */
+/** Starting charges per power-up type (Strength and No bounce each have their own pool). */
 export const INITIAL_POWERUP_CHARGES = 2;
 
-/** Five power-up slots (only the first is implemented; order is fixed in the HUD). */
+/** Five power-up slots (Strength + No bounce implemented; order is fixed in the HUD). */
 export const POWERUP_SLOTS = [
   { id: "strength", name: "Strength", implemented: true },
-  { id: "precision", name: "Precision", implemented: false },
+  { id: "noBounce", name: "No bounce", implemented: true },
   { id: "time", name: "Time", implemented: false },
   { id: "magnet", name: "Magnet", implemented: false },
   { id: "lucky", name: "Lucky", implemented: false },

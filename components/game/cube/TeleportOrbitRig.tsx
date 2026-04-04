@@ -16,6 +16,7 @@ import {
   CAMERA_OFFSET_FROM_SPAWN,
   ORBIT_TARGET_Y_OFFSET,
   TELEPORT_DURATION_SEC,
+  TURF_TOP_Y,
 } from "@/lib/game/constants";
 import { sameVec3 } from "@/lib/game/math";
 import type { Vec3 } from "@/lib/game/types";
@@ -23,6 +24,19 @@ import type { Vec3 } from "@/lib/game/types";
 const VisualSpawnContext = createContext<MutableRefObject<THREE.Vector3> | null>(
   null
 );
+
+/** Keep orbit camera above the visible grass plane (`InitialFieldGround` top). */
+const ORBIT_MIN_Y = TURF_TOP_Y + 0.22;
+
+function clampCameraAboveGround(
+  cam: THREE.Camera,
+  target: THREE.Vector3
+) {
+  if (cam.position.y < ORBIT_MIN_Y) {
+    cam.position.y = ORBIT_MIN_Y;
+    cam.lookAt(target);
+  }
+}
 
 export function SpawnVisualGroup({ children }: { children: ReactNode }) {
   const visualRef = useContext(VisualSpawnContext);
@@ -87,6 +101,7 @@ export function TeleportOrbitRig({
       controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
       visualRef.current.set(sx, sy, sz);
       controls.update();
+      clampCameraAboveGround(camera, controls.target);
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
       prevGameRef.current = [sx, sy, sz];
@@ -117,6 +132,7 @@ export function TeleportOrbitRig({
         .copy(tgtStartRef.current)
         .addScaledVector(deltaVRef.current, t);
       controls.update();
+      clampCameraAboveGround(camera, controls.target);
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
       if (t >= 1) {
@@ -124,9 +140,11 @@ export function TeleportOrbitRig({
         visualRef.current.copy(toRef.current);
         controls.enabled = true;
         controls.update();
+        clampCameraAboveGround(camera, controls.target);
       }
     } else {
       controls.update();
+      clampCameraAboveGround(camera, controls.target);
     }
   });
 

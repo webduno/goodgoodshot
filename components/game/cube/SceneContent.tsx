@@ -14,6 +14,7 @@ import { Block } from "@/components/game/cube/meshes/Block";
 import { AimYawPrism } from "@/components/game/cube/meshes/AimYawPrism";
 import { PenaltyPond } from "@/components/game/cube/meshes/PenaltyPond";
 import { SpawnTeePad } from "@/components/game/cube/meshes/SpawnTeePad";
+import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
 import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
 import { SpawnVisualGroup } from "@/components/game/cube/TeleportOrbitRig";
@@ -181,8 +182,7 @@ export function SceneContent({
   );
 
   const half = BLOCK_SIZE / 2;
-  const w = VEHICLE_CORNER_BLOCK_SIZE;
-  const wh = 0 ;
+  const wh = 0;
   /** Wheel center Y: bottom at −half + eps (flush with / just above green plane at y = −half). */
   const wheelCenterY = -half + wh + VEHICLE_WHEEL_FLOOR_Y_EPS;
   /** Axis distance so inner wheel face sits past the vehicle hull (+ outward gap). */
@@ -202,14 +202,24 @@ export function SceneContent({
     <>
       <SpawnTeePad />
       <SpawnVisualGroup>
-        <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
-          <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
-          <meshStandardMaterial
-            color={bodyColor}
-            roughness={0.32}
-            metalness={0.2}
-          />
-        </mesh>
+        {vehicle.bodyParts != null && vehicle.bodyParts.length > 0 ? (
+          <group onPointerDown={onSpawnPointerDown}>
+            <VehicleBodyParts
+              parts={vehicle.bodyParts}
+              mainRgb={vehicle.mainRgb}
+              accentRgb={vehicle.accentRgb}
+            />
+          </group>
+        ) : (
+          <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
+            <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
+            <meshStandardMaterial
+              color={bodyColor}
+              roughness={0.32}
+              metalness={0.2}
+            />
+          </mesh>
+        )}
         {vehicleCornerOffsets.map((pos, i) => (
           <VehicleCornerBlock
             key={`wheel-${i}`}

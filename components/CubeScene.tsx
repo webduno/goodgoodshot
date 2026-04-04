@@ -7,6 +7,7 @@ import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
+import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SceneContent } from "@/components/game/cube/SceneContent";
 import {
   TeleportOrbitRig,
@@ -179,6 +180,7 @@ export default function CubeScene() {
         shadows="soft"
       >
         <StaticSceneLights />
+        <SkyClouds />
         <InitialFieldGround />
         <TeleportOrbitRig gameSpawn={game.spawnCenter}>
           <SceneContent

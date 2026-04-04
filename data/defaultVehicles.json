@@ -13,7 +13,15 @@
       "launchAngleDeg": 48,
       "landingBounces": 1,
       "bounceRestitution": 0.52,
-      "rollDeceleration": 9
+      "rollDeceleration": 9,
+      "bodyParts": [
+        { "type": "cube", "pos": [0, 0, 0], "size": [1, 1, 1], "color": "main" },
+        { "type": "cube", "pos": [0, -0.16, 0.52], "size": [0.56, 0.16, 0.06], "color": [52, 100, 150] },
+        { "type": "cube", "pos": [-0.21, 0.12, 0.52], "size": [0.22, 0.22, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [0.21, 0.12, 0.52], "size": [0.22, 0.22, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [-0.14, 0.06, 0.55], "size": [0.07, 0.07, 0.04], "color": [24, 24, 28], "polygonOffset": true },
+        { "type": "cube", "pos": [0.14, 0.06, 0.55], "size": [0.07, 0.07, 0.04], "color": [24, 24, 28], "polygonOffset": true }
+      ]
     },
     {
       "v_id": "scrap-crawler",
@@ -28,7 +36,33 @@
       "launchAngleDeg": 35,
       "landingBounces": 0,
       "bounceRestitution": 0.42,
-      "rollDeceleration": 14
+      "rollDeceleration": 14,
+      "bodyParts": [
+        { "type": "cube", "pos": [0, 0.02, 0], "size": [0.72, 0.52, 0.76], "color": "main" },
+        { "type": "cube", "pos": [0, -0.14, 0.42], "size": [0.48, 0.2, 0.14], "color": [118, 112, 108] },
+        { "type": "cube", "pos": [-0.1, 0.09, 0.38], "size": [0.12, 0.12, 0.06], "color": [255, 255, 255] },
+        { "type": "cube", "pos": [0.1, 0.09, 0.38], "size": [0.12, 0.12, 0.06], "color": [255, 255, 255] },
+        { "type": "cube", "pos": [-0.07, 0.04, 0.41], "size": [0.035, 0.035, 0.04], "color": [24, 24, 28] },
+        { "type": "cube", "pos": [0.07, 0.04, 0.41], "size": [0.035, 0.035, 0.04], "color": [24, 24, 28] },
+        { "type": "cube", "pos": [-0.1, -0.16, 0.41], "size": [0.06, 0.12, 0.04], "color": [72, 72, 76] },
+        { "type": "cube", "pos": [0, -0.16, 0.41], "size": [0.06, 0.12, 0.04], "color": [72, 72, 76] },
+        { "type": "cube", "pos": [0.1, -0.16, 0.41], "size": [0.06, 0.12, 0.04], "color": [72, 72, 76] },
+        { "type": "cylinder", "pos": [0, 0.3, 0], "size": [0.16, 0.09, 6], "color": "main" },
+        { "type": "cylinder", "pos": [0, 0.34, 0.2], "size": [0.1, 0.38, 6], "rotDeg": [-90, 0, 0], "color": [128, 126, 124] },
+        { "type": "cylinder", "pos": [0, 0.34, 0.38], "size": [0.05, 0.04, 6], "rotDeg": [-90, 0, 0], "color": [20, 20, 24] },
+        { "type": "cylinder", "pos": [-0.14, 0.34, -0.22], "size": [0.05, 0.24, 5], "rotDeg": [48, 0, -22], "color": [120, 118, 116] },
+        { "type": "cylinder", "pos": [0.14, 0.34, -0.22], "size": [0.05, 0.24, 5], "rotDeg": [48, 0, 22], "color": [120, 118, 116] },
+        { "type": "cube", "pos": [-0.4, 0.08, 0.02], "size": [0.08, 0.22, 0.36], "rotDeg": [0, 0, 12], "color": [110, 106, 102] },
+        { "type": "cube", "pos": [0.4, 0.08, 0.02], "size": [0.08, 0.22, 0.36], "rotDeg": [0, 0, -12], "color": [110, 106, 102] },
+        { "type": "cube", "pos": [-0.32, -0.22, -0.32], "size": [0.12, 0.14, 0.12], "color": "main" },
+        { "type": "cube", "pos": [0.32, -0.22, -0.32], "size": [0.12, 0.14, 0.12], "color": "main" },
+        { "type": "cube", "pos": [-0.32, -0.22, 0.32], "size": [0.12, 0.14, 0.12], "color": "main" },
+        { "type": "cube", "pos": [0.32, -0.22, 0.32], "size": [0.12, 0.14, 0.12], "color": "main" },
+        { "type": "cube", "pos": [-0.32, -0.36, -0.34], "size": [0.14, 0.06, 0.16], "color": [108, 106, 104] },
+        { "type": "cube", "pos": [0.32, -0.36, -0.34], "size": [0.14, 0.06, 0.16], "color": [108, 106, 104] },
+        { "type": "cube", "pos": [-0.32, -0.36, 0.34], "size": [0.14, 0.06, 0.16], "color": [108, 106, 104] },
+        { "type": "cube", "pos": [0.32, -0.36, 0.34], "size": [0.14, 0.06, 0.16], "color": [108, 106, 104] }
+      ]
     },
     {
       "v_id": "drift-sprinter",
@@ -43,7 +77,27 @@
       "launchAngleDeg": 62,
       "landingBounces": 3,
       "bounceRestitution": 0.58,
-      "rollDeceleration": 5.5
+      "rollDeceleration": 5.5,
+      "bodyParts": [
+        { "type": "cube", "pos": [0, -0.05, 0.02], "size": [0.88, 0.28, 0.82], "color": "main" },
+        { "type": "cube", "pos": [0, -0.02, 0.44], "size": [0.55, 0.18, 0.16], "rotDeg": [-8, 0, 0], "color": "accent" },
+        { "type": "cube", "pos": [0, 0.06, -0.38], "size": [0.72, 0.08, 0.22], "color": [48, 44, 52] },
+        { "type": "cube", "pos": [-0.38, 0.12, -0.42], "size": [0.12, 0.04, 0.2], "rotDeg": [0, 0, -18], "color": "accent" },
+        { "type": "cube", "pos": [0.38, 0.12, -0.42], "size": [0.12, 0.04, 0.2], "rotDeg": [0, 0, 18], "color": "accent" },
+        { "type": "cylinder", "pos": [0, 0.14, 0], "size": [0.09, 0.06, 6], "color": [64, 60, 68] },
+        { "type": "sphere", "pos": [-0.36, -0.12, 0], "size": [0.11, 5, 4], "color": "accent" },
+        { "type": "sphere", "pos": [0.36, -0.12, 0], "size": [0.11, 5, 4], "color": "accent" },
+        { "type": "sphere", "pos": [-0.36, -0.12, 0.28], "size": [0.1, 5, 4], "color": "accent" },
+        { "type": "sphere", "pos": [0.36, -0.12, 0.28], "size": [0.1, 5, 4], "color": "accent" },
+        { "type": "cube", "pos": [0, -0.18, 0], "size": [0.92, 0.06, 0.86], "color": [40, 36, 44] },
+        { "type": "cube", "pos": [-0.46, -0.02, 0], "size": [0.04, 0.2, 0.5], "color": [56, 52, 60] },
+        { "type": "cube", "pos": [0.46, -0.02, 0], "size": [0.04, 0.2, 0.5], "color": [56, 52, 60] },
+        { "type": "cube", "pos": [-0.15, 0.06, 0.54], "size": [0.22, 0.11, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [0.15, 0.06, 0.54], "size": [0.22, 0.11, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [-0.1, 0.03, 0.57], "size": [0.055, 0.045, 0.04], "color": [24, 24, 28], "polygonOffset": true },
+        { "type": "cube", "pos": [0.1, 0.03, 0.57], "size": [0.055, 0.045, 0.04], "color": [24, 24, 28], "polygonOffset": true },
+        { "type": "cube", "pos": [0, -0.08, 0.54], "size": [0.48, 0.1, 0.06], "color": [52, 48, 56], "polygonOffset": true }
+      ]
     },
     {
       "v_id": "arc-lobber",
@@ -58,7 +112,27 @@
       "launchAngleDeg": 75,
       "landingBounces": 2,
       "bounceRestitution": 0.5,
-      "rollDeceleration": 7.5
+      "rollDeceleration": 7.5,
+      "bodyParts": [
+        { "type": "cube", "pos": [0, -0.12, 0], "size": [0.92, 0.32, 0.88], "color": [72, 40, 120] },
+        { "type": "cube", "pos": [0, 0.08, 0], "size": [0.78, 0.2, 0.72], "color": "main" },
+        { "type": "sphere", "pos": [0, 0.3, 0], "size": [0.34, 7, 5], "color": "accent" },
+        { "type": "cylinder", "pos": [0, -0.02, 0], "size": [0.48, 0.06, 8], "rotDeg": [-90, 0, 0], "color": [96, 72, 140] },
+        { "type": "cylinder", "pos": [0, 0.96, 0], "size": [0.065, 0.62, 6], "color": [176, 132, 255] },
+        { "type": "cylinder", "pos": [0, 0.3, 0.36], "size": [0.045, 0.06, 5], "rotDeg": [-90, 0, 0], "color": [32, 28, 48] },
+        { "type": "cylinder", "pos": [-0.34, 0.06, -0.12], "size": [0.07, 0.42, 5], "rotDeg": [0, 0, 18], "color": [140, 110, 200] },
+        { "type": "cylinder", "pos": [0.34, 0.06, -0.12], "size": [0.07, 0.42, 5], "rotDeg": [0, 0, -18], "color": [140, 110, 200] },
+        { "type": "cube", "pos": [-0.44, -0.02, 0.2], "size": [0.1, 0.24, 0.16], "color": [100, 80, 160] },
+        { "type": "cube", "pos": [0.44, -0.02, 0.2], "size": [0.1, 0.24, 0.16], "color": [100, 80, 160] },
+        { "type": "cube", "pos": [-0.44, -0.02, -0.2], "size": [0.1, 0.24, 0.16], "color": [100, 80, 160] },
+        { "type": "cube", "pos": [0.44, -0.02, -0.2], "size": [0.1, 0.24, 0.16], "color": [100, 80, 160] },
+        { "type": "cube", "pos": [0, -0.22, 0.36], "size": [0.35, 0.08, 0.12], "color": [60, 44, 100] },
+        { "type": "cube", "pos": [-0.12, 0.11, 0.42], "size": [0.13, 0.2, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [0.12, 0.11, 0.42], "size": [0.13, 0.2, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [-0.09, 0.05, 0.45], "size": [0.04, 0.06, 0.04], "color": [24, 24, 28], "polygonOffset": true },
+        { "type": "cube", "pos": [0.09, 0.05, 0.45], "size": [0.04, 0.06, 0.04], "color": [24, 24, 28], "polygonOffset": true },
+        { "type": "cube", "pos": [0, -0.04, 0.42], "size": [0.42, 0.12, 0.08], "color": [52, 40, 88], "polygonOffset": true }
+      ]
     }
   ]
 }

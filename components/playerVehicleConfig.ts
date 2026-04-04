@@ -7,6 +7,22 @@ import defaultVehiclesJson from "@/data/defaultVehicles.json";
 /** [r, g, b] in 0–255 — used for UI and theming. */
 export type RgbTuple = readonly [number, number, number];
 
+/**
+ * Single primitive in a composite vehicle mesh (local space; origin = spawn block center).
+ * - `cube`: `size` = width, height, depth.
+ * - `cylinder`: `size` = [radius, height, radialSegments] (Y-up; rotate group to aim barrel).
+ * - `sphere`: `size` = [radius, widthSegments, heightSegments] (low-poly).
+ */
+export type VehicleBodyPart = {
+  type: "cube" | "cylinder" | "sphere";
+  pos: readonly [number, number, number];
+  size: readonly [number, number, number];
+  rotDeg?: readonly [number, number, number];
+  color?: "main" | "accent" | RgbTuple;
+  /** Pull forward slightly in depth to avoid z-fighting with overlapping hulls. */
+  polygonOffset?: boolean;
+};
+
 type JsonVehicle = {
   v_id: string;
   name: string;
@@ -31,6 +47,8 @@ type JsonVehicle = {
    * Horizontal speed loss while rolling on the ground (world units/s²). 0 = no roll; ball stops on final touch.
    */
   rollDeceleration?: number;
+  /** Composite hull; omit or empty only for the default single-box vehicle. */
+  bodyParts?: VehicleBodyPart[];
 };
 
 type DefaultVehiclesFile = {
@@ -59,6 +77,8 @@ export type PlayerVehicleConfig = {
   bounceRestitution: number;
   /** Ground roll: magnitude deceleration on horizontal velocity (0 = none). */
   rollDeceleration: number;
+  /** Composite primitives; when missing/empty and id is `default`, scene uses one box. */
+  bodyParts: readonly VehicleBodyPart[] | undefined;
 };
 
 export function rgbTupleToCss(rgb: RgbTuple): string {
@@ -84,10 +104,11 @@ function jsonVehicleToConfig(entry: JsonVehicle): PlayerVehicleConfig {
     landingBounces: entry.landingBounces ?? DEFAULT_LANDING_BOUNCES,
     bounceRestitution: entry.bounceRestitution ?? DEFAULT_BOUNCE_RESTITUTION,
     rollDeceleration: entry.rollDeceleration ?? DEFAULT_ROLL_DECELERATION,
+    bodyParts: entry.bodyParts,
   };
 }
 
-const data = defaultVehiclesJson as DefaultVehiclesFile;
+const data = defaultVehiclesJson as unknown as DefaultVehiclesFile;
 
 const byVId = new Map<string, PlayerVehicleConfig>();
 for (const row of data.vehicles) {

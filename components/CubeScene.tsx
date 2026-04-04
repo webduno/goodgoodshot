@@ -1,8 +1,10 @@
 "use client";
 
 import { ToastNotif } from "@/components/ToastNotif";
+import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
+import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
 import { ShotHud } from "@/components/game/cube/hud/ShotHud";
@@ -45,6 +47,7 @@ import {
 } from "react";
 
 export default function CubeScene() {
+  const { recordHoleCompleted } = usePlayerStats();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
   const playerVehicle = useMemo(
@@ -73,6 +76,7 @@ export default function CubeScene() {
   const [sessionShots, setSessionShots] = useState(0);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
   const [waterToastToken, setWaterToastToken] = useState(0);
   const [chargeHud, setChargeHud] = useState<{
@@ -80,6 +84,14 @@ export default function CubeScene() {
     clicks: number;
   } | null>(null);
   const [, setHudTick] = useState(0);
+
+  const gameRef = useRef(game);
+  gameRef.current = game;
+  const sessionShotsRef = useRef(sessionShots);
+  sessionShotsRef.current = sessionShots;
+  const strengthUsesRoundRef = useRef(0);
+  const noBounceUsesRoundRef = useRef(0);
+  const waterPenaltiesRoundRef = useRef(0);
 
   const powerupStackRef = useRef(0);
   const noBounceRef = useRef(false);
@@ -113,6 +125,7 @@ export default function CubeScene() {
 
       if (slotId === "strength") {
         if (strengthChargesRef.current <= 0) return;
+        strengthUsesRoundRef.current += 1;
         powerupStackRef.current += 1;
         setPowerupStackCount(powerupStackRef.current);
         setStrengthCharges((c) => (c <= 0 ? c : c - 1));
@@ -122,6 +135,7 @@ export default function CubeScene() {
       if (slotId === "noBounce") {
         if (noBounceRef.current) return;
         if (noBounceChargesRef.current <= 0) return;
+        noBounceUsesRoundRef.current += 1;
         noBounceRef.current = true;
         setNoBounceActive(true);
         setNoBounceCharges((c) => (c <= 0 ? c : c - 1));
@@ -147,6 +161,7 @@ export default function CubeScene() {
     (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => {
       setShotInFlight(false);
       if (outcome === "penalty") {
+        waterPenaltiesRoundRef.current += 1;
         setWaterToastToken((t) => t + 1);
         dispatch({
           type: "PROJECTILE_END",
@@ -154,6 +169,19 @@ export default function CubeScene() {
           revertSpawn: [...spawnBeforeShotRef.current] as Vec3,
         });
       } else {
+        if (outcome === "hit") {
+          const g = gameRef.current;
+          recordHoleCompleted({
+            vehicleId: playerVehicle.id,
+            shots: sessionShotsRef.current,
+            ponds: g.ponds,
+            goalWorldX: g.goalWorldX,
+            goalWorldZ: g.goalWorldZ,
+            strengthUses: strengthUsesRoundRef.current,
+            noBounceUses: noBounceUsesRoundRef.current,
+            waterPenaltiesThisRound: waterPenaltiesRoundRef.current,
+          });
+        }
         dispatch({
           type: "PROJECTILE_END",
           outcome,
@@ -166,7 +194,7 @@ export default function CubeScene() {
       }
       setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
     },
-    [playerVehicle]
+    [playerVehicle, recordHoleCompleted]
   );
 
   useEffect(() => {
@@ -181,7 +209,10 @@ export default function CubeScene() {
   }, [cooldownUntil]);
 
   useEffect(() => {
-    if (showFinishModal) setShowHelpModal(false);
+    if (showFinishModal) {
+      setShowHelpModal(false);
+      setShowProfileModal(false);
+    }
   }, [showFinishModal]);
 
   useEffect(() => {
@@ -205,6 +236,15 @@ export default function CubeScene() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [showPowerupMenu]);
+
+  useEffect(() => {
+    if (!showProfileModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowProfileModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showProfileModal]);
 
   return (
     <div
@@ -257,20 +297,39 @@ export default function CubeScene() {
         vehicle={playerVehicle}
       />
       {!showFinishModal && (
-        <button
-          type="button"
-          aria-label="Open help"
-          onClick={() => setShowHelpModal(true)}
+        <div
           style={{
             position: "absolute",
             top: 12,
             right: 12,
             zIndex: 42,
-            ...goldChipButtonStyle(),
+            display: "flex",
+            gap: 8,
           }}
         >
-          Help
-        </button>
+          <button
+            type="button"
+            aria-label="Open menu"
+            onClick={() => {
+              setShowProfileModal(false);
+              setShowHelpModal(true);
+            }}
+            style={goldChipButtonStyle()}
+          >
+            Menu
+          </button>
+          <button
+            type="button"
+            aria-label="Open profile"
+            onClick={() => {
+              setShowHelpModal(false);
+              setShowProfileModal(true);
+            }}
+            style={goldChipButtonStyle()}
+          >
+            Profile
+          </button>
+        </div>
       )}
       {!showFinishModal && (
         <div
@@ -385,6 +444,10 @@ export default function CubeScene() {
         open={showHelpModal}
         onClose={() => setShowHelpModal(false)}
         vehicle={playerVehicle}
+      />
+      <ProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
       />
     </div>
   );

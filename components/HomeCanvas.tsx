@@ -1,5 +1,6 @@
 "use client";
 
+import { PlayerStatsProvider } from "@/components/PlayerStatsProvider";
 import dynamic from "next/dynamic";
 
 const CubeScene = dynamic(() => import("@/components/CubeScene"), {
@@ -22,5 +23,9 @@ const CubeScene = dynamic(() => import("@/components/CubeScene"), {
 });
 
 export function HomeCanvas() {
-  return <CubeScene />;
+  return (
+    <PlayerStatsProvider>
+      <CubeScene />
+    </PlayerStatsProvider>
+  );
 }

@@ -47,7 +47,7 @@ export function HelpModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="help-title"
+      aria-labelledby="menu-title"
       style={modalBackdrop}
       onClick={onClose}
     >
@@ -56,7 +56,7 @@ export function HelpModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2
-          id="help-title"
+          id="menu-title"
           style={{
             margin: "0 0 10px",
             fontSize: 16,
@@ -64,7 +64,7 @@ export function HelpModal({
             color: hudColors.value,
           }}
         >
-          Help
+          Menu
         </h2>
         <details>
           <summary

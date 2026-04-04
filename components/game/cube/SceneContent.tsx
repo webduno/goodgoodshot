@@ -298,22 +298,27 @@ export function SceneContent({
         if (collectedCoinKeysRef.current.has(ck)) return null;
         return (
           <group key={`lane-coin-${i}-${ck}`} position={[...center]}>
-            <mesh castShadow receiveShadow>
-              <cylinderGeometry args={[0.42, 0.42, 0.07, 40]} />
-              <meshStandardMaterial
-                color="#e8c547"
-                roughness={0.28}
-                metalness={0.88}
-              />
-            </mesh>
-            <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.036, 0]}>
-              <torusGeometry args={[0.44, 0.028, 10, 40]} />
-              <meshStandardMaterial
-                color="#c9a227"
-                roughness={0.35}
-                metalness={0.75}
-              />
-            </mesh>
+            {/** Y-up cylinder → rotate so axis is horizontal: coin stands on edge (vertical faces). */}
+            <group rotation={[Math.PI / 2, 0, 0]}>
+              <mesh castShadow receiveShadow>
+                <cylinderGeometry args={[0.42, 0.42, 0.07, 40]} />
+                <meshStandardMaterial
+                  color="#e8c547"
+                  roughness={0.28}
+                  metalness={0.88}
+                />
+              </mesh>
+              {/*
+              <mesh position={[0, 0.036, 0]} castShadow receiveShadow>
+                <torusGeometry args={[0.44, 0.028, 10, 40]} />
+                <meshStandardMaterial
+                  color="#c9a227"
+                  roughness={0.35}
+                  metalness={0.75}
+                />
+              </mesh>
+              */}
+            </group>
           </group>
         );
       })}

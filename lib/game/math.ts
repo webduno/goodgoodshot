@@ -13,6 +13,16 @@ export function wrapYawRad(a: number): number {
   return THREE.MathUtils.euclideanModulo(a + Math.PI, Math.PI * 2) - Math.PI;
 }
 
+/**
+ * Vehicle body yaw in 90° steps so hull forward stays within ±45° of world aim
+ * (turret can point farther until the body snaps to the next side).
+ */
+export function bodyYawQuarterSnappedFromWorldAim(aimYawRad: number): number {
+  const quarter = Math.PI / 2;
+  const k = Math.round(aimYawRad / quarter);
+  return wrapYawRad(k * quarter);
+}
+
 export function spawnTopYFromBlockCenterY(blockCenterY: number): number {
   return blockCenterY + BLOCK_SIZE / 2 + SPHERE_RADIUS;
 }

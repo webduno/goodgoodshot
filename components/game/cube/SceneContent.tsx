@@ -28,6 +28,7 @@ import {
 } from "@/lib/game/constants";
 import {
   aimPrismLengthForStrength,
+  bodyYawQuarterSnappedFromWorldAim,
   spawnTopYFromBlockCenterY,
 } from "@/lib/game/math";
 import { laneMarkerCenters } from "@/lib/game/path";
@@ -198,36 +199,43 @@ export function SceneContent({
   const bodyColor = rgbTupleToCss(vehicle.mainRgb);
   const accentColor = rgbTupleToCss(vehicle.accentRgb);
 
+  const bodyYawRad = useMemo(
+    () => bodyYawQuarterSnappedFromWorldAim(aimYawRad),
+    [aimYawRad]
+  );
+
   return (
     <>
       <SpawnTeePad />
       <SpawnVisualGroup>
-        {vehicle.bodyParts != null && vehicle.bodyParts.length > 0 ? (
-          <group onPointerDown={onSpawnPointerDown}>
-            <VehicleBodyParts
-              parts={vehicle.bodyParts}
-              mainRgb={vehicle.mainRgb}
-              accentRgb={vehicle.accentRgb}
+        <group rotation={[0, bodyYawRad, 0]}>
+          {vehicle.bodyParts != null && vehicle.bodyParts.length > 0 ? (
+            <group onPointerDown={onSpawnPointerDown}>
+              <VehicleBodyParts
+                parts={vehicle.bodyParts}
+                mainRgb={vehicle.mainRgb}
+                accentRgb={vehicle.accentRgb}
+              />
+            </group>
+          ) : (
+            <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
+              <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
+              <meshStandardMaterial
+                color={bodyColor}
+                roughness={0.32}
+                metalness={0.2}
+              />
+            </mesh>
+          )}
+          {vehicleCornerOffsets.map((pos, i) => (
+            <VehicleCornerBlock
+              key={`wheel-${i}`}
+              position={pos}
+              size={VEHICLE_CORNER_BLOCK_SIZE}
+              color={accentColor}
             />
-          </group>
-        ) : (
-          <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
-            <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
-            <meshStandardMaterial
-              color={bodyColor}
-              roughness={0.32}
-              metalness={0.2}
-            />
-          </mesh>
-        )}
-        {vehicleCornerOffsets.map((pos, i) => (
-          <VehicleCornerBlock
-            key={`wheel-${i}`}
-            position={pos}
-            size={VEHICLE_CORNER_BLOCK_SIZE}
-            color={accentColor}
-          />
-        ))}
+          ))}
+        </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}
           aimYawRad={aimYawRad}

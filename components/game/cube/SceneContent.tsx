@@ -52,7 +52,9 @@ export function SceneContent({
   onProjectileEnd,
   getPowerupMultiplier,
   getNoBounceActive,
+  prepareShotWind,
   resetPowerupStack,
+  onChargeWindowStart,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -68,10 +70,14 @@ export function SceneContent({
   onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
   getPowerupMultiplier: () => number;
   getNoBounceActive: () => boolean;
+  /** Advances wind for this shot and returns horizontal acceleration (XZ) for the ball. */
+  prepareShotWind: () => { ax: number; az: number };
   resetPowerupStack: () => void;
+  onChargeWindowStart?: () => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
+  const shotWindAccelRef = useRef({ x: 0, z: 0 });
   const chargingRef = useRef(false);
   const clickCountRef = useRef(1);
   const chargeEndsAtRef = useRef(0);
@@ -87,6 +93,8 @@ export function SceneContent({
 
   const fireProjectile = useCallback(
     (clicks: number) => {
+      const w = prepareShotWind();
+      shotWindAccelRef.current = { x: w.ax, z: w.az };
       const force =
         launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
       const noBounceShot = getNoBounceActive();
@@ -119,6 +127,7 @@ export function SceneContent({
       getNoBounceActive,
       getPowerupMultiplier,
       onShootStart,
+      prepareShotWind,
       resetPowerupStack,
       spawnCenter,
       vehicle,
@@ -129,6 +138,8 @@ export function SceneContent({
     const chargeMs = vehicleChargeMs(vehicle);
     if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
     if (chargeTickRef.current) clearInterval(chargeTickRef.current);
+
+    onChargeWindowStart?.();
 
     clickCountRef.current = 1;
     chargingRef.current = true;
@@ -162,7 +173,7 @@ export function SceneContent({
       onChargeHudUpdate(null);
       fireProjectile(n);
     }, chargeMs);
-  }, [fireProjectile, onChargeHudUpdate, vehicle]);
+  }, [fireProjectile, onChargeHudUpdate, onChargeWindowStart, vehicle]);
 
   const yellowLaneMarkers = useMemo(
     () => laneMarkerCenters(INITIAL_LANE_ORIGIN, goalCenter),
@@ -282,6 +293,7 @@ export function SceneContent({
       <SphereToGoal
         meshRef={meshRef}
         projectileRef={projectileRef}
+        shotWindAccelRef={shotWindAccelRef}
         spawnCenter={spawnCenter}
         ponds={ponds}
         goalCenter={goalCenter}

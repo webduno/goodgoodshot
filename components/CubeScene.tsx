@@ -5,6 +5,7 @@ import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
+import { StartGameModal } from "@/components/game/cube/modals/StartGameModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
 import { ShotHud } from "@/components/game/cube/hud/ShotHud";
@@ -34,6 +35,7 @@ import {
 } from "@/lib/game/constants";
 import { createInitialGameState, gameReducer } from "@/lib/game/gameState";
 import { wrapYawRad } from "@/lib/game/math";
+import { stepWind } from "@/lib/game/wind";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
 import { Canvas } from "@react-three/fiber";
 import { useSearchParams } from "next/navigation";
@@ -75,15 +77,32 @@ export default function CubeScene() {
   const [shotInFlight, setShotInFlight] = useState(false);
   const [sessionShots, setSessionShots] = useState(0);
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
-  const [waterToastToken, setWaterToastToken] = useState(0);
-  const [powerupToastToken, setPowerupToastToken] = useState(0);
-  const [powerupToastMessage, setPowerupToastMessage] = useState("");
-  const [powerupToastAccent, setPowerupToastAccent] = useState<
-    "strength" | "noBounce"
-  >("strength");
+  const [hudToastToken, setHudToastToken] = useState(0);
+  const [hudToastMessage, setHudToastMessage] = useState("");
+  const [hudToastAccent, setHudToastAccent] = useState<
+    "strength" | "noBounce" | "nowind" | undefined
+  >(undefined);
+
+  const pushHudToast = useCallback(
+    (
+      message: string,
+      accent?: "strength" | "noBounce" | "nowind"
+    ) => {
+      setHudToastMessage(message);
+      setHudToastAccent(accent);
+      setHudToastToken((t) => t + 1);
+    },
+    []
+  );
+
+  const onStartGame = useCallback(() => {
+    setShowStartGameModal(false);
+    pushHudToast(`Click ${playerVehicle.name} to start`);
+  }, [playerVehicle.name, pushHudToast]);
   const [chargeHud, setChargeHud] = useState<{
     remainingMs: number;
     clicks: number;
@@ -100,15 +119,27 @@ export default function CubeScene() {
 
   const powerupStackRef = useRef(0);
   const noBounceRef = useRef(false);
+  const noWindRef = useRef(false);
+  const windRef = useRef({ x: 0, z: 0 });
   /** Kept in sync with state each render for reliable guards in handlers. */
   const strengthChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const noBounceChargesRef = useRef(INITIAL_POWERUP_CHARGES);
+  const noWindChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
+  const [noWindActive, setNoWindActive] = useState(false);
+  const [windHud, setWindHud] = useState({ x: 0, z: 0 });
   const [strengthCharges, setStrengthCharges] = useState(INITIAL_POWERUP_CHARGES);
   const [noBounceCharges, setNoBounceCharges] = useState(INITIAL_POWERUP_CHARGES);
+  const [noWindCharges, setNoWindCharges] = useState(INITIAL_POWERUP_CHARGES);
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
+  noWindChargesRef.current = noWindCharges;
+
+  useEffect(() => {
+    windRef.current = stepWind();
+    setWindHud({ x: windRef.current.x, z: windRef.current.z });
+  }, [game.goalWorldX, game.goalWorldZ]);
 
   const getPowerupMultiplier = useCallback(
     () => Math.pow(2, powerupStackRef.current),
@@ -122,6 +153,17 @@ export default function CubeScene() {
     setPowerupStackCount(0);
     noBounceRef.current = false;
     setNoBounceActive(false);
+    noWindRef.current = false;
+    setNoWindActive(false);
+  }, []);
+
+  const prepareShotWind = useCallback(() => {
+    const useNoWind = noWindRef.current;
+    const ax = useNoWind ? 0 : windRef.current.x;
+    const az = useNoWind ? 0 : windRef.current.z;
+    windRef.current = stepWind();
+    /** HUD stays on this shot's wind until onProjectileEnd; windRef holds the next shot. */
+    return { ax, az };
   }, []);
 
   const activatePowerup = useCallback(
@@ -135,9 +177,7 @@ export default function CubeScene() {
         setPowerupStackCount(powerupStackRef.current);
         setStrengthCharges((c) => (c <= 0 ? c : c - 1));
         const mult = Math.pow(2, powerupStackRef.current);
-        setPowerupToastAccent("strength");
-        setPowerupToastMessage(`"Strength" used (×${mult})`);
-        setPowerupToastToken((t) => t + 1);
+        pushHudToast(`"Strength" used (×${mult})`, "strength");
         return;
       }
 
@@ -148,12 +188,20 @@ export default function CubeScene() {
         noBounceRef.current = true;
         setNoBounceActive(true);
         setNoBounceCharges((c) => (c <= 0 ? c : c - 1));
-        setPowerupToastAccent("noBounce");
-        setPowerupToastMessage(`"No bounce" used`);
-        setPowerupToastToken((t) => t + 1);
+        pushHudToast(`"No bounce" used`, "noBounce");
+        return;
+      }
+
+      if (slotId === "nowind") {
+        if (noWindRef.current) return;
+        if (noWindChargesRef.current <= 0) return;
+        noWindRef.current = true;
+        setNoWindActive(true);
+        setNoWindCharges((c) => (c <= 0 ? c : c - 1));
+        pushHudToast(`"No wind" used`, "nowind");
       }
     },
-    [shotInFlight, showFinishModal]
+    [pushHudToast, shotInFlight, showFinishModal]
   );
 
   const onChargeHudUpdate = useCallback(
@@ -162,6 +210,10 @@ export default function CubeScene() {
     },
     []
   );
+
+  const onChargeWindowStart = useCallback(() => {
+    pushHudToast("Tap again to add power");
+  }, [pushHudToast]);
 
   const onShootStart = useCallback(() => {
     setShotInFlight(true);
@@ -172,9 +224,10 @@ export default function CubeScene() {
   const onProjectileEnd = useCallback(
     (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => {
       setShotInFlight(false);
+      setWindHud({ x: windRef.current.x, z: windRef.current.z });
       if (outcome === "penalty") {
         waterPenaltiesRoundRef.current += 1;
-        setWaterToastToken((t) => t + 1);
+        pushHudToast("Water hazard");
         dispatch({
           type: "PROJECTILE_END",
           outcome: "penalty",
@@ -206,7 +259,7 @@ export default function CubeScene() {
       }
       setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
     },
-    [playerVehicle, recordHoleCompleted]
+    [playerVehicle, pushHudToast, recordHoleCompleted]
   );
 
   useEffect(() => {
@@ -284,37 +337,43 @@ export default function CubeScene() {
             ponds={game.ponds}
             aimYawRad={aimYawRad}
             cooldownUntil={cooldownUntil}
-            roundLocked={showFinishModal}
+            roundLocked={showFinishModal || showStartGameModal}
             vehicle={playerVehicle}
             onChargeHudUpdate={onChargeHudUpdate}
             onShootStart={onShootStart}
             onProjectileEnd={onProjectileEnd}
             getPowerupMultiplier={getPowerupMultiplier}
             getNoBounceActive={getNoBounceActive}
+            prepareShotWind={prepareShotWind}
             resetPowerupStack={resetPowerupStack}
+            onChargeWindowStart={onChargeWindowStart}
           />
         </TeleportOrbitRig>
       </Canvas>
-      <ToastNotif showToken={waterToastToken} message="Water hazard" />
       <ToastNotif
-        showToken={powerupToastToken}
-        message={powerupToastMessage}
-        top={56}
-        accent={powerupToastAccent}
+        showToken={hudToastToken}
+        message={hudToastMessage}
+        top={16}
+        accent={hudToastAccent}
       />
-      <StatsHud
-        spawnCenter={game.spawnCenter}
-        sessionShots={sessionShots}
-        chargeHud={chargeHud}
-        shotInFlight={shotInFlight}
-        cooldownUntil={cooldownUntil}
-        strengthCharges={strengthCharges}
-        noBounceCharges={noBounceCharges}
-        powerupStackCount={powerupStackCount}
-        noBounceActive={noBounceActive}
-        vehicle={playerVehicle}
-      />
-      {!showFinishModal && (
+      {!showStartGameModal && (
+        <StatsHud
+          spawnCenter={game.spawnCenter}
+          sessionShots={sessionShots}
+          chargeHud={chargeHud}
+          shotInFlight={shotInFlight}
+          cooldownUntil={cooldownUntil}
+          strengthCharges={strengthCharges}
+          noBounceCharges={noBounceCharges}
+          noWindCharges={noWindCharges}
+          powerupStackCount={powerupStackCount}
+          noBounceActive={noBounceActive}
+          noWindActive={noWindActive}
+          windHud={windHud}
+          vehicle={playerVehicle}
+        />
+      )}
+      {!showFinishModal && !showStartGameModal && (
         <div
           style={{
             position: "absolute",
@@ -349,7 +408,7 @@ export default function CubeScene() {
           </button>
         </div>
       )}
-      {!showFinishModal && (
+      {!showFinishModal && !showStartGameModal && (
         <div
           className="hud-bottom-dock"
           style={{
@@ -412,10 +471,12 @@ export default function CubeScene() {
                     <PowerupSlotRow
                       strengthCharges={strengthCharges}
                       noBounceCharges={noBounceCharges}
+                      noWindCharges={noWindCharges}
                       canUseStrength={strengthCharges > 0}
                       canUseNoBounce={
                         noBounceCharges > 0 && !noBounceActive
                       }
+                      canUseNoWind={noWindCharges > 0 && !noWindActive}
                       onPowerup={activatePowerup}
                     />
                   </div>
@@ -450,13 +511,19 @@ export default function CubeScene() {
               chargeHud={chargeHud}
               strengthCharges={strengthCharges}
               noBounceCharges={noBounceCharges}
+              noWindCharges={noWindCharges}
               noBounceActive={noBounceActive}
+              noWindActive={noWindActive}
               onPowerup={activatePowerup}
               vehicle={playerVehicle}
             />
           </div>
         </div>
       )}
+      <StartGameModal
+        open={showStartGameModal}
+        onStart={onStartGame}
+      />
       <FinishGameModal open={showFinishModal} sessionShots={sessionShots} />
       <HelpModal
         open={showHelpModal}

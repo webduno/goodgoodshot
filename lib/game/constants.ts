@@ -101,13 +101,14 @@ export const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 export const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
 export const FIELD_GROUND_MUTED_GREEN = "#3a9d4a";
 
-/** Starting charges per power-up type (Strength and No bounce each have their own pool). */
+/** Starting charges per power-up type (Strength, No bounce, No wind each have their own pool). */
 export const INITIAL_POWERUP_CHARGES = 2;
 
-/** Five power-up slots (Strength + No bounce implemented; order is fixed in the HUD). */
+/** Power-up slots (order is fixed in the HUD). */
 export const POWERUP_SLOTS = [
   { id: "strength", name: "Strength", implemented: true },
   { id: "noBounce", name: "No bounce", implemented: true },
+  { id: "nowind", name: "No wind", implemented: true },
   { id: "time", name: "Time", implemented: false },
   { id: "magnet", name: "Magnet", implemented: false },
   { id: "lucky", name: "Lucky", implemented: false },

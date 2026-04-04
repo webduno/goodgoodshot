@@ -12,6 +12,7 @@ import {
 } from "@/components/gameHudStyles";
 import { formatVec3 } from "@/lib/game/math";
 import type { Vec3 } from "@/lib/game/types";
+import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 
 import { HudIdleBoltIcon, HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
 
@@ -23,8 +24,11 @@ export function StatsHud({
   cooldownUntil,
   strengthCharges,
   noBounceCharges,
+  noWindCharges,
   powerupStackCount,
   noBounceActive,
+  noWindActive,
+  windHud,
   vehicle,
 }: {
   spawnCenter: Vec3;
@@ -34,8 +38,11 @@ export function StatsHud({
   cooldownUntil: number | null;
   strengthCharges: number;
   noBounceCharges: number;
+  noWindCharges: number;
   powerupStackCount: number;
   noBounceActive: boolean;
+  noWindActive: boolean;
+  windHud: { x: number; z: number };
   vehicle: PlayerVehicleConfig;
 }) {
   const remainingMs =
@@ -43,6 +50,10 @@ export function StatsHud({
   const inCooldown = cooldownUntil !== null && remainingMs > 0;
   const charging = chargeHud !== null;
   const powerupMult = Math.pow(2, powerupStackCount);
+
+  const windMag = Math.hypot(windHud.x, windHud.z);
+  const windAngleDeg = (Math.atan2(windHud.z, windHud.x) * 180) / Math.PI;
+  const windArrowLen = 6 + (Math.min(windMag, WIND_ACCEL_MAX) / WIND_ACCEL_MAX) * 14;
 
   const metricsDivider: CSSProperties = {
     marginTop: 8,
@@ -76,7 +87,7 @@ export function StatsHud({
           textTransform: "uppercase",
         }}
       >
-        Shots (session)
+        n°
       </div>
       <div
         style={{
@@ -110,6 +121,76 @@ export function StatsHud({
         }}
       >
         {vehicle.name}
+      </div>
+      <div
+        style={{
+          color: hudColors.muted,
+          marginBottom: 2,
+          marginTop: 4,
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+        }}
+      >
+        Wind
+      </div>
+      <div
+        role="img"
+        aria-label={`Wind ${windMag.toFixed(2)} m/s² toward ${windAngleDeg.toFixed(0)}° (X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)})`}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          alignSelf: "flex-start",
+          gap: 2,
+          color: hudColors.value,
+          marginBottom: 6,
+        }}
+      >
+        <svg
+          width={40}
+          height={40}
+          viewBox="0 0 40 40"
+          aria-hidden
+        >
+          <g transform={`translate(20 20) rotate(${windAngleDeg})`}>
+            <line
+              x1={-windArrowLen * 0.15}
+              y1={0}
+              x2={windArrowLen * 0.65}
+              y2={0}
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+            <polygon
+              points={`${windArrowLen * 0.85},0 ${windArrowLen * 0.55},-4 ${windArrowLen * 0.55},4`}
+              fill="currentColor"
+            />
+          </g>
+        </svg>
+        <span
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            fontWeight: 600,
+            fontSize: 11,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {windMag.toFixed(2)}
+        </span>
+        <span
+          style={{
+            color: hudColors.muted,
+            fontWeight: 500,
+            fontSize: 9,
+            lineHeight: 1.1,
+          }}
+        >
+          m/s²
+        </span>
       </div>
       <div
         style={{
@@ -211,6 +292,22 @@ export function StatsHud({
               for this shot
             </div>
           )}
+          {noWindActive && (
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 9,
+                lineHeight: 1.35,
+                color: hudColors.label,
+              }}
+            >
+              No wind{" "}
+              <strong style={{ color: hudColors.accent, fontWeight: 600 }}>
+                on
+              </strong>{" "}
+              for this shot
+            </div>
+          )}
         </div>
       )}
 
@@ -226,14 +323,15 @@ export function StatsHud({
           >
             {(remainingMs / 1000).toFixed(1)}
           </strong>
-          s · Boost left: Str {strengthCharges} · Nb {noBounceCharges}
+          s · Boost: Str {strengthCharges} · Nb {noBounceCharges} · Nw{" "}
+          {noWindCharges}
         </div>
       )}
 
       {!shotInFlight && !inCooldown && !charging && (
         <div
           role="status"
-          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds, ${strengthCharges} strength charges and ${noBounceCharges} no-bounce charges available`}
+          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds, ${strengthCharges} strength, ${noBounceCharges} no-bounce, ${noWindCharges} no-wind charges available`}
           style={{
             ...metricsDivider,
             display: "flex",
@@ -263,10 +361,10 @@ export function StatsHud({
               gap: 4,
               fontVariantNumeric: "tabular-nums",
             }}
-            title="Boost charges left (strength / no-bounce)"
+            title="Boost charges left (strength / no-bounce / no-wind)"
           >
             <HudIdleBoltIcon color={hudColors.accent} />
-            {strengthCharges}/{noBounceCharges}
+            {strengthCharges}/{noBounceCharges}/{noWindCharges}
           </span>
         </div>
       )}

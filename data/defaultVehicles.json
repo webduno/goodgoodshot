@@ -2,7 +2,7 @@
   "vehicles": [
     {
       "v_id": "default",
-      "name": "Grid Runner",
+      "name": "Blue Tank",
       "mainRgb": [0, 114, 188],
       "accentRgb": [0, 174, 239],
       "strengthPerBaseClick": 8,

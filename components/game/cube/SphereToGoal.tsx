@@ -25,6 +25,7 @@ import {
 export function SphereToGoal({
   meshRef,
   projectileRef,
+  shotWindAccelRef,
   spawnCenter,
   ponds,
   goalCenter,
@@ -35,6 +36,7 @@ export function SphereToGoal({
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   projectileRef: MutableRefObject<Projectile | null>;
+  shotWindAccelRef: MutableRefObject<{ x: number; z: number }>;
   spawnCenter: Vec3;
   ponds: readonly PondSpec[];
   goalCenter: Vec3;
@@ -54,6 +56,9 @@ export function SphereToGoal({
     const dt = Math.min(delta, 0.05);
 
     if (p.rolling) {
+      const wa = shotWindAccelRef.current;
+      p.vx += wa.x * dt;
+      p.vz += wa.z * dt;
       const h = Math.hypot(p.vx, p.vz);
       const decel = rollDeceleration * dt;
       const hNew = h > 0 ? Math.max(0, h - decel) : 0;
@@ -124,6 +129,9 @@ export function SphereToGoal({
 
     p.vy += gravityY * dt;
     const vyAfterGravity = p.vy;
+    const wa = shotWindAccelRef.current;
+    p.vx += wa.x * dt;
+    p.vz += wa.z * dt;
     p.x += p.vx * dt;
     p.y += vyAfterGravity * dt;
     p.z += p.vz * dt;

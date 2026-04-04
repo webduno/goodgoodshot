@@ -48,6 +48,24 @@ export function PowerupHudIcon({
           />
         </svg>
       );
+    case "nowind":
+      return (
+        <svg {...box} fill="none">
+          <path
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            d="M4 9h10M4 12h14M4 15h8"
+            opacity={0.45}
+          />
+          <path
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            d="M17 6l4 4-4 4"
+          />
+        </svg>
+      );
     case "time":
       return (
         <svg {...box}>

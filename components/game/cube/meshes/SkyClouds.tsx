@@ -37,7 +37,7 @@ export function SkyClouds() {
     for (let c = 0; c < clusters; c++) {
       const cx = (rand() - 0.5) * 200;
       const cz = rand() * 240 - 35;
-      const cy = 24 + rand() * 50;
+      const cy = 34 + rand() * 50;
       /** 1–2 wide slabs per cluster, offset when doubled. */
       const pieces = 1 + Math.floor(rand() * 2);
       for (let k = 0; k < pieces; k++) {

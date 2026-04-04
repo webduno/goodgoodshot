@@ -21,7 +21,9 @@ export function ShotHud({
   chargeHud,
   strengthCharges,
   noBounceCharges,
+  noWindCharges,
   noBounceActive,
+  noWindActive,
   onPowerup,
   vehicle,
 }: {
@@ -30,7 +32,9 @@ export function ShotHud({
   chargeHud: { remainingMs: number; clicks: number } | null;
   strengthCharges: number;
   noBounceCharges: number;
+  noWindCharges: number;
   noBounceActive: boolean;
+  noWindActive: boolean;
   onPowerup: (slotId: PowerupSlotId) => void;
   vehicle: PlayerVehicleConfig;
 }) {
@@ -48,6 +52,8 @@ export function ShotHud({
     charging && !shotInFlight && strengthCharges > 0;
   const canUseNoBounce =
     charging && !shotInFlight && noBounceCharges > 0 && !noBounceActive;
+  const canUseNoWind =
+    charging && !shotInFlight && noWindCharges > 0 && !noWindActive;
 
   if (charging && !shotInFlight && chargeHud) {
     return (
@@ -75,8 +81,10 @@ export function ShotHud({
           <PowerupSlotRow
             strengthCharges={strengthCharges}
             noBounceCharges={noBounceCharges}
+            noWindCharges={noWindCharges}
             canUseStrength={canUseStrength}
             canUseNoBounce={canUseNoBounce}
+            canUseNoWind={canUseNoWind}
             onPowerup={onPowerup}
           />
         </div>

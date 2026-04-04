@@ -109,9 +109,10 @@ export function HelpModal({
               use the <strong style={{ color: hudColors.value }}>Power-ups</strong>{" "}
               chip above the aim row when you are not charging to pick boosts before
               your first click; the same slots also appear during the charge
-              window. Five slots (left to right):{" "}
-              <strong style={{ color: hudColors.value }}>Strength</strong> and{" "}
-              <strong style={{ color: hudColors.value }}>No bounce</strong> are
+              window. Six slots (left to right):{" "}
+              <strong style={{ color: hudColors.value }}>Strength</strong>,{" "}
+              <strong style={{ color: hudColors.value }}>No bounce</strong>, and{" "}
+              <strong style={{ color: hudColors.value }}>No wind</strong> are
               available; the rest are coming later.
               <ul
                 style={{
@@ -136,6 +137,16 @@ export function HelpModal({
                   no-bounce charge and removes bounces and rolling for that shot:
                   the ball stops where it first touches the ground (no rebound, no
                   roll-out).
+                </li>
+                <li style={{ marginBottom: 6 }}>
+                  <strong style={{ color: hudColors.value }}>No wind</strong>{" "}
+                  — Separate charges (same starting count as the other boosts).
+                  One tap before the shot spends one charge and removes wind
+                  effects on the ball for that shot (the wind value still updates
+                  for the next shot).{" "}
+                  <strong style={{ color: hudColors.value }}>Wind</strong> drifts
+                  the ball horizontally; it changes every shot and is shown in the
+                  stats panel.
                 </li>
                 <li style={{ marginBottom: 6, opacity: 0.85 }}>
                   <strong style={{ color: hudColors.value }}>Time</strong> (clock

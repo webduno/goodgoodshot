@@ -159,9 +159,9 @@ export function goldChipButtonStyle(): CSSProperties {
   };
 }
 
-/** Distinct glass tints for Strength vs No bounce (HUD + toasts). */
+/** Distinct glass tints for power-up slots (HUD + toasts). */
 export const POWERUP_SLOT_ACCENT: Record<
-  "strength" | "noBounce",
+  "strength" | "noBounce" | "nowind",
   { ready: string; depleted: string; shadow: string }
 > = {
   strength: {
@@ -178,34 +178,45 @@ export const POWERUP_SLOT_ACCENT: Record<
       "linear-gradient(165deg, #edeaf0 0%, #c4b8d4 100%)",
     shadow: `${edgeLight}, 0 3px 10px rgba(124, 58, 237, 0.32)`,
   },
+  nowind: {
+    ready:
+      "linear-gradient(165deg, #ffffff 0%, #ecfeff 12%, #a5f3fc 42%, #22d3ee 68%, #0891b2 100%)",
+    depleted:
+      "linear-gradient(165deg, #e8ecee 0%, #b8c5ca 100%)",
+    shadow: `${edgeLight}, 0 3px 10px rgba(8, 145, 178, 0.32)`,
+  },
 };
 
 /** Toast bubble styling matching the corresponding power-up slot. */
 export function powerupToastAccentStyle(
-  slot: "strength" | "noBounce"
+  slot: "strength" | "noBounce" | "nowind"
 ): Pick<
   CSSProperties,
   "color" | "textShadow" | "background" | "border" | "boxShadow"
 > {
   const a = POWERUP_SLOT_ACCENT[slot];
+  const shadowTint =
+    slot === "strength"
+      ? "rgba(234, 88, 12, 0.28)"
+      : slot === "noBounce"
+        ? "rgba(124, 58, 237, 0.28)"
+        : "rgba(8, 145, 178, 0.28)";
+  const text =
+    slot === "strength" ? "#7c2d12" : slot === "noBounce" ? "#4c1d95" : "#0c4a5e";
   return {
-    color: slot === "strength" ? "#7c2d12" : "#4c1d95",
+    color: text,
     textShadow: "0 1px 0 rgba(255,255,255,0.45)",
     background: a.ready,
     border: "1px solid rgba(255,255,255,0.88)",
-    boxShadow: `${edgeLight}, 0 4px 14px ${
-      slot === "strength"
-        ? "rgba(234, 88, 12, 0.28)"
-        : "rgba(124, 58, 237, 0.28)"
-    }`,
+    boxShadow: `${edgeLight}, 0 4px 14px ${shadowTint}`,
   };
 }
 
-/** One of five compact power-up slots in the aim panel (icon + value). */
+/** Compact power-up slots in the aim panel (icon + value). */
 export function powerupSlotStyle(opts: {
   variant: "ready" | "depleted" | "locked";
-  /** When set, ready/depleted use a distinct tint (Strength vs No bounce). */
-  accentSlot?: "strength" | "noBounce";
+  /** When set, ready/depleted use a distinct tint. */
+  accentSlot?: "strength" | "noBounce" | "nowind";
 }): CSSProperties {
   const { variant, accentSlot } = opts;
   const locked = variant === "locked";

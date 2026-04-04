@@ -13,6 +13,7 @@ export function defaultPlayerStats(): PlayerStatsState {
     totalStrengthPowerupsUsed: 0,
     totalNoBouncePowerupsUsed: 0,
     totalWaterPenalties: 0,
+    totalGoldCoins: 0,
     lastCompletedGame: null,
   };
 }
@@ -75,6 +76,10 @@ export function loadPlayerStats(): PlayerStatsState {
       typeof p.totalWaterPenalties === "number"
         ? p.totalWaterPenalties
         : base.totalWaterPenalties;
+    const totalGoldCoins =
+      typeof p.totalGoldCoins === "number"
+        ? p.totalGoldCoins
+        : base.totalGoldCoins;
     const lastCompletedGame =
       p.lastCompletedGame === null
         ? null
@@ -87,6 +92,7 @@ export function loadPlayerStats(): PlayerStatsState {
       totalStrengthPowerupsUsed,
       totalNoBouncePowerupsUsed,
       totalWaterPenalties,
+      totalGoldCoins,
       lastCompletedGame,
     };
   } catch {
@@ -123,6 +129,7 @@ export function mergeHoleCompleted(
       prev.totalNoBouncePowerupsUsed + payload.noBounceUses,
     totalWaterPenalties:
       prev.totalWaterPenalties + payload.waterPenaltiesThisRound,
+    totalGoldCoins: prev.totalGoldCoins,
     lastCompletedGame: {
       vehicleId: payload.vehicleId,
       shots: payload.shots,

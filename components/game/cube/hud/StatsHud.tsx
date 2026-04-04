@@ -30,6 +30,7 @@ export function StatsHud({
   noWindActive,
   windHud,
   vehicle,
+  totalGoldCoins,
 }: {
   spawnCenter: Vec3;
   sessionShots: number;
@@ -44,6 +45,7 @@ export function StatsHud({
   noWindActive: boolean;
   windHud: { x: number; z: number };
   vehicle: PlayerVehicleConfig;
+  totalGoldCoins: number;
 }) {
   const remainingMs =
     cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
@@ -127,6 +129,29 @@ export function StatsHud({
           color: hudColors.muted,
           marginBottom: 2,
           marginTop: 4,
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+        }}
+      >
+        Gold coins
+      </div>
+      <div
+        style={{
+          color: "#b8860b",
+          fontWeight: 700,
+          fontSize: 13,
+          fontVariantNumeric: "tabular-nums",
+          marginBottom: 8,
+        }}
+      >
+        {totalGoldCoins}
+      </div>
+      <div
+        style={{
+          color: hudColors.muted,
+          marginBottom: 2,
           fontSize: 9,
           fontWeight: 600,
           letterSpacing: "0.04em",

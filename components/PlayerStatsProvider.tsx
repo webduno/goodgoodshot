@@ -17,6 +17,7 @@ import {
 type PlayerStatsContextValue = {
   stats: PlayerStatsState;
   recordHoleCompleted: (payload: HoleCompletedPayload) => void;
+  recordGoldCoin: () => void;
 };
 
 const PlayerStatsContext = createContext<PlayerStatsContextValue | null>(null);
@@ -38,9 +39,17 @@ export function PlayerStatsProvider({
     });
   }, []);
 
+  const recordGoldCoin = useCallback(() => {
+    setStats((prev) => {
+      const next = { ...prev, totalGoldCoins: prev.totalGoldCoins + 1 };
+      savePlayerStats(next);
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ stats, recordHoleCompleted }),
-    [stats, recordHoleCompleted]
+    () => ({ stats, recordHoleCompleted, recordGoldCoin }),
+    [stats, recordHoleCompleted, recordGoldCoin]
   );
 
   return (

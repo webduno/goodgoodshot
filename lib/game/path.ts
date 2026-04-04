@@ -4,6 +4,11 @@ import {
 } from "./constants";
 import type { Vec3 } from "./types";
 
+/** Stable id for a 1×1×1 grid coin cell (lane bonus pickup). */
+export function coinCellKey(center: Vec3): string {
+  return `${center[0]},${center[1]},${center[2]}`;
+}
+
 /** Axis-aligned grid steps from lane origin to goal (Z first, then X); includes goal as last point. */
 export function manhattanPathLaneToGoal(laneOrigin: Vec3, goalCenter: Vec3): Vec3[] {
   const sy = laneOrigin[1];

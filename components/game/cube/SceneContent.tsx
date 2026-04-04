@@ -7,7 +7,13 @@ import {
   vehicleChargeMs,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type MutableRefObject,
+} from "react";
 import * as THREE from "three";
 
 import { Block } from "@/components/game/cube/meshes/Block";
@@ -21,7 +27,6 @@ import { SpawnVisualGroup } from "@/components/game/cube/TeleportOrbitRig";
 import {
   BLOCK_SIZE,
   GOAL_BLOCK_COLOR,
-  LANE_MARKER_COLOR,
   VEHICLE_CORNER_BLOCK_SIZE,
   VEHICLE_WHEEL_FLOOR_Y_EPS,
   VEHICLE_WHEEL_OUTWARD,
@@ -31,7 +36,7 @@ import {
   bodyYawQuarterSnappedFromWorldAim,
   spawnTopYFromBlockCenterY,
 } from "@/lib/game/math";
-import { laneMarkerCenters } from "@/lib/game/path";
+import { coinCellKey, laneMarkerCenters } from "@/lib/game/path";
 import {
   INITIAL_LANE_ORIGIN,
   type PondSpec,
@@ -55,6 +60,9 @@ export function SceneContent({
   prepareShotWind,
   resetPowerupStack,
   onChargeWindowStart,
+  collectedCoinKeysRef,
+  coinRenderTick,
+  onCoinCollected,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -74,6 +82,10 @@ export function SceneContent({
   prepareShotWind: () => { ax: number; az: number };
   resetPowerupStack: () => void;
   onChargeWindowStart?: () => void;
+  collectedCoinKeysRef: MutableRefObject<Set<string>>;
+  /** Bumps when a coin is collected or the hole goal changes (re-render visibility). */
+  coinRenderTick: number;
+  onCoinCollected: (key: string) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -179,6 +191,7 @@ export function SceneContent({
     () => laneMarkerCenters(INITIAL_LANE_ORIGIN, goalCenter),
     [goalCenter]
   );
+  void coinRenderTick;
 
   const onSpawnPointerDown = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
@@ -280,16 +293,30 @@ export function SceneContent({
           surfaceLayer={pond.surfaceLayer}
         />
       ))}
-      {yellowLaneMarkers.map((center, i) => (
-        <mesh key={`lane-${i}`} position={[...center]} castShadow receiveShadow>
-          <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
-          <meshStandardMaterial
-            color={LANE_MARKER_COLOR}
-            roughness={0.6}
-            metalness={0.05}
-          />
-        </mesh>
-      ))}
+      {yellowLaneMarkers.map((center, i) => {
+        const ck = coinCellKey(center);
+        if (collectedCoinKeysRef.current.has(ck)) return null;
+        return (
+          <group key={`lane-coin-${i}-${ck}`} position={[...center]}>
+            <mesh castShadow receiveShadow>
+              <cylinderGeometry args={[0.42, 0.42, 0.07, 40]} />
+              <meshStandardMaterial
+                color="#e8c547"
+                roughness={0.28}
+                metalness={0.88}
+              />
+            </mesh>
+            <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.036, 0]}>
+              <torusGeometry args={[0.44, 0.028, 10, 40]} />
+              <meshStandardMaterial
+                color="#c9a227"
+                roughness={0.35}
+                metalness={0.75}
+              />
+            </mesh>
+          </group>
+        );
+      })}
       <SphereToGoal
         meshRef={meshRef}
         projectileRef={projectileRef}
@@ -301,6 +328,9 @@ export function SceneContent({
         bounceRestitution={vehicle.bounceRestitution}
         rollDeceleration={vehicle.rollDeceleration}
         onProjectileEnd={onProjectileEnd}
+        coinCells={yellowLaneMarkers}
+        collectedCoinKeysRef={collectedCoinKeysRef}
+        onCoinCollected={onCoinCollected}
       />
     </>
   );

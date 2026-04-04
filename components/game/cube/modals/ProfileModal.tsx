@@ -81,6 +81,7 @@ export function ProfileModal({
             <li>Strength power-ups used (lifetime): {stats.totalStrengthPowerupsUsed}</li>
             <li>No-bounce power-ups used (lifetime): {stats.totalNoBouncePowerupsUsed}</li>
             <li>Water penalties (lifetime): {stats.totalWaterPenalties}</li>
+            <li>Gold coins (lifetime): {stats.totalGoldCoins}</li>
           </ul>
         </section>
 

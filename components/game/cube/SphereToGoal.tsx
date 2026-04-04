@@ -14,6 +14,7 @@ import {
   sphereIntersectsAabb,
   sphereIntersectsGoalBox,
 } from "@/lib/game/collision";
+import { coinCellKey } from "@/lib/game/path";
 import { spawnTopYFromBlockCenterY } from "@/lib/game/math";
 import {
   INITIAL_LANE_ORIGIN,
@@ -33,6 +34,9 @@ export function SphereToGoal({
   bounceRestitution,
   rollDeceleration,
   onProjectileEnd,
+  coinCells,
+  collectedCoinKeysRef,
+  onCoinCollected,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   projectileRef: MutableRefObject<Projectile | null>;
@@ -44,9 +48,30 @@ export function SphereToGoal({
   bounceRestitution: number;
   rollDeceleration: number;
   onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
+  /** Lane bonus pickups (same cells as yellow markers); 1×1×1 hitbox, no physics. */
+  coinCells: readonly Vec3[];
+  collectedCoinKeysRef: MutableRefObject<Set<string>>;
+  onCoinCollected: (key: string) => void;
 }) {
   const sx = spawnCenter[0];
   const spawnTopY = spawnTopYFromBlockCenterY(spawnCenter[1]);
+
+  const tryCollectCoins = (
+    px: number,
+    py: number,
+    pz: number
+  ) => {
+    const half = GOAL_HALF;
+    for (const c of coinCells) {
+      const key = coinCellKey(c);
+      if (collectedCoinKeysRef.current.has(key)) continue;
+      if (
+        sphereIntersectsAabb(px, py, pz, SPHERE_RADIUS, c, half, half, half)
+      ) {
+        onCoinCollected(key);
+      }
+    }
+  };
 
   useFrame((_, delta) => {
     const mesh = meshRef.current;
@@ -100,6 +125,8 @@ export function SphereToGoal({
           return;
         }
       }
+
+      tryCollectCoins(p.x, p.y, p.z);
 
       const hitGoal = sphereIntersectsGoalBox(
         p.x,
@@ -160,6 +187,8 @@ export function SphereToGoal({
         return;
       }
     }
+
+    tryCollectCoins(p.x, p.y, p.z);
 
     const hitGoal = sphereIntersectsGoalBox(
       p.x,

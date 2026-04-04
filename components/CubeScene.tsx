@@ -49,7 +49,7 @@ import {
 } from "react";
 
 export default function CubeScene() {
-  const { recordHoleCompleted } = usePlayerStats();
+  const { recordHoleCompleted, recordGoldCoin, stats } = usePlayerStats();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
   const playerVehicle = useMemo(
@@ -117,6 +117,9 @@ export default function CubeScene() {
   const noBounceUsesRoundRef = useRef(0);
   const waterPenaltiesRoundRef = useRef(0);
 
+  const collectedCoinKeysRef = useRef(new Set<string>());
+  const [coinRenderTick, setCoinRenderTick] = useState(0);
+
   const powerupStackRef = useRef(0);
   const noBounceRef = useRef(false);
   const noWindRef = useRef(false);
@@ -140,6 +143,21 @@ export default function CubeScene() {
     windRef.current = stepWind();
     setWindHud({ x: windRef.current.x, z: windRef.current.z });
   }, [game.goalWorldX, game.goalWorldZ]);
+
+  useEffect(() => {
+    collectedCoinKeysRef.current.clear();
+    setCoinRenderTick((t) => t + 1);
+  }, [game.goalWorldX, game.goalWorldZ]);
+
+  const onCoinCollected = useCallback(
+    (key: string) => {
+      if (collectedCoinKeysRef.current.has(key)) return;
+      collectedCoinKeysRef.current.add(key);
+      recordGoldCoin();
+      setCoinRenderTick((t) => t + 1);
+    },
+    [recordGoldCoin]
+  );
 
   const getPowerupMultiplier = useCallback(
     () => Math.pow(2, powerupStackRef.current),
@@ -347,6 +365,9 @@ export default function CubeScene() {
             prepareShotWind={prepareShotWind}
             resetPowerupStack={resetPowerupStack}
             onChargeWindowStart={onChargeWindowStart}
+            collectedCoinKeysRef={collectedCoinKeysRef}
+            coinRenderTick={coinRenderTick}
+            onCoinCollected={onCoinCollected}
           />
         </TeleportOrbitRig>
       </Canvas>
@@ -371,6 +392,7 @@ export default function CubeScene() {
           noWindActive={noWindActive}
           windHud={windHud}
           vehicle={playerVehicle}
+          totalGoldCoins={stats.totalGoldCoins}
         />
       )}
       {!showFinishModal && !showStartGameModal && (

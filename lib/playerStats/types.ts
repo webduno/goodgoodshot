@@ -24,6 +24,8 @@ export type PlayerStatsState = {
   totalStrengthPowerupsUsed: number;
   totalNoBouncePowerupsUsed: number;
   totalWaterPenalties: number;
+  /** Lane bonus coins collected (lifetime). */
+  totalGoldCoins: number;
   lastCompletedGame: LastCompletedGame | null;
 };
 

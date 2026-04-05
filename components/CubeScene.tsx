@@ -140,6 +140,7 @@ export default function CubeScene() {
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
   noWindChargesRef.current = noWindCharges;
+  const inCooldown = cooldownUntil !== null;
 
   useEffect(() => {
     windRef.current = stepWind();
@@ -532,14 +533,14 @@ export default function CubeScene() {
                     shotInFlight ||
                     showFinishModal ||
                     showStartGameModal ||
-                    (cooldownUntil !== null && Date.now() < cooldownUntil)
+                    inCooldown
                   }
                   style={goldPillButtonStyle({
                     disabled:
                       shotInFlight ||
                       showFinishModal ||
                       showStartGameModal ||
-                      (cooldownUntil !== null && Date.now() < cooldownUntil),
+                      inCooldown,
                     fullWidth: true,
                   })}
                 >

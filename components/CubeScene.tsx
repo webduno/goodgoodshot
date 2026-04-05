@@ -19,6 +19,7 @@ import {
 import { StaticSceneLights } from "@/components/game/cube/StaticSceneLights";
 import {
   goldChipButtonStyle,
+  goldPillButtonStyle,
   hudBottomPanel,
   hudFont,
 } from "@/components/gameHudStyles";
@@ -86,6 +87,7 @@ export default function CubeScene() {
   const [hudToastAccent, setHudToastAccent] = useState<
     "strength" | "noBounce" | "nowind" | undefined
   >(undefined);
+  const fireInputRef = useRef<(() => void) | null>(null);
 
   const pushHudToast = useCallback(
     (
@@ -101,8 +103,8 @@ export default function CubeScene() {
 
   const onStartGame = useCallback(() => {
     setShowStartGameModal(false);
-    pushHudToast(`Click ${playerVehicle.name} to start`);
-  }, [playerVehicle.name, pushHudToast]);
+    pushHudToast(`Tap Fire to start`);
+  }, [pushHudToast]);
   const [chargeHud, setChargeHud] = useState<{
     remainingMs: number;
     clicks: number;
@@ -232,6 +234,14 @@ export default function CubeScene() {
   const onChargeWindowStart = useCallback(() => {
     pushHudToast("Tap again to add power");
   }, [pushHudToast]);
+
+  const bindFireInput = useCallback((handler: (() => void) | null) => {
+    fireInputRef.current = handler;
+  }, []);
+
+  const onFireButtonPress = useCallback(() => {
+    fireInputRef.current?.();
+  }, []);
 
   const onShootStart = useCallback(() => {
     setShotInFlight(true);
@@ -367,6 +377,7 @@ export default function CubeScene() {
             collectedCoinKeysRef={collectedCoinKeysRef}
             coinRenderTick={coinRenderTick}
             onCoinCollected={onCoinCollected}
+            onBindFireInput={bindFireInput}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
@@ -504,6 +515,36 @@ export default function CubeScene() {
                     />
                   </div>
                 )}
+              </div>
+            )}
+            {!showFinishModal && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label="Fire"
+                  onClick={onFireButtonPress}
+                  disabled={
+                    shotInFlight ||
+                    showFinishModal ||
+                    showStartGameModal ||
+                    (cooldownUntil !== null && Date.now() < cooldownUntil)
+                  }
+                  style={goldPillButtonStyle({
+                    disabled:
+                      shotInFlight ||
+                      showFinishModal ||
+                      showStartGameModal ||
+                      (cooldownUntil !== null && Date.now() < cooldownUntil),
+                    fullWidth: true,
+                  })}
+                >
+                  {chargeHud === null ? "Fire" : "Tap Fire +Power"}
+                </button>
               </div>
             )}
             {chargeHud === null && (

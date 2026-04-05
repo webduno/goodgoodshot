@@ -5,7 +5,7 @@ import * as THREE from "three";
 
 import type { Vec3 } from "@/lib/game/types";
 
-/** Corner “wheels”: no raycast so clicks still hit the vehicle body. */
+/** Corner “wheels”: purely visual meshes (input comes from HUD). */
 export function VehicleCornerBlock({
   position: pos,
   size,

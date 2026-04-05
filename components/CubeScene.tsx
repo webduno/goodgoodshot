@@ -19,7 +19,6 @@ import {
 import { StaticSceneLights } from "@/components/game/cube/StaticSceneLights";
 import {
   goldChipButtonStyle,
-  goldPillButtonStyle,
   hudBottomPanel,
   hudFont,
 } from "@/components/gameHudStyles";
@@ -141,6 +140,9 @@ export default function CubeScene() {
   noBounceChargesRef.current = noBounceCharges;
   noWindChargesRef.current = noWindCharges;
   const inCooldown = cooldownUntil !== null;
+  const fireButtonDisabled =
+    shotInFlight || showFinishModal || showStartGameModal || inCooldown;
+  const fireButtonLabel = chargeHud === null ? "Fire" : `${chargeHud.clicks}`;
 
   useEffect(() => {
     windRef.current = stepWind();
@@ -518,36 +520,6 @@ export default function CubeScene() {
                 )}
               </div>
             )}
-            {!showFinishModal && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label="Fire"
-                  onClick={onFireButtonPress}
-                  disabled={
-                    shotInFlight ||
-                    showFinishModal ||
-                    showStartGameModal ||
-                    inCooldown
-                  }
-                  style={goldPillButtonStyle({
-                    disabled:
-                      shotInFlight ||
-                      showFinishModal ||
-                      showStartGameModal ||
-                      inCooldown,
-                    fullWidth: true,
-                  })}
-                >
-                  {chargeHud === null ? "Fire" : "Tap Fire +Power"}
-                </button>
-              </div>
-            )}
             {chargeHud === null && (
               <AimHud
                 aimYawRad={aimYawRad}
@@ -583,6 +555,48 @@ export default function CubeScene() {
               vehicle={playerVehicle}
             />
           </div>
+        </div>
+      )}
+      {!showFinishModal && !showStartGameModal && (
+        <div
+          style={{
+            position: "absolute",
+            right: 14,
+            bottom: 18,
+            zIndex: 45,
+            pointerEvents: "none",
+          }}
+        >
+          <button
+            type="button"
+            aria-label={chargeHud === null ? "Fire" : `Fire clicks ${chargeHud.clicks}`}
+            onClick={onFireButtonPress}
+            disabled={fireButtonDisabled}
+            style={{
+              ...hudFont,
+              pointerEvents: "auto",
+              width: 84,
+              height: 84,
+              borderRadius: "50%",
+              border: fireButtonDisabled
+                ? "2px solid rgba(120,120,120,0.9)"
+                : "2px solid rgba(255,255,255,0.92)",
+              backgroundImage: fireButtonDisabled
+                ? "linear-gradient(180deg, #9ca3af 0%, #6b7280 100%)"
+                : "linear-gradient(180deg, #ff6b6b 0%, #dc2626 52%, #991b1b 100%)",
+              color: "#ffffff",
+              fontWeight: 800,
+              fontSize: chargeHud === null ? 20 : 28,
+              lineHeight: 1,
+              textShadow: "0 2px 3px rgba(0,0,0,0.38)",
+              boxShadow: fireButtonDisabled
+                ? "inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px rgba(0,0,0,0.2)"
+                : "inset 0 1px 0 rgba(255,255,255,0.45), 0 8px 16px rgba(127, 29, 29, 0.45)",
+              cursor: fireButtonDisabled ? "not-allowed" : "pointer",
+            }}
+          >
+            {fireButtonLabel}
+          </button>
         </div>
       )}
       <StartGameModal

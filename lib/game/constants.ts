@@ -115,11 +115,20 @@ export const POWERUP_SLOTS = [
 ] as const;
 
 /**
- * Camera offset from spawn block center (lane stays to +X so the goal stays visible).
+ * First-frame camera offset from spawn (medium close, face visible). Tank hull faces +Z
+ * (shot / eyes); use +Z here so the camera sits in front of the face, not behind.
+ */
+export const INTRO_CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
+  0.95, 1.22, 3.1,
+];
+/**
+ * Gameplay orbit camera offset from spawn (further out in front of the tank; goal stays down +Z).
  */
 export const CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
-  0.95, 1.22, -3.1,
+  1.38, 1.78, 4.45,
 ];
+/** Seconds for intro zoom-out from `INTRO_CAMERA_OFFSET_FROM_SPAWN` to gameplay offset. */
+export const INTRO_CAMERA_DURATION_SEC = 2.4;
 /** Orbit pivot Y: one block above the spawn block center. */
 export const ORBIT_TARGET_Y_OFFSET = BLOCK_SIZE;
 /**

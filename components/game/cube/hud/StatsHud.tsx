@@ -54,7 +54,9 @@ export function StatsHud({
   const powerupMult = Math.pow(2, powerupStackCount);
 
   const windMag = Math.hypot(windHud.x, windHud.z);
-  const windAngleDeg = (Math.atan2(windHud.z, windHud.x) * 180) / Math.PI;
+  /** Meteorological convention: direction the wind comes from (opposite to acceleration). */
+  const windFromAngleDeg =
+    (Math.atan2(-windHud.z, -windHud.x) * 180) / Math.PI;
   const windArrowLen = 6 + (Math.min(windMag, WIND_ACCEL_MAX) / WIND_ACCEL_MAX) * 14;
 
   const metricsDivider: CSSProperties = {
@@ -162,7 +164,7 @@ export function StatsHud({
       </div>
       <div
         role="img"
-        aria-label={`Wind ${windMag.toFixed(2)} m/s² toward ${windAngleDeg.toFixed(0)}° (X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)})`}
+        aria-label={`Wind ${windMag.toFixed(2)} m/s² from ${windFromAngleDeg.toFixed(0)}° in world XZ (X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)})`}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -179,7 +181,7 @@ export function StatsHud({
           viewBox="0 0 40 40"
           aria-hidden
         >
-          <g transform={`translate(20 20) rotate(${windAngleDeg})`}>
+          <g transform={`translate(20 20) rotate(${windFromAngleDeg})`}>
             <line
               x1={-windArrowLen * 0.15}
               y1={0}

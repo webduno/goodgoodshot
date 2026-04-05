@@ -34,7 +34,7 @@ export const TerrainTextured = ({ clickedHandler }: { clickedHandler: (e: any) =
     {/** PlaneGeometry is XY (vertical); rotate to XZ to match `InitialFieldGround`. */}
     <Plane
       rotation={[-Math.PI / 2, 0, 0]}
-      args={[120, 80, 64, 64]}
+      args={[120, 80, 32, 32]}
       castShadow
       onClick={(e: any) => {
       e.stopPropagation();
@@ -83,7 +83,7 @@ export const AvilaTerrainTextured = ({ clickedHandler }: { clickedHandler: (e: a
   return (<>
     <Plane
       rotation={[-Math.PI / 2, 0, 0]}
-      args={[120, 80, 64, 64]}
+      args={[120, 80, 32, 32]}
       castShadow
       onClick={(e: any) => {
       e.stopPropagation();
@@ -94,7 +94,7 @@ export const AvilaTerrainTextured = ({ clickedHandler }: { clickedHandler: (e: a
     >
       <meshStandardMaterial map={earth_jpg} 
         color={"#aaaaaa"} 
-        displacementScale={60} displacementMap={bump2} />
+        displacementScale={9} displacementMap={bump2} />
     </Plane>
   </>);
 };

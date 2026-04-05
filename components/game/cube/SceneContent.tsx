@@ -248,8 +248,10 @@ export function SceneContent({
   const fieldWidth = 2 * (2 * FIELD_PLANE_HALF_WIDTH_X);
   const z0 = -FIELD_PLANE_Z_BEFORE_SPAWN;
   const z1 = GOAL_Z_MAX + FIELD_PLANE_Z_PAST_GOAL;
-  const fieldDepth = 2 * (z1 - z0);
-  const fieldZCenter = (z0 + z1) / 2;
+  const fieldDepth = fieldWidth
+  // const fieldDepth = 2 * (z1 - z0);
+  const fieldZCenter = 200
+  // const fieldZCenter = (z0 + z1) / 2;
 
   const onTerrainTexturedClick = useCallback((_coords: { lat: number; lng: number }) => {
     // Reserved for future map / terrain interactions
@@ -258,8 +260,8 @@ export function SceneContent({
   return (
     <>
       <group
-        position={[0, TURF_TOP_Y, fieldZCenter]}
-        scale={[fieldWidth / 120, 1, fieldDepth / 80]}
+        position={[0, -10, fieldZCenter]}
+        scale={[fieldWidth / 5, 1, fieldDepth / 5]}
       >
         <TerrainTextured clickedHandler={onTerrainTexturedClick} />
       </group>

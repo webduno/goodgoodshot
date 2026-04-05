@@ -1,6 +1,4 @@
 "use client";
-
-import type { ThreeEvent } from "@react-three/fiber";
 import {
   launchStrengthFromClicks,
   rgbTupleToCss,
@@ -32,7 +30,6 @@ import {
   FIELD_PLANE_Z_PAST_GOAL,
   GOAL_BLOCK_COLOR,
   GOAL_Z_MAX,
-  TURF_TOP_Y,
   VEHICLE_CORNER_BLOCK_SIZE,
   VEHICLE_WHEEL_FLOOR_Y_EPS,
   VEHICLE_WHEEL_OUTWARD,
@@ -69,6 +66,7 @@ export function SceneContent({
   collectedCoinKeysRef,
   coinRenderTick,
   onCoinCollected,
+  onBindFireInput,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -92,6 +90,8 @@ export function SceneContent({
   /** Bumps when a coin is collected or the hole goal changes (re-render visibility). */
   coinRenderTick: number;
   onCoinCollected: (key: string) => void;
+  /** Supplies the fire input handler to outer HUD controls. */
+  onBindFireInput: (handler: (() => void) | null) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -199,29 +199,29 @@ export function SceneContent({
   );
   void coinRenderTick;
 
-  const onSpawnPointerDown = useCallback(
-    (e: ThreeEvent<PointerEvent>) => {
-      e.stopPropagation();
-      if (roundLocked) return;
-      if (cooldownUntil !== null && Date.now() < cooldownUntil) return;
-      if (projectileRef.current) return;
+  const onFireInput = useCallback(() => {
+    if (roundLocked) return;
+    if (cooldownUntil !== null && Date.now() < cooldownUntil) return;
+    if (projectileRef.current) return;
 
-      if (chargingRef.current) {
-        clickCountRef.current += 1;
-        onChargeHudUpdate({
-          remainingMs: Math.max(
-            0,
-            chargeEndsAtRef.current - performance.now()
-          ),
-          clicks: clickCountRef.current,
-        });
-        return;
-      }
+    if (chargingRef.current) {
+      clickCountRef.current += 1;
+      onChargeHudUpdate({
+        remainingMs: Math.max(0, chargeEndsAtRef.current - performance.now()),
+        clicks: clickCountRef.current,
+      });
+      return;
+    }
 
-      beginChargeWindow();
-    },
+    beginChargeWindow();
+  },
     [roundLocked, cooldownUntil, beginChargeWindow, onChargeHudUpdate]
   );
+
+  useEffect(() => {
+    onBindFireInput(onFireInput);
+    return () => onBindFireInput(null);
+  }, [onBindFireInput, onFireInput]);
 
   const half = BLOCK_SIZE / 2;
   const wh = 0;
@@ -269,7 +269,7 @@ export function SceneContent({
       <SpawnVisualGroup>
         <group rotation={[0, bodyYawRad, 0]}>
           {vehicle.bodyParts != null && vehicle.bodyParts.length > 0 ? (
-            <group onPointerDown={onSpawnPointerDown}>
+            <group>
               <VehicleBodyParts
                 parts={vehicle.bodyParts}
                 mainRgb={vehicle.mainRgb}
@@ -277,7 +277,7 @@ export function SceneContent({
               />
             </group>
           ) : (
-            <mesh onPointerDown={onSpawnPointerDown} castShadow receiveShadow>
+            <mesh castShadow receiveShadow>
               <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
               <meshStandardMaterial
                 color={bodyColor}

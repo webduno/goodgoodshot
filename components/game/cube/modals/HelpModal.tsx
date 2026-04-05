@@ -94,8 +94,8 @@ export function HelpModal({
             </li>
             <li style={{ marginBottom: 8 }}>
               <strong style={{ color: hudColors.value }}>Shoot</strong> — Click
-              the spawn block. The first click starts a {chargeSec}s charge
-              window.
+              the <strong style={{ color: hudColors.value }}>Fire</strong> button.
+              The first click starts a {chargeSec}s charge window.
             </li>
             <li style={{ marginBottom: 8 }}>
               <strong style={{ color: hudColors.value }}>Power</strong> — Extra

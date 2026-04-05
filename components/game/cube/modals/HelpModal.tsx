@@ -146,7 +146,8 @@ export function HelpModal({
                   for the next shot).{" "}
                   <strong style={{ color: hudColors.value }}>Wind</strong> drifts
                   the ball horizontally; it changes every shot and is shown in the
-                  stats panel.
+                  stats panel (arrow: direction the wind comes from, meteorological
+                  convention).
                 </li>
                 <li style={{ marginBottom: 6, opacity: 0.85 }}>
                   <strong style={{ color: hudColors.value }}>Time</strong> (clock

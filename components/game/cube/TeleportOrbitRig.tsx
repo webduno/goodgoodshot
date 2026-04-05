@@ -14,6 +14,8 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
   CAMERA_OFFSET_FROM_SPAWN,
+  INTRO_CAMERA_DURATION_SEC,
+  INTRO_CAMERA_OFFSET_FROM_SPAWN,
   ORBIT_TARGET_Y_OFFSET,
   TELEPORT_DURATION_SEC,
   TURF_TOP_Y,
@@ -70,6 +72,8 @@ export function TeleportOrbitRig({
   const camStartRef = useRef(new THREE.Vector3());
   const tgtStartRef = useRef(new THREE.Vector3());
   const deltaVRef = useRef(new THREE.Vector3());
+  const introDoneRef = useRef(false);
+  const introProgressRef = useRef(0);
 
   useLayoutEffect(() => {
     const controls = new OrbitControls(camera, gl.domElement);
@@ -94,12 +98,15 @@ export function TeleportOrbitRig({
       const sy = gameSpawn[1];
       const sz = gameSpawn[2];
       camera.position.set(
-        sx + CAMERA_OFFSET_FROM_SPAWN[0],
-        sy + CAMERA_OFFSET_FROM_SPAWN[1],
-        sz + CAMERA_OFFSET_FROM_SPAWN[2]
+        sx + INTRO_CAMERA_OFFSET_FROM_SPAWN[0],
+        sy + INTRO_CAMERA_OFFSET_FROM_SPAWN[1],
+        sz + INTRO_CAMERA_OFFSET_FROM_SPAWN[2]
       );
       controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
       visualRef.current.set(sx, sy, sz);
+      introProgressRef.current = 0;
+      introDoneRef.current = false;
+      controls.enabled = false;
       controls.update();
       clampCameraAboveGround(camera, controls.target);
       camera.updateProjectionMatrix();
@@ -108,6 +115,7 @@ export function TeleportOrbitRig({
       return;
     }
     if (sameVec3(prev, gameSpawn)) return;
+    introDoneRef.current = true;
     fromRef.current.copy(visualRef.current);
     toRef.current.set(gameSpawn[0], gameSpawn[1], gameSpawn[2]);
     progressRef.current = 0;
@@ -138,6 +146,31 @@ export function TeleportOrbitRig({
       if (t >= 1) {
         transitioningRef.current = false;
         visualRef.current.copy(toRef.current);
+        controls.enabled = true;
+        controls.update();
+        clampCameraAboveGround(camera, controls.target);
+      }
+    } else if (!introDoneRef.current) {
+      introProgressRef.current += delta;
+      const rawT = Math.min(1, introProgressRef.current / INTRO_CAMERA_DURATION_SEC);
+      const t = rawT * rawT * (3 - 2 * rawT);
+      const sx = gameSpawn[0];
+      const sy = gameSpawn[1];
+      const sz = gameSpawn[2];
+      const i0 = INTRO_CAMERA_OFFSET_FROM_SPAWN;
+      const i1 = CAMERA_OFFSET_FROM_SPAWN;
+      camera.position.set(
+        sx + i0[0] + (i1[0] - i0[0]) * t,
+        sy + i0[1] + (i1[1] - i0[1]) * t,
+        sz + i0[2] + (i1[2] - i0[2]) * t
+      );
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
+      controls.update();
+      clampCameraAboveGround(camera, controls.target);
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      if (rawT >= 1) {
+        introDoneRef.current = true;
         controls.enabled = true;
         controls.update();
         clampCameraAboveGround(camera, controls.target);

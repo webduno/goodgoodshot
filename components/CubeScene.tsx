@@ -561,8 +561,8 @@ export default function CubeScene() {
         <div
           style={{
             position: "absolute",
-            right: 14,
-            bottom: 18,
+            right: "max(14px, env(safe-area-inset-right))",
+            bottom: "max(18px, env(safe-area-inset-bottom))",
             zIndex: 45,
             pointerEvents: "none",
           }}

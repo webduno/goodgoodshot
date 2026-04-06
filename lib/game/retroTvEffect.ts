@@ -12,7 +12,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   vec2 distorted = p * (1.0 + barrelStrength * d);
   vec2 uv2 = distorted * 0.5 + 0.5;
   if (uv2.x <= 0.0 || uv2.x >= 1.0 || uv2.y <= 0.0 || uv2.y >= 1.0) {
-    outputColor = vec4(0.04, 0.04, 0.04, 1.0);
+    outputColor = vec4(0.2, 0.4, 0.6, 1.0);
     return;
   }
   vec4 color = texture(inputBuffer, uv2);

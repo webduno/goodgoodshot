@@ -35,7 +35,11 @@ import {
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
 import { onCanvasCreated } from "@/lib/game/canvas";
-import { burstPowerupBuyConfetti } from "@/lib/game/confetti";
+import {
+  burstPowerupBuyConfetti,
+  burstPowerupUseConfetti,
+  burstShotGreyConfetti,
+} from "@/lib/game/confetti";
 import {
   AIM_PITCH_MAX_RAD,
   AIM_PITCH_STEP_RAD,
@@ -273,6 +277,7 @@ export default function CubeScene() {
         setStrengthCharges((c) => (c <= 0 ? c : c - 1));
         const mult = Math.pow(2, powerupStackRef.current);
         pushHudToast(`"Strength" used (×${mult})`, "strength");
+        burstPowerupUseConfetti("strength");
         return;
       }
 
@@ -284,6 +289,7 @@ export default function CubeScene() {
         setNoBounceActive(true);
         setNoBounceCharges((c) => (c <= 0 ? c : c - 1));
         pushHudToast(`"No bounce" used`, "noBounce");
+        burstPowerupUseConfetti("noBounce");
         return;
       }
 
@@ -294,6 +300,7 @@ export default function CubeScene() {
         setNoWindActive(true);
         setNoWindCharges((c) => (c <= 0 ? c : c - 1));
         pushHudToast(`"No wind" used`, "nowind");
+        burstPowerupUseConfetti("nowind");
       }
     },
     [pushHudToast, shotInFlight, showFinishModal, showSessionEndModal]
@@ -345,6 +352,7 @@ export default function CubeScene() {
     setShotInFlight(true);
     spawnBeforeShotRef.current = gameSpawnRef.current;
     setSessionShots((n) => n + 1);
+    burstShotGreyConfetti();
   }, []);
 
   const onProjectileEnd = useCallback(
@@ -644,6 +652,9 @@ export default function CubeScene() {
             onCoinCollected={onCoinCollected}
             onBindFireHeld={bindFireHeld}
             isCharging={chargeHud !== null}
+            powerupStackCount={powerupStackCount}
+            noBounceActive={noBounceActive}
+            noWindActive={noWindActive}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
@@ -672,7 +683,6 @@ export default function CubeScene() {
           noWindActive={noWindActive}
           windHud={windHud}
           vehicle={playerVehicle}
-          totalGoldCoins={stats.totalGoldCoins}
           sessionScoreDisplay={formatSessionScoreHud(playSession, sessionShots)}
         />
       )}

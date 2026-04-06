@@ -5,12 +5,14 @@ import {
   vehicleChargeMs,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
+import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
+  type CSSProperties,
   type MutableRefObject,
 } from "react";
 import * as THREE from "three";
@@ -45,9 +47,120 @@ import { coinCellKey, coinCentersForIslands } from "@/lib/game/path";
 import type { IslandRect } from "@/lib/game/islands";
 import { INITIAL_LANE_ORIGIN, type Projectile, type Vec3 } from "@/lib/game/types";
 import { TerrainTextured } from "../TerrainTextured";
+import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
+import { POWERUP_SLOT_ACCENT } from "@/components/gameHudStyles";
 
 /** Interval between automatic +power steps while Fire / Space / rear trigger is held (charge window). */
 const CHARGE_HOLD_REPEAT_MS = 85;
+
+/** Local Y above spawn block center: clears default hull top (~0.5) and typical barrel. */
+const VEHICLE_POWERUP_LABEL_Y = 0.92;
+
+/**
+ * Drei `Html` defaults to `zIndexRange` [16777271, 0], so labels paint above fixed UI (e.g. modals at
+ * z-index 50). Keep world-space HTML strictly below overlays (`modalBackdrop` / toasts use 50).
+ */
+const VEHICLE_HTML_Z_INDEX_RANGE: [number, number] = [35, 0];
+
+function pillStyle(slot: "strength" | "noBounce" | "nowind"): CSSProperties {
+  const a = POWERUP_SLOT_ACCENT[slot];
+  const text =
+    slot === "strength"
+      ? "#7c2d12"
+      : slot === "noBounce"
+        ? "#4c1d95"
+        : "#0c4a5e";
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    padding: "0 6px",
+    height: 18,
+    borderRadius: 999,
+    fontSize: 9,
+    fontWeight: 700,
+    color: text,
+    textShadow: "0 1px 0 rgba(255,255,255,0.45)",
+    background: a.ready,
+    border: "1px solid rgba(255,255,255,0.88)",
+    boxShadow: a.shadow,
+    whiteSpace: "nowrap",
+  };
+}
+
+function VehicleNextShotPowerupLabel({
+  powerupStackCount,
+  noBounceActive,
+  noWindActive,
+}: {
+  powerupStackCount: number;
+  noBounceActive: boolean;
+  noWindActive: boolean;
+}) {
+  const hasAny =
+    powerupStackCount > 0 || noBounceActive || noWindActive;
+  if (!hasAny) return null;
+
+  const strengthMult = Math.pow(2, powerupStackCount);
+
+  return (
+    <Html
+      position={[0, VEHICLE_POWERUP_LABEL_Y, 0]}
+      center
+      distanceFactor={7}
+      zIndexRange={VEHICLE_HTML_Z_INDEX_RANGE}
+      style={{ pointerEvents: "none", userSelect: "none" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 3,
+          maxWidth: 190,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 600,
+            color: "rgba(15, 23, 42, 0.72)",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Next shot
+        </span>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 4,
+            justifyContent: "center",
+          }}
+        >
+          {powerupStackCount > 0 && (
+            <span style={pillStyle("strength")}>
+              <PowerupHudIcon slotId="strength" color="currentColor" size={11} />
+              ×{strengthMult}
+            </span>
+          )}
+          {noBounceActive && (
+            <span style={pillStyle("noBounce")}>
+              <PowerupHudIcon slotId="noBounce" color="currentColor" size={11} />
+              No bounce
+            </span>
+          )}
+          {noWindActive && (
+            <span style={pillStyle("nowind")}>
+              <PowerupHudIcon slotId="nowind" color="currentColor" size={11} />
+              No wind
+            </span>
+          )}
+        </div>
+      </div>
+    </Html>
+  );
+}
 
 function LaneCoin({ position }: { position: Vec3 }) {
   const spinRef = useRef<THREE.Group>(null);
@@ -97,6 +210,9 @@ export function SceneContent({
   onCoinCollected,
   onBindFireHeld,
   isCharging,
+  powerupStackCount,
+  noBounceActive,
+  noWindActive,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -127,6 +243,10 @@ export function SceneContent({
   onCoinCollected: (key: string) => void;
   /** Press/release for fire + hold-to-add-power (Fire button, Space, rear red cube). */
   onBindFireHeld: (handler: ((held: boolean) => void) | null) => void;
+  /** Queued strength stacks (2^count multiplier) for the next shot. */
+  powerupStackCount: number;
+  noBounceActive: boolean;
+  noWindActive: boolean;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -359,9 +479,16 @@ export function SceneContent({
 
   return (
     <>
+    <group
+      position={[0, -55, fieldZCenter]}
+      scale={[fieldWidth / 15, 1, fieldDepth / 15]}
+    >
+      <TerrainTextured clickedHandler={onTerrainTexturedClick} />
+    </group>
       <group
-        position={[0, -55, fieldZCenter]}
-        scale={[fieldWidth / 5, 1, fieldDepth / 5]}
+      rotation={[0, Math.PI, 0]}
+        position={[0, -55, fieldZCenter-275]}
+        scale={[fieldWidth / 15, 1, fieldDepth / 15]}
       >
         <TerrainTextured clickedHandler={onTerrainTexturedClick} />
       </group>
@@ -400,6 +527,11 @@ export function SceneContent({
             />
           ))}
           <ShootTriggerCube phase={shootTriggerPhase} onFireHeld={setFireHeld} />
+          <VehicleNextShotPowerupLabel
+            powerupStackCount={powerupStackCount}
+            noBounceActive={noBounceActive}
+            noWindActive={noWindActive}
+          />
         </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}

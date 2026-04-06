@@ -40,8 +40,11 @@ export const POND_HALF_Z_MAX = 24;
 
 export const PLAYER_GROUND_HALF = BLOCK_SIZE / 2;
 
-/** Goal block / hazard box AABB (same as the mesh: center + half extents). */
-export const GOAL_HALF = BLOCK_SIZE / 2;
+/** Goal pyramid AABB half-extents: 2×2 blocks on XZ, 2 blocks tall (center on `goalCenter` + `GOAL_PYRAMID_Y_OFFSET` on Y). */
+export const GOAL_HALF_XZ = BLOCK_SIZE;
+export const GOAL_HALF_Y = BLOCK_SIZE;
+/** Y from lane `goalCenter[1]` to pyramid mesh group origin (cylinder center; base on `TURF_TOP_Y`). */
+export const GOAL_PYRAMID_Y_OFFSET = TURF_TOP_Y + GOAL_HALF_Y;
 
 /** Penalty pond water tint (mid sky blue; matches Frutiger Aero palette). */
 export const BG = "#78d4ff";

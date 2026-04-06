@@ -6,7 +6,7 @@ import * as THREE from "three";
 
 import {
   FLOOR_CONTACT_CENTER_Y,
-  GOAL_HALF,
+  PLAYER_GROUND_HALF,
   ROLL_STOP_SPEED,
   SPHERE_RADIUS,
 } from "@/lib/game/constants";
@@ -58,7 +58,7 @@ export function SphereToGoal({
     py: number,
     pz: number
   ) => {
-    const half = GOAL_HALF;
+    const half = PLAYER_GROUND_HALF;
     for (const c of coinCells) {
       const key = coinCellKey(c);
       if (collectedCoinKeysRef.current.has(key)) continue;

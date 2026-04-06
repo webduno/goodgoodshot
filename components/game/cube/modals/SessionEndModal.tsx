@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { Fredoka } from "next/font/google";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import {
@@ -16,6 +17,11 @@ import { PREDETERMINED_VEHICLES } from "@/components/playerVehicleConfig";
 import type { SessionBattleCount } from "@/lib/game/playSession";
 
 const BATTLE_OPTIONS: SessionBattleCount[] = [3, 9, 18];
+
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+});
 
 const sessionEndShell: CSSProperties = {
   ...hudFont,
@@ -35,6 +41,26 @@ const sessionEndShell: CSSProperties = {
   ].join(", "),
 };
 
+/** Step 1: brighter frame, subtle stripe, chunky depth — casual game feel. */
+const sessionEndShellGame: CSSProperties = {
+  ...sessionEndShell,
+  padding: "22px 18px 20px",
+  borderRadius: 26,
+  border: "3px solid rgba(255,255,255,0.98)",
+  boxShadow: [
+    "inset 0 3px 0 rgba(255,255,255,0.95)",
+    "inset 0 -4px 12px rgba(0, 100, 160, 0.08)",
+    "0 0 0 2px rgba(0, 200, 255, 0.45)",
+    "0 10px 0 rgba(0, 80, 130, 0.12)",
+    "0 28px 56px rgba(0, 35, 85, 0.42)",
+  ].join(", "),
+  backgroundImage: [
+    "repeating-linear-gradient(125deg, rgba(255,255,255,0) 0 11px, rgba(0, 190, 255, 0.045) 11px 12px)",
+    "radial-gradient(ellipse 120% 80% at 50% -20%, rgba(255,255,255,0.99) 0%, transparent 55%)",
+    "linear-gradient(168deg, rgba(255,255,255,0.97) 0%, rgba(200, 248, 255, 0.92) 45%, rgba(140, 230, 255, 0.88) 100%)",
+  ].join(", "),
+};
+
 const rulesPanel: CSSProperties = {
   margin: "0 0 14px",
   padding: "11px 13px",
@@ -46,6 +72,15 @@ const rulesPanel: CSSProperties = {
     "linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(230, 248, 255, 0.5) 100%)",
   border: "1px solid rgba(255,255,255,0.75)",
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85)",
+};
+
+const rulesPanelGame: CSSProperties = {
+  ...rulesPanel,
+  borderRadius: 18,
+  border: "2px solid rgba(0, 160, 230, 0.35)",
+  fontWeight: 600,
+  boxShadow:
+    "inset 0 2px 10px rgba(255,255,255,0.65), 0 3px 0 rgba(0, 100, 150, 0.12)",
 };
 
 const statLabel: CSSProperties = {
@@ -64,6 +99,81 @@ const secondaryPill: CSSProperties = {
   color: hudColors.value,
   textShadow: "0 1px 0 rgba(255,255,255,0.85)",
   border: "1px solid rgba(0, 114, 188, 0.22)",
+};
+
+function orangeCtaButtonStyle(pressed: boolean): CSSProperties {
+  return {
+    position: "relative",
+    display: "block",
+    width: "100%",
+    boxSizing: "border-box",
+    border: "none",
+    cursor: "pointer",
+    padding: "15px 18px",
+    borderRadius: 18,
+    overflow: "hidden",
+    fontFamily: "inherit",
+    fontSize: 16,
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    lineHeight: 1.25,
+    color: "#fffefa",
+    WebkitTapHighlightColor: "transparent",
+    transform: pressed ? "translateY(4px) scale(0.992)" : "translateY(0) scale(1)",
+    transition: "transform 0.07s ease-out, box-shadow 0.07s ease-out",
+    backgroundImage: [
+      "radial-gradient(ellipse 95% 70% at 50% -15%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.12) 42%, transparent 58%)",
+      "radial-gradient(ellipse 80% 50% at 100% 50%, rgba(255, 220, 100, 0.35) 0%, transparent 55%)",
+      "linear-gradient(168deg, #fffbeb 0%, #fde68a 10%, #fb923c 38%, #ea580c 62%, #c2410c 88%, #431407 100%)",
+    ].join(", "),
+    boxShadow: pressed
+      ? [
+          "inset 0 3px 10px rgba(0,0,0,0.35)",
+          "inset 0 1px 0 rgba(255,255,255,0.45)",
+          "0 1px 0 rgba(80, 30, 0, 0.55)",
+          "0 4px 10px rgba(180, 60, 0, 0.35)",
+        ].join(", ")
+      : [
+          "inset 0 2px 0 rgba(255,255,255,0.75)",
+          "inset 0 -4px 12px rgba(100, 30, 0, 0.35)",
+          "0 0 0 2px rgba(255, 200, 120, 0.55)",
+          "0 0 0 3px rgba(180, 60, 10, 0.45)",
+          "0 7px 0 rgba(100, 35, 5, 0.85)",
+          "0 12px 28px rgba(220, 90, 0, 0.55)",
+          "0 0 40px rgba(251, 146, 60, 0.45)",
+        ].join(", "),
+    textShadow: [
+      "0 1px 0 rgba(0,0,0,0.45)",
+      "0 2px 4px rgba(120, 40, 0, 0.55)",
+      "0 0 18px rgba(255, 220, 160, 0.35)",
+    ].join(", "),
+  };
+}
+
+const orangeCtaShimmer: CSSProperties = {
+  position: "absolute",
+  top: "-20%",
+  left: "-30%",
+  width: "55%",
+  height: "140%",
+  pointerEvents: "none",
+  background:
+    "linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.08) 35%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0.1) 65%, transparent 100%)",
+  transform: "skewX(-14deg)",
+  animation: "session-orange-shimmer 2.4s linear infinite",
+};
+
+const statPanelGame: CSSProperties = {
+  padding: "12px 10px",
+  textAlign: "center" as const,
+  ...hudMiniPanel,
+  borderRadius: 18,
+  border: "2px solid rgba(0, 190, 255, 0.4)",
+  boxShadow: [
+    "inset 0 2px 8px rgba(255,255,255,0.75)",
+    "0 4px 0 rgba(0, 100, 150, 0.1)",
+    "0 8px 16px rgba(0, 80, 130, 0.15)",
+  ].join(", "),
 };
 
 export function SessionEndModal({
@@ -88,10 +198,15 @@ export function SessionEndModal({
   onStartNewSession: (battleCount: SessionBattleCount) => void;
 }) {
   const [page, setPage] = useState<1 | 2>(1);
+  const [orangeCtaPressed, setOrangeCtaPressed] = useState(false);
   const { stats } = usePlayerStats();
 
   useEffect(() => {
     if (open) setPage(1);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) setOrangeCtaPressed(false);
   }, [open]);
 
   if (!open) return null;
@@ -120,56 +235,107 @@ export function SessionEndModal({
       aria-labelledby="session-end-title"
       style={modalBackdrop}
     >
+      <style>{`
+        @keyframes session-end-card-in {
+          from {
+            opacity: 0;
+            transform: scale(0.94) translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        @keyframes session-orange-shimmer {
+          0% {
+            transform: translateX(-60%) skewX(-14deg);
+          }
+          100% {
+            transform: translateX(280%) skewX(-14deg);
+          }
+        }
+      `}</style>
       {page === 1 ? (
-        <div style={sessionEndShell}>
+        <div
+          className={fredoka.className}
+          style={{
+            ...sessionEndShellGame,
+            animation: "session-end-card-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both",
+          }}
+        >
           <div
             style={{
               marginBottom: 14,
               paddingBottom: 12,
-              borderBottom: "1px solid rgba(0, 114, 188, 0.12)",
+              borderBottom: "2px solid rgba(0, 160, 220, 0.18)",
             }}
           >
             <p
               style={{
-                margin: "0 0 6px",
+                margin: "0 0 8px",
                 fontSize: 10,
                 fontWeight: 700,
-                letterSpacing: "0.14em",
+                letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: hudColors.muted,
-              }}
-            >
-              Session complete · step 1 of 2
-            </p>
-            <h2
-              id="session-end-title"
-              style={{
-                margin: 0,
-                fontSize: 24,
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-                lineHeight: 1.15,
-                color: hudColors.value,
+                color: "#0072bc",
                 textShadow: "0 1px 0 rgba(255,255,255,0.9)",
               }}
             >
-              {title}
-            </h2>
+              ★ Session complete · step 1 of 2
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  fontSize: 40,
+                  lineHeight: 1,
+                  filter: "drop-shadow(0 3px 2px rgba(0,60,100,0.25))",
+                }}
+              >
+                {sessionWon ? "🏆" : "⛳"}
+              </span>
+              <h2
+                id="session-end-title"
+                style={{
+                  margin: 0,
+                  fontSize: 28,
+                  fontWeight: 700,
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1.1,
+                  color: hudColors.value,
+                  textShadow: [
+                    "0 2px 0 rgba(255,255,255,0.95)",
+                    "0 3px 0 rgba(0, 80, 120, 0.15)",
+                    "0 8px 18px rgba(0, 120, 180, 0.2)",
+                  ].join(", "),
+                }}
+              >
+                {title}
+              </h2>
+            </div>
             <div
               aria-hidden
               style={{
-                marginTop: 10,
-                height: 3,
-                width: 48,
+                marginTop: 12,
+                height: 5,
+                width: 72,
                 borderRadius: 999,
                 background:
-                  "linear-gradient(90deg, #00aeef 0%, #0072bc 55%, rgba(0,180,255,0.35) 100%)",
-                boxShadow: "0 1px 4px rgba(0, 114, 188, 0.35)",
+                  "linear-gradient(90deg, #22d3ee 0%, #00aeef 35%, #0072bc 70%, rgba(0,180,255,0.4) 100%)",
+                boxShadow:
+                  "0 2px 6px rgba(0, 114, 188, 0.45), inset 0 1px 0 rgba(255,255,255,0.5)",
               }}
             />
           </div>
 
-          <div style={rulesPanel}>{outcomeHint}</div>
+          <div style={rulesPanelGame}>{outcomeHint}</div>
 
           <div
             style={{
@@ -179,14 +345,8 @@ export function SessionEndModal({
               marginBottom: 12,
             }}
           >
-            <div
-              style={{
-                padding: "12px 10px",
-                textAlign: "center",
-                ...hudMiniPanel,
-              }}
-            >
-              <div style={statLabel}>Battles</div>
+            <div style={statPanelGame}>
+              <div style={statLabel}>⚔️ Battles</div>
               <div
                 style={{
                   color: hudColors.value,
@@ -224,14 +384,8 @@ export function SessionEndModal({
                 {" lost"}
               </div>
             </div>
-            <div
-              style={{
-                padding: "12px 10px",
-                textAlign: "center",
-                ...hudMiniPanel,
-              }}
-            >
-              <div style={statLabel}>Total strokes</div>
+            <div style={statPanelGame}>
+              <div style={statLabel}>🎯 Total strokes</div>
               <div
                 style={{
                   color: hudColors.value,
@@ -259,21 +413,68 @@ export function SessionEndModal({
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button
               type="button"
               onClick={() => setPage(2)}
-              style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
+              style={{
+                ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
+                borderRadius: 16,
+                padding: "10px 16px",
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: "0.02em",
+                border: "2px solid rgba(255,255,255,0.95)",
+                boxShadow: [
+                  "inset 0 2px 6px rgba(255,255,255,0.45)",
+                  "0 4px 0 rgba(0, 70, 120, 0.35)",
+                  "0 10px 20px rgba(0, 90, 140, 0.28)",
+                ].join(", "),
+              }}
             >
               Career & stats
             </button>
-            <button type="button" onClick={onDone} style={secondaryPill}>
-              Done
+            <button
+              type="button"
+              onClick={() => onStartNewSession(3)}
+              style={orangeCtaButtonStyle(orangeCtaPressed)}
+              onMouseDown={() => setOrangeCtaPressed(true)}
+              onMouseUp={() => setOrangeCtaPressed(false)}
+              onMouseLeave={() => setOrangeCtaPressed(false)}
+              onTouchStart={() => setOrangeCtaPressed(true)}
+              onTouchEnd={() => setOrangeCtaPressed(false)}
+            >
+              <span style={orangeCtaShimmer} aria-hidden />
+              <span
+                style={{
+                  position: "relative",
+                  zIndex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    fontSize: 20,
+                    lineHeight: 1,
+                    filter: "drop-shadow(0 3px 2px rgba(0,0,0,0.45))",
+                  }}
+                >
+                  ⚡
+                </span>
+                <span>Start a new 3-battle session</span>
+              </span>
             </button>
           </div>
         </div>
       ) : (
-        <div style={{ ...helpModalCard, ...sessionEndShell, maxHeight: "min(82vh, 520px)" }}>
+        <div
+          className={fredoka.className}
+          style={{ ...helpModalCard, ...sessionEndShell, maxHeight: "min(82vh, 520px)" }}
+        >
           <div
             style={{
               marginBottom: 12,

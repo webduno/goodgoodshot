@@ -54,6 +54,41 @@ export function ProfileModal({
           Profile
         </h2>
 
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "8px 10px",
+            borderRadius: 12,
+            border: "1px solid rgba(0, 114, 188, 0.2)",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240, 248, 255, 0.85) 100%)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: hudColors.muted,
+              marginBottom: 4,
+            }}
+          >
+            Coins
+          </div>
+          <div
+            style={{
+              color: "#b8860b",
+              fontWeight: 700,
+              fontSize: 18,
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1.2,
+            }}
+          >
+            {stats.totalGoldCoins}
+          </div>
+        </div>
+
         <section style={{ marginBottom: 14 }}>
           <h3
             style={{
@@ -81,7 +116,6 @@ export function ProfileModal({
             <li>Strength power-ups used (lifetime): {stats.totalStrengthPowerupsUsed}</li>
             <li>No-bounce power-ups used (lifetime): {stats.totalNoBouncePowerupsUsed}</li>
             <li>Water penalties (lifetime): {stats.totalWaterPenalties}</li>
-            <li>Gold coins (lifetime): {stats.totalGoldCoins}</li>
           </ul>
         </section>
 

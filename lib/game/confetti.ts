@@ -78,6 +78,40 @@ export function burstPowerupBuyConfetti(
   });
 }
 
+/** Small burst when a power-up is activated (lighter than buying a charge). */
+export function burstPowerupUseConfetti(
+  slot: "strength" | "noBounce" | "nowind"
+) {
+  const j = getConfetti();
+  if (!j) return;
+  void j.addConfetti({
+    confettiNumber: 52,
+    confettiColors: POWERUP_BUY_COLORS[slot],
+    confettiRadius: 3,
+  });
+}
+
+const SHOT_GREY_COLORS = [
+  "#9ca3af",
+  "#6b7280",
+  "#d1d5db",
+  "#e5e7eb",
+  "#4b5563",
+  "#cbd5e1",
+  "#78716c",
+];
+
+/** Small neutral burst when the ball is launched. */
+export function burstShotGreyConfetti() {
+  const j = getConfetti();
+  if (!j) return;
+  void j.addConfetti({
+    confettiNumber: 40,
+    confettiColors: SHOT_GREY_COLORS,
+    confettiRadius: 3,
+  });
+}
+
 /** Session start / Continue — uses the selected vehicle’s main + accent RGB. */
 export function burstVehicleStartConfetti(
   mainRgb: readonly [number, number, number],
@@ -95,9 +129,9 @@ export function burstVehicleStartConfetti(
     rgbToHex(...mixRgb(accentRgb, NEAR_BLACK, 0.22)),
   ];
   void j.addConfetti({
-    confettiNumber: 380,
+    confettiNumber: 140,
     confettiColors: palette,
-    confettiRadius: 6,
+    confettiRadius: 4,
   });
 }
 

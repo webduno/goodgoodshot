@@ -5,13 +5,9 @@ import {
   rgbTupleToCss,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
-import {
-  hudColors,
-  hudFont,
-  hudMiniPanel,
-} from "@/components/gameHudStyles";
+import { hudColors, hudFont, hudMiniPanel } from "@/components/gameHudStyles";
 import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 
 import { HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
@@ -29,7 +25,6 @@ export function StatsHud({
   noWindActive,
   windHud,
   vehicle,
-  totalGoldCoins,
   sessionScoreDisplay,
 }: {
   sessionShots: number;
@@ -44,10 +39,11 @@ export function StatsHud({
   noWindActive: boolean;
   windHud: { x: number; z: number };
   vehicle: PlayerVehicleConfig;
-  totalGoldCoins: number;
   /** e.g. `12/3(+1)` — strokes/targetBattles(win−loss spread). */
   sessionScoreDisplay: string;
 }) {
+  const [vehicleOpen, setVehicleOpen] = useState(false);
+
   const remainingMs =
     cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
   const inCooldown = cooldownUntil !== null && remainingMs > 0;
@@ -89,6 +85,129 @@ export function StatsHud({
         maxWidth: "min(94vw, 168px)",
       }}
     >
+      <div
+        style={{
+          pointerEvents: "auto",
+          ...hudFont,
+          fontSize: 10,
+          lineHeight: 1.4,
+          borderRadius: 14,
+          border: "1px solid rgba(255,255,255,0.88)",
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 10px rgba(0, 55, 95, 0.2)",
+          backgroundImage: [
+            "linear-gradient(165deg, rgba(255,255,255,0.42) 0%, transparent 46%)",
+            `linear-gradient(135deg, ${mainCss} 0%, ${accentCss} 100%)`,
+          ].join(", "),
+        }}
+      >
+        <button
+          type="button"
+          id="hud-vehicle-toggle"
+          aria-expanded={vehicleOpen}
+          aria-controls="hud-vehicle-details"
+          onClick={() => setVehicleOpen((o) => !o)}
+          style={{
+            width: "100%",
+            margin: 0,
+            padding: "6px 8px",
+            border: "none",
+            borderRadius: vehicleOpen ? "14px 14px 0 0" : 14,
+            background: "transparent",
+            cursor: "pointer",
+            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            ...hudFont,
+          }}
+        >
+          <span
+            style={{
+              color: "rgba(255,255,255,0.88)",
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+            }}
+          >
+            Vehicle
+          </span>
+          <span
+            aria-hidden
+            style={{
+              flexShrink: 0,
+              color: "rgba(255,255,255,0.92)",
+              fontSize: 12,
+              lineHeight: 1,
+              textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+            }}
+          >
+            {vehicleOpen ? "▼" : "▶"}
+          </span>
+        </button>
+        {vehicleOpen ? (
+          <div
+            id="hud-vehicle-details"
+            role="region"
+            aria-labelledby="hud-vehicle-toggle"
+            style={{ padding: "0 8px 8px" }}
+          >
+            <div
+              style={{
+                color: "rgba(255,255,255,0.88)",
+                marginBottom: 2,
+                fontSize: 9,
+                fontWeight: 600,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+              }}
+            >
+              Strength
+            </div>
+            <div
+              role="status"
+              aria-label={`Base launch strength ${baseLaunchStrength.toFixed(2)}`}
+              title="Launch strength on the first tap in the charge window; hold Fire, Space, or the rear button to ramp clicks"
+              style={{
+                color: "#ffffff",
+                fontWeight: 700,
+                fontSize: 12,
+                fontVariantNumeric: "tabular-nums",
+                textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+                marginBottom: 2,
+              }}
+            >
+              {baseLaunchStrength.toFixed(2)}
+            </div>
+            <div
+              role="status"
+              aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds`}
+              style={{
+                marginTop: 8,
+                paddingTop: 8,
+                borderTop: "1px solid rgba(255,255,255,0.28)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                color: "rgba(255,255,255,0.95)",
+                fontSize: 10,
+                lineHeight: 1,
+                fontVariantNumeric: "tabular-nums",
+                textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+              }}
+              title="Charge window length"
+            >
+              <HudIdleClockIcon color="rgba(255,255,255,0.95)" />
+              {vehicle.secondsBeforeShotTrigger}s
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       <div
         style={{
           padding: "6px 8px",
@@ -315,130 +434,6 @@ export function StatsHud({
           )}
         </div>
       ) : null}
-
-      <div
-        style={{
-          padding: "6px 8px",
-          ...hudMiniPanel,
-          fontSize: 10,
-          lineHeight: 1.4,
-        }}
-      >
-        <div
-          style={{
-            color: hudColors.muted,
-            marginBottom: 2,
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-          }}
-        >
-          Coins
-        </div>
-        <div
-          style={{
-            color: "#b8860b",
-            fontWeight: 700,
-            fontSize: 14,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {totalGoldCoins}
-        </div>
-      </div>
-
-      <div
-        style={{
-          padding: "6px 8px",
-          ...hudFont,
-          fontSize: 10,
-          lineHeight: 1.4,
-          borderRadius: 14,
-          border: "1px solid rgba(255,255,255,0.88)",
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 10px rgba(0, 55, 95, 0.2)",
-          backgroundImage: [
-            "linear-gradient(165deg, rgba(255,255,255,0.42) 0%, transparent 46%)",
-            `linear-gradient(135deg, ${mainCss} 0%, ${accentCss} 100%)`,
-          ].join(", "),
-        }}
-      >
-        <div
-          style={{
-            color: "rgba(255,255,255,0.88)",
-            marginBottom: 2,
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
-          }}
-        >
-          Vehicle
-        </div>
-        <div
-          style={{
-            color: "#ffffff",
-            fontWeight: 700,
-            fontSize: 11,
-            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-            marginBottom: 2,
-          }}
-        >
-          {vehicle.name}
-        </div>
-        <div
-          style={{
-            color: "rgba(255,255,255,0.88)",
-            marginTop: 8,
-            marginBottom: 2,
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
-          }}
-        >
-          Strength
-        </div>
-        <div
-          role="status"
-          aria-label={`Base launch strength ${baseLaunchStrength.toFixed(2)}`}
-          title="Launch strength on the first tap in the charge window; hold Fire, Space, or the rear button to ramp clicks"
-          style={{
-            color: "#ffffff",
-            fontWeight: 700,
-            fontSize: 12,
-            fontVariantNumeric: "tabular-nums",
-            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-            marginBottom: 2,
-          }}
-        >
-          {baseLaunchStrength.toFixed(2)}
-        </div>
-        <div
-          role="status"
-          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds`}
-          style={{
-            marginTop: 8,
-            paddingTop: 8,
-            borderTop: "1px solid rgba(255,255,255,0.28)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            color: "rgba(255,255,255,0.95)",
-            fontSize: 10,
-            lineHeight: 1,
-            fontVariantNumeric: "tabular-nums",
-            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
-          }}
-          title="Charge window length"
-        >
-          <HudIdleClockIcon color="rgba(255,255,255,0.95)" />
-          {vehicle.secondsBeforeShotTrigger}s
-        </div>
-      </div>
 
       <div
         style={{

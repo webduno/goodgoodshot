@@ -1,11 +1,12 @@
 import * as THREE from "three";
 
 import {
-  BLOCK_SIZE,
   FIELD_PLANE_HALF_WIDTH_X,
   FIELD_PLANE_Z_BEFORE_SPAWN,
   FIELD_PLANE_Z_PAST_GOAL,
-  GOAL_HALF,
+  GOAL_HALF_XZ,
+  GOAL_HALF_Y,
+  GOAL_PYRAMID_Y_OFFSET,
   GOAL_Z_MAX,
   PLAYER_GROUND_HALF,
 } from "./constants";
@@ -104,7 +105,6 @@ export function pondOverlapsGoalBlock(
   goalX: number,
   goalZ: number
 ): boolean {
-  const gh = BLOCK_SIZE / 2;
   return rectsOverlapXZ(
     pondCx,
     pondCz,
@@ -112,8 +112,8 @@ export function pondOverlapsGoalBlock(
     halfZ,
     goalX,
     goalZ,
-    gh,
-    gh
+    GOAL_HALF_XZ,
+    GOAL_HALF_XZ
   );
 }
 
@@ -198,14 +198,19 @@ export function sphereIntersectsGoalBox(
   radius: number,
   goalCenter: Vec3
 ): boolean {
+  const center: Vec3 = [
+    goalCenter[0],
+    goalCenter[1] + GOAL_PYRAMID_Y_OFFSET,
+    goalCenter[2],
+  ];
   return sphereIntersectsAabb(
     px,
     py,
     pz,
     radius,
-    goalCenter,
-    GOAL_HALF,
-    GOAL_HALF,
-    GOAL_HALF
+    center,
+    GOAL_HALF_XZ,
+    GOAL_HALF_Y,
+    GOAL_HALF_XZ
   );
 }

@@ -27,6 +27,55 @@ import {
 
 const BATTLE_OPTIONS: SessionBattleCount[] = [3, 9, 18];
 
+/** Scoped hover motion for session-length pills (gamified lift + tilt). */
+const battleLengthButtonCss = `
+  .ggsBattleLenBtn {
+    transition: transform 0.22s cubic-bezier(0.34, 1.45, 0.64, 1),
+      box-shadow 0.22s ease,
+      filter 0.22s ease;
+    will-change: transform;
+  }
+  .ggsBattleLenBtn:hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.75),
+      0 10px 22px rgba(0, 82, 130, 0.38),
+      0 0 0 1px rgba(255, 255, 255, 0.55);
+    filter: brightness(1.07) saturate(1.06);
+  }
+  .ggsBattleLenBtn:active {
+    transition-duration: 0.08s;
+    filter: brightness(0.98);
+  }
+  .ggsBattleLenBtn:nth-child(1):hover {
+    transform: translate(-3px, -6px) rotate(-2.5deg) scale(1.06);
+  }
+  .ggsBattleLenBtn:nth-child(2):hover {
+    transform: translateY(-8px) scale(1.08);
+  }
+  .ggsBattleLenBtn:nth-child(3):hover {
+    transform: translate(3px, -6px) rotate(2.5deg) scale(1.06);
+  }
+  .ggsBattleLenBtn:nth-child(1):active,
+  .ggsBattleLenBtn:nth-child(3):active {
+    transform: translate(0, -2px) rotate(0deg) scale(1.02);
+  }
+  .ggsBattleLenBtn:nth-child(2):active {
+    transform: translateY(-3px) scale(1.03);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ggsBattleLenBtn {
+      transition: filter 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ggsBattleLenBtn:hover,
+    .ggsBattleLenBtn:active {
+      transform: none;
+    }
+    .ggsBattleLenBtn:hover {
+      filter: brightness(1.05);
+    }
+  }
+`;
+
 const startModalShell: CSSProperties = {
   ...hudFont,
   backdropFilter: "blur(14px)",
@@ -56,6 +105,65 @@ const rulesPanel: CSSProperties = {
     "linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(230, 248, 255, 0.5) 100%)",
   border: "1px solid rgba(255,255,255,0.75)",
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85)",
+};
+
+/** Welcome overview — slightly richer surface + room for segmented rules. */
+const rulesWelcomePanel: CSSProperties = (() => {
+  const { background: _omitBg, ...rulesRest } = rulesPanel;
+  return {
+    ...rulesRest,
+    padding: "12px 12px 11px",
+    backgroundImage: [
+      "radial-gradient(ellipse 95% 80% at 100% 0%, rgba(0, 174, 239, 0.09) 0%, transparent 55%)",
+      "radial-gradient(ellipse 70% 55% at 0% 100%, rgba(0, 114, 188, 0.06) 0%, transparent 50%)",
+      "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(218, 244, 255, 0.58) 100%)",
+    ].join(", "),
+    border: "1px solid rgba(0, 114, 188, 0.14)",
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.92), 0 1px 8px rgba(0, 82, 130, 0.06)",
+  };
+})();
+
+const welcomeRuleRow: CSSProperties = {
+  display: "flex",
+  gap: 10,
+  alignItems: "flex-start",
+  marginBottom: 10,
+};
+
+const welcomeRuleBadge: CSSProperties = {
+  flexShrink: 0,
+  width: 22,
+  height: 22,
+  marginTop: 1,
+  borderRadius: 999,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 11,
+  fontWeight: 800,
+  color: "#ffffff",
+  textShadow: "0 1px 2px rgba(0, 35, 70, 0.45)",
+  backgroundImage:
+    "linear-gradient(155deg, #5ecfff 0%, #00aeef 45%, #0072bc 100%)",
+  border: "1px solid rgba(255,255,255,0.65)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.45), 0 2px 6px rgba(0, 82, 130, 0.22)",
+};
+
+const welcomeRuleTitle: CSSProperties = {
+  fontSize: 11.5,
+  fontWeight: 800,
+  letterSpacing: "0.02em",
+  color: hudColors.value,
+  marginBottom: 3,
+  lineHeight: 1.25,
+};
+
+const welcomeRuleBody: CSSProperties = {
+  fontSize: 12,
+  lineHeight: 1.5,
+  color: hudColors.label,
+  margin: 0,
 };
 
 const statLabel: CSSProperties = {
@@ -229,6 +337,7 @@ export function StartGameModal({
       style={modalBackdrop}
     >
       <div style={startModalShell}>
+        <style dangerouslySetInnerHTML={{ __html: battleLengthButtonCss }} />
         <div
           style={{
             marginBottom: 14,
@@ -367,29 +476,80 @@ export function StartGameModal({
         ) : (
           <>
             {!gameConfigOpen ? (
-              <div style={rulesPanel}>
-                <p
+              <div style={rulesWelcomePanel}>
+                <div
                   style={{
-                    margin: 0,
-                    fontSize: 12.5,
-                    lineHeight: 1.55,
-                    color: hudColors.label,
+                    ...welcomeRuleRow,
+                    paddingBottom: 10,
+                    marginBottom: 10,
+                    borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
                   }}
                 >
-                  Win battles by hitting the goal at or under par (strokes ≤ lane
-                  coins). Your session wins if your battle wins are at least your
-                  battle losses (ties count). Pick a length below to start.
-                </p>
+                  <span aria-hidden style={welcomeRuleBadge}>
+                    1
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={welcomeRuleTitle}>Win the battle</div>
+                    <p style={welcomeRuleBody}>
+                      Reach the goal at or under{" "}
+                      <strong style={{ color: hudColors.value }}>par</strong> —
+                      strokes ≤ lane coins on the hole.
+                    </p>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    ...welcomeRuleRow,
+                    paddingBottom: 10,
+                    marginBottom: 10,
+                    borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
+                  }}
+                >
+                  <span aria-hidden style={welcomeRuleBadge}>
+                    2
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={welcomeRuleTitle}>Win the session</div>
+                    <p style={welcomeRuleBody}>
+                      Your{" "}
+                      <strong style={{ color: hudColors.value }}>
+                        battle wins
+                      </strong>{" "}
+                      should be at least your{" "}
+                      <strong style={{ color: hudColors.value }}>
+                        battle losses
+                      </strong>{" "}
+                      (ties count).
+                    </p>
+                  </div>
+                </div>
+                <div style={{ ...welcomeRuleRow, marginBottom: 12 }}>
+                  <span aria-hidden style={welcomeRuleBadge}>
+                    3
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={welcomeRuleTitle}>Start playing</div>
+                    <p style={welcomeRuleBody}>
+                      Pick a session length below —{" "}
+                      <strong style={{ color: hudColors.accent }}>3</strong>,{" "}
+                      <strong style={{ color: hudColors.accent }}>9</strong>, or{" "}
+                      <strong style={{ color: hudColors.accent }}>18</strong>{" "}
+                      battles.
+                    </p>
+                  </div>
+                </div>
                 <p
                   style={{
-                    margin: "12px 0 6px",
+                    margin: "0 0 8px",
                     fontSize: 11,
                     lineHeight: 1.45,
                     color: hudColors.muted,
+                    paddingTop: 2,
+                    borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
                   }}
                 >
-                  Changing vehicle or reading extra help is optional — only if you
-                  want to tweak your setup.
+                  Optional: change vehicle or read extra help if you want to tweak
+                  your setup.
                 </p>
                 <button
                   type="button"
@@ -657,6 +817,7 @@ export function StartGameModal({
                 <button
                   key={battleCount}
                   type="button"
+                  className="ggsBattleLenBtn"
                   onClick={() => {
                     burstVehicleStartConfetti(
                       selectedVehicle.mainRgb,

@@ -14,6 +14,9 @@ export type PondSpec = {
   surfaceLayer: 0 | 1;
 };
 
+/** Local XZ offset from island center for a decorative bush (world Y uses `TURF_TOP_Y`). */
+export type IslandBushOffset = { ox: number; oz: number };
+
 /** Axis-aligned island footprint (center + half extents on XZ). */
 export type IslandRect = {
   worldX: number;
@@ -22,6 +25,16 @@ export type IslandRect = {
   halfZ: number;
   /** Visual block height (Y); top face stays at `TURF_TOP_Y` in the renderer. */
   blockThickness: number;
+  /**
+   * Decorative bush anchor(s) on this pad — filled when the course is generated
+   * (`computeIslandsForLane`); visual-only, no physics.
+   */
+  bushes: readonly IslandBushOffset[];
+  /**
+   * Decorative blocky trees (same style as the tee tree) — two per hole on two random
+   * islands, or both on the only island; visual-only, no physics.
+   */
+  trees: readonly IslandBushOffset[];
 };
 
 export type GameState = {

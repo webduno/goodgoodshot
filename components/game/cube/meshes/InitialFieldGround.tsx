@@ -8,8 +8,6 @@ import type { IslandRect } from "@/lib/game/islands";
 
 /** Muted stone under the turf slab — visual only (physics uses island rects). */
 const ISLAND_FOUNDATION_GREY = "#6b6f76";
-/** Island footprint scale (XZ) relative to the green slab — slightly inset. */
-const FOUNDATION_FOOTPRINT = 0.9;
 /**
  * Grey top extends slightly into the grass mesh so there is no visible air gap
  * (same center XZ as the island).
@@ -30,12 +28,21 @@ export function InitialFieldGround({
         const th = is.blockThickness;
         const cy = TURF_TOP_Y - th / 2;
         const slabBottomY = TURF_TOP_Y - th;
-        const ux = is.halfX * 2 * FOUNDATION_FOOTPRINT;
-        const uz = is.halfZ * 2 * FOUNDATION_FOOTPRINT;
         const stoneDepth =
           9 + (i % 3) * 1.2 + Math.min(6, (is.halfX + is.halfZ) * 0.28);
         const stoneTopY = slabBottomY + GRASS_STONE_OVERLAP_Y;
         const stoneCenterY = stoneTopY - stoneDepth / 2;
+        /**
+         * 4-sided frustum like goal `Block` pyramid (inverted): `radiusTop` is vertex distance on
+         * local ±X/±Z. After Y rotation π/4, the world AABB shrinks by √2 vs unrotated — scale so the
+         * top lines up with the slab; `0.94` nudges it slightly under the grass edge.
+         */
+        const foundationTopRadius =
+          Math.max(is.halfX, is.halfZ) * 1.02 * Math.SQRT2 * 0.94;
+        const foundationBottomRadius = Math.max(
+          0.14,
+          foundationTopRadius * 0.1
+        );
 
         return (
           <group
@@ -51,10 +58,18 @@ export function InitialFieldGround({
             </mesh>
             <mesh
               position={[is.worldX, stoneCenterY, is.worldZ]}
+              rotation={[0, Math.PI / 4, 0]}
               castShadow
               receiveShadow
             >
-              <boxGeometry args={[ux, stoneDepth, uz]} />
+              <cylinderGeometry
+                args={[
+                  foundationTopRadius,
+                  foundationBottomRadius,
+                  stoneDepth,
+                  4,
+                ]}
+              />
               <meshStandardMaterial
                 color={ISLAND_FOUNDATION_GREY}
                 roughness={0.94}

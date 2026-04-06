@@ -12,7 +12,10 @@ import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
 import { ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
+import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
+import { IslandTrees } from "@/components/game/cube/meshes/IslandTrees";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
+import { SkySun } from "@/components/game/cube/meshes/SkySun";
 import { SceneContent } from "@/components/game/cube/SceneContent";
 import {
   TeleportOrbitRig,
@@ -37,7 +40,7 @@ import {
   AIM_PITCH_STEP_RAD,
   AIM_YAW_QUARTER_TURN_RAD,
   AIM_YAW_STEP_RAD,
-  BG,
+  SKY_GRADIENT_CSS,
   INITIAL_POWERUP_CHARGES,
 } from "@/lib/game/constants";
 import { createInitialGameState, gameReducer } from "@/lib/game/gameState";
@@ -601,7 +604,7 @@ export default function CubeScene() {
         position: "relative",
         width: "100vw",
         height: "100vh",
-        background: BG,
+        background: SKY_GRADIENT_CSS,
       }}
     >
       <Canvas
@@ -613,6 +616,7 @@ export default function CubeScene() {
       >
         <StaticSceneLights />
         <SkyClouds />
+        <SkySun />
         <TeleportOrbitRig gameSpawn={game.spawnCenter}>
           <SceneContent
             spawnCenter={game.spawnCenter}
@@ -643,6 +647,8 @@ export default function CubeScene() {
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
         <InitialFieldGround islands={islands} />
+        <IslandBushes islands={islands} />
+        <IslandTrees islands={islands} />
       </Canvas>
       <ToastNotif
         showToken={hudToastToken}

@@ -43,8 +43,13 @@ export const PLAYER_GROUND_HALF = BLOCK_SIZE / 2;
 /** Goal block / hazard box AABB (same as the mesh: center + half extents). */
 export const GOAL_HALF = BLOCK_SIZE / 2;
 
-/** Clear color + page chrome — Frutiger Aero sky; penalty ponds use the same tint. */
+/** Penalty pond water tint (mid sky blue; matches Frutiger Aero palette). */
 export const BG = "#78d4ff";
+/** Page chrome + scene wrapper — same stops as `app/page.tsx` / `globals.css` body. */
+export const SKY_GRADIENT_CSS =
+  "linear-gradient(180deg, #d4f1ff 0%, #7dd3fc 38%, #00aeef 72%, #0072bc 100%)";
+/** Fog color — mid band so distant meshes blend with the gradient sky. */
+export const FOG_SKY = "#7dd3fc";
 /** Linear fog (world units): ramp from `FOG_NEAR` to sky color by `FOG_FAR` — distant play barely visible. */
 export const FOG_NEAR = 70;
 export const FOG_FAR = 175;
@@ -92,8 +97,8 @@ export const VEHICLE_FOOTPRINT_HALF_XZ =
   BLOCK_SIZE / 2 +
   VEHICLE_WHEEL_OUTWARD +
   VEHICLE_CORNER_BLOCK_SIZE / 2;
-/** Full player span on XZ ≈ 2× this; tee is 4× that width → half-extent = 4× footprint half. */
-export const TEE_PAD_HALF_X = VEHICLE_FOOTPRINT_HALF_XZ * 4;
+/** Full player span on XZ ≈ 2× this; tee width (X) is slightly more than 4× footprint for comfort. */
+export const TEE_PAD_HALF_X = VEHICLE_FOOTPRINT_HALF_XZ * 4.6;
 export const TEE_PAD_HALF_Z = VEHICLE_FOOTPRINT_HALF_XZ * 4;
 /**
  * Extra pad length toward −Z only (`SpawnTeePad`), so the green extends under `TeeHoleSign`
@@ -161,3 +166,15 @@ export const TELEPORT_DURATION_SEC = 0.5;
 
 /** Mid Z for goal corridor; used by static goal-area light (does not follow rolling goal X/Z). */
 export const MID_GOAL_Z = (GOAL_Z_MIN + GOAL_Z_MAX) / 2;
+
+/**
+ * Distant sky sun (+Z past any hole). Y clears `SkyClouds` slabs; X is lane center (spawn → goal).
+ * Not a scene light — billboard sprite only (`SkySun`).
+ */
+export const SUN_MARGIN_PAST_MAX_GOAL_Z = 80;
+export const SUN_WORLD_Z = GOAL_Z_MAX + SUN_MARGIN_PAST_MAX_GOAL_Z;
+export const SUN_WORLD_X = 0;
+/** Low in the sky toward the fog/horizon band (far +Z billboard). */
+export const SUN_WORLD_Y = 12;
+/** World-units width/height for the billboard (always faces camera). */
+export const SUN_BILLBOARD_SIZE = 56;

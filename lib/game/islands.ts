@@ -1,6 +1,6 @@
 import { BLOCK_SIZE } from "@/lib/game/constants";
 import { manhattanPathLaneToGoal } from "@/lib/game/path";
-import type { IslandRect, Vec3 } from "@/lib/game/types";
+import type { IslandBushOffset, IslandRect, Vec3 } from "@/lib/game/types";
 
 export type { IslandRect } from "@/lib/game/types";
 
@@ -29,6 +29,8 @@ function randomBlockCountInclusive(rng: () => number, lo: number, hi: number): n
 const MIN_PARENT_HALF_FOR_SPLIT = 7 * BLOCK_SIZE;
 /** Each half after split must still hold a centered coin with margin. */
 const MIN_HALF_EXTENT_PER_SPLIT_PAD = 2.5 * BLOCK_SIZE;
+/** Lane bonus coin sits at integer grid `(round(worldX), round(worldZ))` — keep bushes/trees off that spot. */
+const MIN_DECORATION_FROM_COIN = 2.35 * BLOCK_SIZE;
 
 /**
  * Four disconnected platforms along the grid path from lane origin to goal (spawn → coins → goal),
@@ -51,7 +53,7 @@ export function computeIslandsForLane(
   const minHalfZ = 2;
 
   if (n === 0) {
-    return [
+    const islands = [
       bboxToIsland(
         spawnCenter[0],
         spawnCenter[2],
@@ -63,6 +65,10 @@ export function computeIslandsForLane(
         minHalfZ
       ),
     ];
+    const rngEarly = mulberry32(hashSeed(laneOrigin, goalCenter));
+    placeBushesOnIslands(islands, rngEarly, spawnCenter, goalCenter);
+    placeIslandTreesOnIslands(islands, rngEarly, spawnCenter, goalCenter);
+    return islands;
   }
 
   let gapCells = 3;
@@ -123,6 +129,8 @@ export function computeIslandsForLane(
       halfX,
       halfZ,
       blockThickness: 0.72,
+      bushes: [],
+      trees: [],
     });
   }
 
@@ -141,12 +149,18 @@ export function computeIslandsForLane(
   ensureSpawnAndGoalOnIslands(islands, spawnCenter, goalCenter);
   for (const is of islands) snapIslandFootprintToBlockGrid(is);
   resolveOverlappingIslandPairsInXZ(islands);
+  placeBushesOnIslands(islands, rng, spawnCenter, goalCenter);
+  placeIslandTreesOnIslands(islands, rng, spawnCenter, goalCenter);
   return islands;
 }
 
 /** Deep copy for immutable updates from game reducer. */
 export function cloneIslands(islands: readonly IslandRect[]): IslandRect[] {
-  return islands.map((is) => ({ ...is }));
+  return islands.map((is) => ({
+    ...is,
+    bushes: [...is.bushes],
+    trees: [...is.trees],
+  }));
 }
 
 /**
@@ -224,7 +238,253 @@ function bboxToIsland(
     halfX: Math.max(minHalfXBase, (maxX - minX) / 2 + padX),
     halfZ: Math.max(minHalfZ, (maxZ - minZ) / 2 + padZ),
     blockThickness: 0.72,
+    bushes: [],
+    trees: [],
   };
+}
+
+/** Offset of the lane coin from island center `(ox, oz)` in the same space as bush/tree offsets. */
+function coinOffsetFromIslandCenter(is: IslandRect): { ox: number; oz: number } {
+  return {
+    ox: Math.round(is.worldX) - is.worldX,
+    oz: Math.round(is.worldZ) - is.worldZ,
+  };
+}
+
+function shuffleIslandOrder(n: number, rng: () => number): number[] {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const t = a[i]!;
+    a[i] = a[j]!;
+    a[j] = t;
+  }
+  return a;
+}
+
+/** Two random islands get one tree each (two trees on the only island if there is just one). */
+function placeIslandTreesOnIslands(
+  islands: IslandRect[],
+  rng: () => number,
+  spawnCenter: Vec3,
+  goalCenter: Vec3
+): void {
+  for (const is of islands) {
+    is.trees = [];
+  }
+
+  const n = islands.length;
+  if (n === 0) return;
+
+  const perm = shuffleIslandOrder(n, rng);
+  const idxA = n >= 2 ? perm[0]! : 0;
+  const idxB = n >= 2 ? perm[1]! : 0;
+
+  const margin = 2.5 * BLOCK_SIZE;
+  const minFromSpawn = 2.5 * BLOCK_SIZE;
+  const minFromGoal = 2.5 * BLOCK_SIZE;
+  const minFromBush = 1.85 * BLOCK_SIZE;
+  const minFromOtherTree = 2.65 * BLOCK_SIZE;
+
+  const tryOffset = (
+    is: IslandRect,
+    islandIdx: number,
+    ox: number,
+    oz: number,
+    relaxSpawn: boolean,
+    relaxGoal: boolean,
+    others: readonly IslandBushOffset[]
+  ): boolean => {
+    const isFirst = islandIdx === 0;
+    const isLast = islandIdx === islands.length - 1;
+    const wx = is.worldX + ox;
+    const wz = is.worldZ + oz;
+    const relax = relaxSpawn && relaxGoal;
+    const { ox: coinOx, oz: coinOz } = coinOffsetFromIslandCenter(is);
+    if (
+      Math.hypot(ox - coinOx, oz - coinOz) <
+      MIN_DECORATION_FROM_COIN * (relax ? 0.62 : 1)
+    ) {
+      return false;
+    }
+    if (isFirst) {
+      const ds = Math.hypot(wx - spawnCenter[0], wz - spawnCenter[2]);
+      if (ds < minFromSpawn * (relaxSpawn ? 0.62 : 1)) return false;
+    }
+    if (isLast) {
+      const dg = Math.hypot(wx - goalCenter[0], wz - goalCenter[2]);
+      if (dg < minFromGoal * (relaxGoal ? 0.62 : 1)) return false;
+    }
+    for (const b of is.bushes) {
+      if (Math.hypot(ox - b.ox, oz - b.oz) < minFromBush) return false;
+    }
+    for (const o of others) {
+      if (Math.hypot(ox - o.ox, oz - o.oz) < minFromOtherTree) return false;
+    }
+    return true;
+  };
+
+  const placeOne = (
+    islandIdx: number,
+    others: readonly IslandBushOffset[]
+  ): IslandBushOffset | null => {
+    const is = islands[islandIdx]!;
+    const maxHalfX = Math.max(0, is.halfX - margin);
+    const maxHalfZ = Math.max(0, is.halfZ - margin);
+    if (maxHalfX < 0.35 || maxHalfZ < 0.35) return null;
+
+    for (let attempt = 0; attempt < 56; attempt++) {
+      const relax = attempt > 32;
+      const ox = (rng() * 2 - 1) * maxHalfX;
+      const oz = (rng() * 2 - 1) * maxHalfZ;
+      if (tryOffset(is, islandIdx, ox, oz, relax, relax, others)) {
+        return { ox, oz };
+      }
+    }
+
+    const sx = spawnCenter[0] - is.worldX;
+    const sz = spawnCenter[2] - is.worldZ;
+    const gx = goalCenter[0] - is.worldX;
+    const gz = goalCenter[2] - is.worldZ;
+    let ox = maxHalfX * 0.62 * (sx >= 0 ? -1 : 1);
+    let oz = maxHalfZ * 0.62 * (sz >= 0 ? -1 : 1);
+    if (islandIdx === islands.length - 1) {
+      ox = maxHalfX * 0.62 * (gx >= 0 ? -1 : 1);
+      oz = maxHalfZ * 0.62 * (gz >= 0 ? -1 : 1);
+    }
+    ox = Math.max(-maxHalfX, Math.min(maxHalfX, ox));
+    oz = Math.max(-maxHalfZ, Math.min(maxHalfZ, oz));
+    if (tryOffset(is, islandIdx, ox, oz, true, true, others)) {
+      return { ox, oz };
+    }
+    const { ox: coinOx, oz: coinOz } = coinOffsetFromIslandCenter(is);
+    for (let k = 0; k < 10; k++) {
+      const dx = ox - coinOx;
+      const dz = oz - coinOz;
+      const len = Math.hypot(dx, dz) || 1;
+      ox += (dx / len) * (BLOCK_SIZE * 0.85);
+      oz += (dz / len) * (BLOCK_SIZE * 0.85);
+      ox = Math.max(-maxHalfX, Math.min(maxHalfX, ox));
+      oz = Math.max(-maxHalfZ, Math.min(maxHalfZ, oz));
+      if (tryOffset(is, islandIdx, ox, oz, true, true, others)) {
+        return { ox, oz };
+      }
+    }
+    return null;
+  };
+
+  const first = placeOne(idxA, []);
+  if (first) {
+    if (idxA === idxB) {
+      islands[idxA]!.trees = [first];
+      const second = placeOne(idxB, [first]);
+      if (second) {
+        islands[idxB]!.trees = [first, second];
+      }
+    } else {
+      islands[idxA]!.trees = [first];
+      const second = placeOne(idxB, []);
+      if (second) {
+        islands[idxB]!.trees = [second];
+      }
+    }
+  }
+}
+
+/** One or two small leaf clusters per island; keeps clear of spawn/goal on end pads. */
+function placeBushesOnIslands(
+  islands: IslandRect[],
+  rng: () => number,
+  spawnCenter: Vec3,
+  goalCenter: Vec3
+): void {
+  const margin = 1.1 * BLOCK_SIZE;
+  const minFromSpawn = 2.1 * BLOCK_SIZE;
+  const minFromGoal = 2.1 * BLOCK_SIZE;
+  const minBushSep = 1.05 * BLOCK_SIZE;
+
+  for (let i = 0; i < islands.length; i++) {
+    const is = islands[i];
+    const isFirst = i === 0;
+    const isLast = i === islands.length - 1;
+    const maxHalfX = Math.max(0, is.halfX - margin);
+    const maxHalfZ = Math.max(0, is.halfZ - margin);
+    if (maxHalfX < 0.25 || maxHalfZ < 0.25) {
+      is.bushes = [];
+      continue;
+    }
+
+    const want = rng() < 0.48 ? 1 : 2;
+    const placements: IslandBushOffset[] = [];
+    const { ox: coinOx, oz: coinOz } = coinOffsetFromIslandCenter(is);
+
+    const tryPush = (ox: number, oz: number, relaxSpawn: boolean, relaxGoal: boolean) => {
+      const wx = is.worldX + ox;
+      const wz = is.worldZ + oz;
+      const relax = relaxSpawn && relaxGoal;
+      if (
+        Math.hypot(ox - coinOx, oz - coinOz) <
+        MIN_DECORATION_FROM_COIN * (relax ? 0.55 : 1)
+      ) {
+        return false;
+      }
+      if (isFirst) {
+        const ds = Math.hypot(wx - spawnCenter[0], wz - spawnCenter[2]);
+        if (ds < minFromSpawn * (relaxSpawn ? 0.55 : 1)) return false;
+      }
+      if (isLast) {
+        const dg = Math.hypot(wx - goalCenter[0], wz - goalCenter[2]);
+        if (dg < minFromGoal * (relaxGoal ? 0.55 : 1)) return false;
+      }
+      if (placements.length > 0) {
+        const d = Math.hypot(ox - placements[0]!.ox, oz - placements[0]!.oz);
+        if (d < minBushSep) return false;
+      }
+      placements.push({ ox, oz });
+      return true;
+    };
+
+    for (let b = 0; b < want; b++) {
+      let placed = false;
+      for (let attempt = 0; attempt < 48; attempt++) {
+        const relax = attempt > 28;
+        const ox = (rng() * 2 - 1) * maxHalfX;
+        const oz = (rng() * 2 - 1) * maxHalfZ;
+        if (tryPush(ox, oz, relax, relax)) {
+          placed = true;
+          break;
+        }
+      }
+      if (!placed && b === 0) {
+        const sx = spawnCenter[0] - is.worldX;
+        const sz = spawnCenter[2] - is.worldZ;
+        const gx = goalCenter[0] - is.worldX;
+        const gz = goalCenter[2] - is.worldZ;
+        let ox = maxHalfX * 0.65 * (sx >= 0 ? -1 : 1);
+        let oz = maxHalfZ * 0.65 * (sz >= 0 ? -1 : 1);
+        if (isLast) {
+          ox = maxHalfX * 0.65 * (gx >= 0 ? -1 : 1);
+          oz = maxHalfZ * 0.65 * (gz >= 0 ? -1 : 1);
+        }
+        ox = Math.max(-maxHalfX, Math.min(maxHalfX, ox));
+        oz = Math.max(-maxHalfZ, Math.min(maxHalfZ, oz));
+        if (!tryPush(ox, oz, true, true)) {
+          for (let k = 0; k < 10; k++) {
+            const dx = ox - coinOx;
+            const dz = oz - coinOz;
+            const len = Math.hypot(dx, dz) || 1;
+            ox += (dx / len) * (BLOCK_SIZE * 0.85);
+            oz += (dz / len) * (BLOCK_SIZE * 0.85);
+            ox = Math.max(-maxHalfX, Math.min(maxHalfX, ox));
+            oz = Math.max(-maxHalfZ, Math.min(maxHalfZ, oz));
+            if (tryPush(ox, oz, true, true)) break;
+          }
+        }
+      }
+    }
+
+    is.bushes = placements;
+  }
 }
 
 /** Minimum square half-extent (world units) so pads are playable; coins are at island center. */
@@ -399,6 +659,8 @@ function maybeSplitSideBySide(islands: IslandRect[], rng: () => number): void {
       halfX: leftHalf,
       halfZ: leftHalf,
       blockThickness: is.blockThickness * (0.78 + rng() * 0.35),
+      bushes: [],
+      trees: [],
     };
     const right: IslandRect = {
       worldX:
@@ -407,6 +669,8 @@ function maybeSplitSideBySide(islands: IslandRect[], rng: () => number): void {
       halfX: rightHalf,
       halfZ: rightHalf,
       blockThickness: is.blockThickness * (0.78 + rng() * 0.35),
+      bushes: [],
+      trees: [],
     };
 
     islands.splice(i, 1, left, right);

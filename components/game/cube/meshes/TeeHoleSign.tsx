@@ -6,8 +6,10 @@ import * as THREE from "three";
 
 import {
   TEE_PAD_CENTER_Y,
+  TEE_PAD_HALF_X,
   TEE_PAD_HALF_Y,
   TEE_PAD_HALF_Z,
+  TEE_PAD_EXTEND_BACK_Z,
 } from "@/lib/game/constants";
 
 /** Compact board; still fits “Goal length: NNN blocks” on one line at `fontSize`. */
@@ -27,7 +29,7 @@ type TeeHoleSignProps = {
   coinCount: number;
 };
 
-/** Beige sign at the back of the tee (−Z) with hole length and coin count for this level. */
+/** Beige sign at the back-right of the tee with hole length and coin count for this level. */
 export function TeeHoleSign({ goalLength, coinCount }: TeeHoleSignProps) {
   const signMeshRef = useRef<THREE.Mesh>(null);
   const stickMeshRef = useRef<THREE.Mesh>(null);
@@ -40,9 +42,11 @@ export function TeeHoleSign({ goalLength, coinCount }: TeeHoleSignProps) {
     if (t) t.raycast = noop;
   }, []);
 
-  const padBackZ = -TEE_PAD_HALF_Z;
-  const z =
-    padBackZ - 0.06 - SIGN_DEPTH / 2;
+  /** Pad back edge (−Z) after `SpawnTeePad` extension toward −Z. */
+  const minPadZ = -TEE_PAD_HALF_Z - TEE_PAD_EXTEND_BACK_Z;
+  const EDGE_MARGIN = 0.1;
+  const signCenterX = TEE_PAD_HALF_X - SIGN_WIDTH / 2 - EDGE_MARGIN;
+  const signCenterZ = minPadZ + SIGN_DEPTH / 2 + 0.06;
   /** Sign center Y: raised on a stick from the pad top. */
   const signCenterY = PAD_TOP_Y + STICK_HEIGHT + SIGN_HEIGHT / 2;
   const goalBlocks = Math.round(goalLength);
@@ -51,7 +55,7 @@ export function TeeHoleSign({ goalLength, coinCount }: TeeHoleSignProps) {
   const stickCenterLocalY = -(SIGN_HEIGHT / 2 + STICK_HEIGHT / 2);
 
   return (
-    <group position={[0, signCenterY, z]}>
+    <group position={[signCenterX, signCenterY, signCenterZ]}>
       <mesh
         ref={stickMeshRef}
         position={[0, stickCenterLocalY, 0]}

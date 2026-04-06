@@ -8,8 +8,8 @@ export const SHOOT_TRIGGER_CUBE_SIZE = 0.2;
  * Min/max distance from spawn to goal along +Z (new random value after each shot).
  * Independent of launch strength — do not tune one from the other.
  */
-export const GOAL_Z_MIN = 20;
-export const GOAL_Z_MAX = 200;
+export const GOAL_Z_MIN = 40;
+export const GOAL_Z_MAX = 250;
 /** Random sideways offset for the green goal (grid units). */
 export const GOAL_X_MIN = -18;
 export const GOAL_X_MAX = 18;

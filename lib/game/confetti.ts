@@ -10,6 +10,97 @@ function getConfetti(): JSConfetti | null {
   return instance;
 }
 
+function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
+  return `#${[clamp(r), clamp(g), clamp(b)]
+    .map((x) => x.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function mixRgb(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+  t: number
+): [number, number, number] {
+  return [
+    a[0] + (b[0] - a[0]) * t,
+    a[1] + (b[1] - a[1]) * t,
+    a[2] + (b[2] - a[2]) * t,
+  ];
+}
+
+const WHITE: readonly [number, number, number] = [255, 255, 255];
+const NEAR_BLACK: readonly [number, number, number] = [28, 28, 32];
+
+/**
+ * Confetti when buying a charge — matches HUD power-up slot accents
+ * (`POWERUP_SLOT_ACCENT` in `gameHudStyles`).
+ */
+const POWERUP_BUY_COLORS: Record<
+  "strength" | "noBounce" | "nowind",
+  string[]
+> = {
+  strength: [
+    "#ea580c",
+    "#fb923c",
+    "#f97316",
+    "#fdba74",
+    "#fed7aa",
+    "#c2410c",
+  ],
+  noBounce: [
+    "#7c3aed",
+    "#a78bfa",
+    "#8b5cf6",
+    "#c4b5fd",
+    "#ddd6fe",
+    "#5b21b6",
+  ],
+  nowind: [
+    "#0891b2",
+    "#22d3ee",
+    "#06b6d4",
+    "#67e8f9",
+    "#a5f3fc",
+    "#0e7490",
+  ],
+};
+
+export function burstPowerupBuyConfetti(
+  slot: "strength" | "noBounce" | "nowind"
+) {
+  const j = getConfetti();
+  if (!j) return;
+  void j.addConfetti({
+    confettiNumber: 160,
+    confettiColors: POWERUP_BUY_COLORS[slot],
+    confettiRadius: 5,
+  });
+}
+
+/** Session start / Continue — uses the selected vehicle’s main + accent RGB. */
+export function burstVehicleStartConfetti(
+  mainRgb: readonly [number, number, number],
+  accentRgb: readonly [number, number, number]
+) {
+  const j = getConfetti();
+  if (!j) return;
+  const palette = [
+    rgbToHex(...mainRgb),
+    rgbToHex(...accentRgb),
+    rgbToHex(...mixRgb(mainRgb, WHITE, 0.38)),
+    rgbToHex(...mixRgb(mainRgb, accentRgb, 0.52)),
+    rgbToHex(...mixRgb(accentRgb, WHITE, 0.28)),
+    rgbToHex(...mixRgb(mainRgb, NEAR_BLACK, 0.32)),
+    rgbToHex(...mixRgb(accentRgb, NEAR_BLACK, 0.22)),
+  ];
+  void j.addConfetti({
+    confettiNumber: 380,
+    confettiColors: palette,
+    confettiRadius: 6,
+  });
+}
+
 /** Rich palette for end-of-battle modal. */
 const FINISH_BATTLE_COLORS = [
   "#ff6b6b",

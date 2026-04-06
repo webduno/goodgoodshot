@@ -18,6 +18,7 @@ import {
   resolveVehicleFromUrlParam,
 } from "@/components/playerVehicleConfig";
 import { INITIAL_POWERUP_CHARGES } from "@/lib/game/constants";
+import { burstVehicleStartConfetti } from "@/lib/game/confetti";
 import {
   formatSessionScoreHud,
   type PlaySession,
@@ -351,7 +352,13 @@ export function StartGameModal({
             </div>
             <button
               type="button"
-              onClick={onContinue}
+              onClick={() => {
+                burstVehicleStartConfetti(
+                  selectedVehicle.mainRgb,
+                  selectedVehicle.accentRgb
+                );
+                onContinue();
+              }}
               style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
             >
               Continue
@@ -650,7 +657,13 @@ export function StartGameModal({
                 <button
                   key={battleCount}
                   type="button"
-                  onClick={() => onStartSession(battleCount)}
+                  onClick={() => {
+                    burstVehicleStartConfetti(
+                      selectedVehicle.mainRgb,
+                      selectedVehicle.accentRgb
+                    );
+                    onStartSession(battleCount);
+                  }}
                   style={{
                     ...goldPillButtonStyle({
                       disabled: false,

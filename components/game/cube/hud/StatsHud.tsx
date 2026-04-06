@@ -55,6 +55,8 @@ export function StatsHud({
   const powerupMult = Math.pow(2, powerupStackCount);
 
   const windMag = Math.hypot(windHud.x, windHud.z);
+  const windPercentOfMax =
+    WIND_ACCEL_MAX > 0 ? (windMag / WIND_ACCEL_MAX) * 100 : 0;
   /** Meteorological convention: direction the wind comes from (opposite to acceleration). */
   const windFromAngleDeg =
     (Math.atan2(-windHud.z, -windHud.x) * 180) / Math.PI;
@@ -62,6 +64,7 @@ export function StatsHud({
 
   const mainCss = rgbTupleToCss(vehicle.mainRgb);
   const accentCss = rgbTupleToCss(vehicle.accentRgb);
+  const baseLaunchStrength = launchStrengthFromClicks(1, vehicle);
 
   const metricsDivider: CSSProperties = {
     marginTop: 8,
@@ -132,7 +135,7 @@ export function StatsHud({
       </div>
       <div
         role="img"
-        aria-label={`Wind ${windMag.toFixed(2)} m/s² from ${windFromAngleDeg.toFixed(0)}° in world XZ (X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)})`}
+        aria-label={`Wind ${windPercentOfMax.toFixed(0)}% of max from ${windFromAngleDeg.toFixed(0)}° in world XZ (X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)})`}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -174,17 +177,7 @@ export function StatsHud({
             whiteSpace: "nowrap",
           }}
         >
-          {windMag.toFixed(2)}
-        </span>
-        <span
-          style={{
-            color: hudColors.muted,
-            fontWeight: 500,
-            fontSize: 9,
-            lineHeight: 1.1,
-          }}
-        >
-          m/s²
+          {windPercentOfMax.toFixed(0)}%
         </span>
       </div>
 
@@ -394,6 +387,35 @@ export function StatsHud({
           }}
         >
           {vehicle.name}
+        </div>
+        <div
+          style={{
+            color: "rgba(255,255,255,0.88)",
+            marginTop: 8,
+            marginBottom: 2,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+          }}
+        >
+          Strength
+        </div>
+        <div
+          role="status"
+          aria-label={`Base launch strength ${baseLaunchStrength.toFixed(2)}`}
+          title="Launch strength on the first tap in the charge window"
+          style={{
+            color: "#ffffff",
+            fontWeight: 700,
+            fontSize: 12,
+            fontVariantNumeric: "tabular-nums",
+            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+            marginBottom: 2,
+          }}
+        >
+          {baseLaunchStrength.toFixed(2)}
         </div>
         <div
           role="status"

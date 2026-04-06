@@ -18,6 +18,8 @@ type PlayerStatsContextValue = {
   stats: PlayerStatsState;
   recordHoleCompleted: (payload: HoleCompletedPayload) => void;
   recordGoldCoin: () => void;
+  /** Returns whether one coin was deducted (fails at 0 coins). */
+  spendGoldCoin: () => boolean;
 };
 
 const PlayerStatsContext = createContext<PlayerStatsContextValue | null>(null);
@@ -47,9 +49,21 @@ export function PlayerStatsProvider({
     });
   }, []);
 
+  const spendGoldCoin = useCallback((): boolean => {
+    let spent = false;
+    setStats((prev) => {
+      if (prev.totalGoldCoins <= 0) return prev;
+      spent = true;
+      const next = { ...prev, totalGoldCoins: prev.totalGoldCoins - 1 };
+      savePlayerStats(next);
+      return next;
+    });
+    return spent;
+  }, []);
+
   const value = useMemo(
-    () => ({ stats, recordHoleCompleted, recordGoldCoin }),
-    [stats, recordHoleCompleted, recordGoldCoin]
+    () => ({ stats, recordHoleCompleted, recordGoldCoin, spendGoldCoin }),
+    [stats, recordHoleCompleted, recordGoldCoin, spendGoldCoin]
   );
 
   return (

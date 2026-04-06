@@ -31,6 +31,7 @@ import {
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
 import { onCanvasCreated } from "@/lib/game/canvas";
+import { burstPowerupBuyConfetti } from "@/lib/game/confetti";
 import {
   AIM_PITCH_MAX_RAD,
   AIM_PITCH_STEP_RAD,
@@ -66,7 +67,8 @@ import {
 } from "react";
 
 export default function CubeScene() {
-  const { recordHoleCompleted, recordGoldCoin, stats } = usePlayerStats();
+  const { recordHoleCompleted, recordGoldCoin, spendGoldCoin, stats } =
+    usePlayerStats();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
   const playerVehicle = useMemo(
@@ -136,6 +138,22 @@ export default function CubeScene() {
     []
   );
 
+  const prevWindMagRef = useRef<number | null>(null);
+  const maybeWindToast = useCallback(
+    (wx: number, wz: number, resetHole: boolean) => {
+      if (resetHole) {
+        prevWindMagRef.current = null;
+      }
+      const mag = Math.hypot(wx, wz);
+      const prev = prevWindMagRef.current;
+      if (mag > 2 && (prev === null || prev <= 2)) {
+        pushHudToast("is getting windy");
+      }
+      prevWindMagRef.current = mag;
+    },
+    [pushHudToast]
+  );
+
   const onContinueSession = useCallback(() => {
     setShowStartGameModal(false);
     pushHudToast(`Tap Fire to start`);
@@ -190,8 +208,10 @@ export default function CubeScene() {
 
   useEffect(() => {
     windRef.current = stepWind();
-    setWindHud({ x: windRef.current.x, z: windRef.current.z });
-  }, [game.goalWorldX, game.goalWorldZ]);
+    const w = windRef.current;
+    maybeWindToast(w.x, w.z, true);
+    setWindHud({ x: w.x, z: w.z });
+  }, [game.goalWorldX, game.goalWorldZ, maybeWindToast]);
 
   useEffect(() => {
     collectedCoinKeysRef.current.clear();
@@ -275,6 +295,33 @@ export default function CubeScene() {
     [pushHudToast, shotInFlight, showFinishModal, showSessionEndModal]
   );
 
+  const buyPowerupCharge = useCallback(
+    (slotId: PowerupSlotId) => {
+      if (
+        slotId !== "strength" &&
+        slotId !== "noBounce" &&
+        slotId !== "nowind"
+      ) {
+        return;
+      }
+      if (!spendGoldCoin()) {
+        pushHudToast("Need 1 coin");
+        return;
+      }
+      if (slotId === "strength") {
+        setStrengthCharges((c) => c + 1);
+        burstPowerupBuyConfetti("strength");
+      } else if (slotId === "noBounce") {
+        setNoBounceCharges((c) => c + 1);
+        burstPowerupBuyConfetti("noBounce");
+      } else {
+        setNoWindCharges((c) => c + 1);
+        burstPowerupBuyConfetti("nowind");
+      }
+    },
+    [spendGoldCoin, pushHudToast]
+  );
+
   const onChargeHudUpdate = useCallback(
     (next: { remainingMs: number; clicks: number } | null) => {
       setChargeHud(next);
@@ -304,6 +351,7 @@ export default function CubeScene() {
     (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => {
       setShotInFlight(false);
       setWindHud({ x: windRef.current.x, z: windRef.current.z });
+      maybeWindToast(windRef.current.x, windRef.current.z, false);
       if (outcome === "penalty") {
         waterPenaltiesRoundRef.current += 1;
         pushHudToast("Water hazard");
@@ -376,7 +424,7 @@ export default function CubeScene() {
       }
       setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
     },
-    [playerVehicle, pushHudToast, recordHoleCompleted]
+    [maybeWindToast, playerVehicle, pushHudToast, recordHoleCompleted]
   );
 
   useEffect(() => {
@@ -451,6 +499,19 @@ export default function CubeScene() {
         return;
       }
       const k = e.key;
+      const powerupFromKey =
+        k === "1" || e.code === "Numpad1"
+          ? ("strength" as const)
+          : k === "2" || e.code === "Numpad2"
+            ? ("noBounce" as const)
+            : k === "3" || e.code === "Numpad3"
+              ? ("nowind" as const)
+              : null;
+      if (powerupFromKey !== null) {
+        e.preventDefault();
+        activatePowerup(powerupFromKey);
+        return;
+      }
       if (k === " ") {
         if (
           shotInFlight ||
@@ -504,6 +565,7 @@ export default function CubeScene() {
     inCooldown,
     chargeHud,
     onFireButtonPress,
+    activatePowerup,
   ]);
 
   const powerupMenuLocked = chargeHud !== null || shotInFlight;
@@ -728,7 +790,9 @@ export default function CubeScene() {
                     noBounceCharges > 0 && !noBounceActive
                   }
                   canUseNoWind={noWindCharges > 0 && !noWindActive}
+                  canAffordBuy={stats.totalGoldCoins >= 1}
                   onPowerup={activatePowerup}
+                  onBuyPowerupCharge={buyPowerupCharge}
                 />
               </div>
             )}

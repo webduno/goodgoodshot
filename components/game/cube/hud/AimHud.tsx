@@ -59,6 +59,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim pitch to maximum up"
+          title="Aim pitch to maximum up"
           disabled={disabled}
           onClick={onPitchMaxUp}
           style={aimQuarterButtonStyle(disabled)}
@@ -68,6 +69,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim pitch up"
+          title="Aim pitch up"
           disabled={disabled}
           onClick={onPitchUp}
           style={goldIconButtonStyle(disabled)}
@@ -77,6 +79,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim pitch down"
+          title="Aim pitch down"
           disabled={disabled}
           onClick={onPitchDown}
           style={goldIconButtonStyle(disabled)}
@@ -86,6 +89,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim pitch to maximum down"
+          title="Aim pitch to maximum down"
           disabled={disabled}
           onClick={onPitchMaxDown}
           style={aimQuarterButtonStyle(disabled)}
@@ -102,6 +106,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim plus 90 degrees"
+          title="Aim plus 90 degrees"
           disabled={disabled}
           onClick={onPlus90}
           style={aimQuarterButtonStyle(disabled)}
@@ -111,6 +116,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim left"
+          title="Aim left"
           disabled={disabled}
           onClick={onLeft}
           style={goldIconButtonStyle(disabled)}
@@ -120,6 +126,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim right"
+          title="Aim right"
           disabled={disabled}
           onClick={onRight}
           style={goldIconButtonStyle(disabled)}
@@ -129,6 +136,7 @@ export function AimHud({
         <button
           type="button"
           aria-label="Aim minus 90 degrees"
+          title="Aim minus 90 degrees"
           disabled={disabled}
           onClick={onMinus90}
           style={aimQuarterButtonStyle(disabled)}

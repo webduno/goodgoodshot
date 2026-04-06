@@ -42,7 +42,9 @@ export function PowerupSlotRow({
   canUseStrength,
   canUseNoBounce,
   canUseNoWind,
+  canAffordBuy,
   onPowerup,
+  onBuyPowerupCharge,
 }: {
   strengthCharges: number;
   noBounceCharges: number;
@@ -50,8 +52,28 @@ export function PowerupSlotRow({
   canUseStrength: boolean;
   canUseNoBounce: boolean;
   canUseNoWind: boolean;
+  canAffordBuy: boolean;
   onPowerup: (slotId: PowerupSlotId) => void;
+  onBuyPowerupCharge: (slotId: PowerupSlotId) => void;
 }) {
+  const buyChipStyle = {
+    width: "100%",
+    padding: "3px 2px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.85)",
+    fontSize: 9,
+    fontWeight: 700,
+    lineHeight: 1,
+    letterSpacing: "0.02em",
+    textTransform: "uppercase" as const,
+    cursor: canAffordBuy ? ("pointer" as const) : ("not-allowed" as const),
+    opacity: canAffordBuy ? 1 : 0.48,
+    backgroundImage:
+      "linear-gradient(165deg, rgba(255,255,255,0.5) 0%, rgba(200,230,255,0.35) 100%)",
+    color: "#0c4a6e",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), 0 2px 6px rgba(0, 55, 95, 0.15)",
+  };
+
   return (
     <div
       style={{
@@ -64,35 +86,61 @@ export function PowerupSlotRow({
         ...hudFont,
       }}
     >
-      {POWERUP_SLOTS.map((slot) => {
-        if (slot.implemented) {
-          const slotCharges = implementedCharges(
-            slot.id,
-            strengthCharges,
-            noBounceCharges,
-            noWindCharges
-          );
-          const slotReady =
-            slot.id === "strength"
-              ? canUseStrength
-              : slot.id === "noBounce"
-                ? canUseNoBounce
-                : canUseNoWind;
-          const ariaDetail =
-            slot.id === "strength"
-              ? `multiply launch strength by 2 for this shot (${strengthCharges} strength charges left)`
-              : slot.id === "noBounce"
-                ? `no bounce and no roll after landing for this shot (${noBounceCharges} no-bounce charges left)`
-                : `ignore wind on the ball for this shot (${noWindCharges} no-wind charges left)`;
-          const buttonTitle =
-            slot.id === "strength"
-              ? `${slot.name}: ×2 per tap · ${strengthCharges} charge${strengthCharges === 1 ? "" : "s"}`
-              : slot.id === "noBounce"
-                ? `${slot.name}: one tap · ${noBounceCharges} charge${noBounceCharges === 1 ? "" : "s"}`
-                : `${slot.name}: one tap · ${noWindCharges} charge${noWindCharges === 1 ? "" : "s"}`;
-          return (
+      {POWERUP_SLOTS.filter((s) => s.implemented).map((slot) => {
+        const slotCharges = implementedCharges(
+          slot.id,
+          strengthCharges,
+          noBounceCharges,
+          noWindCharges
+        );
+        const slotReady =
+          slot.id === "strength"
+            ? canUseStrength
+            : slot.id === "noBounce"
+              ? canUseNoBounce
+              : canUseNoWind;
+        const ariaDetail =
+          slot.id === "strength"
+            ? `multiply launch strength by 2 for this shot (${strengthCharges} strength charges left)`
+            : slot.id === "noBounce"
+              ? `no bounce and no roll after landing for this shot (${noBounceCharges} no-bounce charges left)`
+              : `ignore wind on the ball for this shot (${noWindCharges} no-wind charges left)`;
+        const buttonTitle =
+          slot.id === "strength"
+            ? `${slot.name}: ×2 per tap · ${strengthCharges} charge${strengthCharges === 1 ? "" : "s"}`
+            : slot.id === "noBounce"
+              ? `${slot.name}: one tap · ${noBounceCharges} charge${noBounceCharges === 1 ? "" : "s"}`
+              : `${slot.name}: one tap · ${noWindCharges} charge${noWindCharges === 1 ? "" : "s"}`;
+        return (
+          <div
+            key={slot.id}
+            style={{
+              flex: "1 1 0",
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
             <button
-              key={slot.id}
+              type="button"
+              aria-label={`Buy +1 ${slot.name} charge for 1 gold coin`}
+              title={
+                canAffordBuy
+                  ? "Spend 1 gold coin for +1 charge"
+                  : "Need 1 gold coin"
+              }
+              disabled={!canAffordBuy}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onBuyPowerupCharge(slot.id);
+              }}
+              style={buyChipStyle}
+            >
+              Buy
+            </button>
+            <button
               type="button"
               aria-label={`${slot.name}: ${ariaDetail}`}
               title={buttonTitle}
@@ -102,10 +150,14 @@ export function PowerupSlotRow({
                 e.stopPropagation();
                 onPowerup(slot.id);
               }}
-              style={powerupSlotStyle({
-                variant: slotReady ? "ready" : "depleted",
-                accentSlot: implementedAccent(slot.id),
-              })}
+              style={{
+                ...powerupSlotStyle({
+                  variant: slotReady ? "ready" : "depleted",
+                  accentSlot: implementedAccent(slot.id),
+                }),
+                flex: "1 1 auto",
+                minHeight: 40,
+              }}
             >
               <PowerupHudIcon slotId={slot.id} color="currentColor" />
               <span
@@ -118,19 +170,7 @@ export function PowerupSlotRow({
                 {slotCharges}
               </span>
             </button>
-          );
-        }
-        return (
-          <button
-            key={slot.id}
-            type="button"
-            aria-label={`${slot.name}: not available yet`}
-            title={`${slot.name} — coming soon`}
-            disabled
-            style={powerupSlotStyle({ variant: "locked" })}
-          >
-            <PowerupHudIcon slotId={slot.id} color="currentColor" />
-          </button>
+          </div>
         );
       })}
     </div>

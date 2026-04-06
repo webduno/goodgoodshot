@@ -3,10 +3,10 @@ import { useTexture, Plane } from "@react-three/drei";
 
 
 export const TerrainTextured = ({ clickedHandler }: { clickedHandler: (e: any) => void; }) => {
-  const bump2 = useTexture("./textures/heightmap(9).png");
+  const bump2 = useTexture("./textures/earthbump1k.jpg");
   // const bump2 = useTexture("./textures/bump2.jpg");
   // const earth_jpg = useTexture("./textures/earthmap1k.jpg");
-  const earth_jpg = useTexture("./textures/heightmap(2).png");
+  const earth_jpg = useTexture("./textures/earthmap1k (1).jpg");
 
   const cartesianToLatLng = (x: number, y: number, z: number) => {
     const radius = Math.sqrt(x * x + y * y + z * z);

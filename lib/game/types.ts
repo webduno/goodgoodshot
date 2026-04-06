@@ -37,6 +37,21 @@ export type IslandRect = {
   trees: readonly IslandBushOffset[];
 };
 
+/** One house in the per-level mini village (main blocks only; visual-only). */
+export type MiniVillageHouse = {
+  worldX: number;
+  worldZ: number;
+  /** 1 = one short block; 2 = tall (double-height main block). */
+  stories: 1 | 2;
+  /** CSS hex color for the main blocks. */
+  colorHex: string;
+};
+
+/** Cluster of rounded “houses” on one random island; rerolled only on hole-out. */
+export type MiniVillageSpec = {
+  houses: readonly MiniVillageHouse[];
+};
+
 export type GameState = {
   spawnCenter: Vec3;
   /** World-space Z of green goal center; unchanged on miss, rerolled only on hit. */
@@ -50,6 +65,8 @@ export type GameState = {
    * (then recomputed for the new goal).
    */
   islands: readonly IslandRect[];
+  /** Decorative mini village; rerolled only when the goal is hit (new hole). */
+  miniVillage: MiniVillageSpec;
 };
 
 export type GameAction = {

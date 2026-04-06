@@ -13,6 +13,7 @@ import { ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
 import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
+import { IslandMiniVillage } from "@/components/game/cube/meshes/IslandMiniVillage";
 import { IslandTrees } from "@/components/game/cube/meshes/IslandTrees";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
@@ -647,6 +648,7 @@ export default function CubeScene() {
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
         <InitialFieldGround islands={islands} />
+        <IslandMiniVillage miniVillage={game.miniVillage} />
         <IslandBushes islands={islands} />
         <IslandTrees islands={islands} />
       </Canvas>

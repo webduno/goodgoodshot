@@ -29,7 +29,7 @@ export function createInitialGameState(): GameState {
     INITIAL_LANE_ORIGIN[1],
     goalWorldZ,
   ];
-  const islands = computeIslandsForLane(
+  const { islands, miniVillage } = computeIslandsForLane(
     INITIAL_LANE_ORIGIN,
     goalCenter,
     spawnCenter
@@ -40,6 +40,7 @@ export function createInitialGameState(): GameState {
     goalWorldX,
     ponds,
     islands,
+    miniVillage,
   };
 }
 
@@ -53,6 +54,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   let nextPonds = state.ponds;
 
   let nextIslands = state.islands;
+  let nextMiniVillage = state.miniVillage;
 
   if (action.outcome === "hit") {
     next = snapBlockCenterToGrid([
@@ -73,7 +75,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       INITIAL_LANE_ORIGIN[1],
       nextGoalWorldZ,
     ];
-    nextIslands = computeIslandsForLane(INITIAL_LANE_ORIGIN, goalCenter, next);
+    const lane = computeIslandsForLane(INITIAL_LANE_ORIGIN, goalCenter, next);
+    nextIslands = lane.islands;
+    nextMiniVillage = lane.miniVillage;
   } else if (action.outcome === "penalty" && action.revertSpawn) {
     next = snapBlockCenterToGrid(action.revertSpawn);
     const goalCenter: Vec3 = [
@@ -109,5 +113,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     goalWorldX: nextGoalWorldX,
     ponds: nextPonds,
     islands: nextIslands,
+    miniVillage: nextMiniVillage,
   };
 }

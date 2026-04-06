@@ -1,6 +1,12 @@
 import { BLOCK_SIZE } from "@/lib/game/constants";
 import { manhattanPathLaneToGoal } from "@/lib/game/path";
-import type { IslandBushOffset, IslandRect, Vec3 } from "@/lib/game/types";
+import type {
+  IslandBushOffset,
+  IslandRect,
+  MiniVillageHouse,
+  MiniVillageSpec,
+  Vec3,
+} from "@/lib/game/types";
 
 export type { IslandRect } from "@/lib/game/types";
 
@@ -40,7 +46,7 @@ export function computeIslandsForLane(
   laneOrigin: Vec3,
   goalCenter: Vec3,
   spawnCenter: Vec3
-): IslandRect[] {
+): { islands: IslandRect[]; miniVillage: MiniVillageSpec } {
   const path = manhattanPathLaneToGoal(laneOrigin, goalCenter);
   const cells: Vec3[] = [laneOrigin, ...path];
   const n = cells.length;
@@ -68,7 +74,14 @@ export function computeIslandsForLane(
     const rngEarly = mulberry32(hashSeed(laneOrigin, goalCenter));
     placeBushesOnIslands(islands, rngEarly, spawnCenter, goalCenter);
     placeIslandTreesOnIslands(islands, rngEarly, spawnCenter, goalCenter);
-    return islands;
+    const rngVillageEarly = mulberry32((hashSeed(laneOrigin, goalCenter) ^ 0x9e3779b9) >>> 0);
+    const miniVillage = placeMiniVillageOnIslands(
+      islands,
+      rngVillageEarly,
+      spawnCenter,
+      goalCenter
+    );
+    return { islands, miniVillage };
   }
 
   let gapCells = 3;
@@ -151,7 +164,14 @@ export function computeIslandsForLane(
   resolveOverlappingIslandPairsInXZ(islands);
   placeBushesOnIslands(islands, rng, spawnCenter, goalCenter);
   placeIslandTreesOnIslands(islands, rng, spawnCenter, goalCenter);
-  return islands;
+  const rngVillage = mulberry32((hashSeed(laneOrigin, goalCenter) ^ 0x9e3779b9) >>> 0);
+  const miniVillage = placeMiniVillageOnIslands(
+    islands,
+    rngVillage,
+    spawnCenter,
+    goalCenter
+  );
+  return { islands, miniVillage };
 }
 
 /** Deep copy for immutable updates from game reducer. */
@@ -260,6 +280,277 @@ function shuffleIslandOrder(n: number, rng: () => number): number[] {
     a[j] = t;
   }
   return a;
+}
+
+/** Must match horizontal footprint used in `IslandMiniVillage` (half-width of one house). */
+const MINI_VILLAGE_HOUSE_HALF_XZ = 0.78;
+/** Min center-to-center spacing so main blocks do not overlap. */
+const MINI_VILLAGE_HOUSE_SEP = 1.28;
+
+const MINI_VILLAGE_PALETTE = [
+  "#8ec5e8",
+  "#f5b8c8",
+  "#b8e8c8",
+  "#c9b8f0",
+  "#ffd4b8",
+  "#a8d4f0",
+] as const;
+
+function fibonacciDiskOffsets(count: number, scale: number): [number, number][] {
+  const out: [number, number][] = [[0, 0]];
+  if (count <= 1) return out.slice(0, count);
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 1; i < count; i++) {
+    /** Keep spacing ≥ `MINI_VILLAGE_HOUSE_SEP` from origin and between neighbors on the spiral. */
+    const r = scale * 1.02 * Math.sqrt(i);
+    const theta = i * golden;
+    out.push([r * Math.cos(theta), r * Math.sin(theta)]);
+  }
+  return out.slice(0, count);
+}
+
+function shuffleMiniVillageColors(
+  count: number,
+  rng: () => number
+): readonly string[] {
+  const pool = [...MINI_VILLAGE_PALETTE];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const t = pool[i]!;
+    pool[i] = pool[j]!;
+    pool[j] = t;
+  }
+  const colors: string[] = [];
+  for (let i = 0; i < count; i++) {
+    colors.push(pool[i % pool.length]!);
+  }
+  return colors;
+}
+
+function assignMiniVillageStories(count: number, rng: () => number): (1 | 2)[] {
+  const s: (1 | 2)[] = [];
+  for (let i = 0; i < count; i++) {
+    s.push(rng() < 0.5 ? 1 : 2);
+  }
+  if (count >= 2) {
+    /** At least one short and one tall (indices 0 and 1). */
+    s[0] = 1;
+    s[1] = 2;
+  }
+  return s;
+}
+
+function miniVillagePointAllowed(
+  is: IslandRect,
+  islandIdx: number,
+  islands: IslandRect[],
+  wx: number,
+  wz: number,
+  spawnCenter: Vec3,
+  goalCenter: Vec3,
+  relax: boolean
+): boolean {
+  const inset = MINI_VILLAGE_HOUSE_HALF_XZ;
+  if (
+    Math.abs(wx - is.worldX) > is.halfX - inset ||
+    Math.abs(wz - is.worldZ) > is.halfZ - inset
+  ) {
+    return false;
+  }
+  const isFirst = islandIdx === 0;
+  const isLast = islandIdx === islands.length - 1;
+  const { ox: coinOx, oz: coinOz } = coinOffsetFromIslandCenter(is);
+  const ox = wx - is.worldX;
+  const oz = wz - is.worldZ;
+  if (
+    Math.hypot(ox - coinOx, oz - coinOz) <
+    MIN_DECORATION_FROM_COIN * (relax ? 0.62 : 1)
+  ) {
+    return false;
+  }
+  const minFromSpawn = 2.0 * BLOCK_SIZE;
+  const minFromGoal = 2.0 * BLOCK_SIZE;
+  if (isFirst) {
+    const ds = Math.hypot(wx - spawnCenter[0], wz - spawnCenter[2]);
+    if (ds < minFromSpawn * (relax ? 0.62 : 1)) return false;
+  }
+  if (isLast) {
+    const dg = Math.hypot(wx - goalCenter[0], wz - goalCenter[2]);
+    if (dg < minFromGoal * (relax ? 0.62 : 1)) return false;
+  }
+  return true;
+}
+
+/** 2–6 houses on one random island; at least one short and one tall when count ≥ 2. */
+function placeMiniVillageOnIslands(
+  islands: IslandRect[],
+  rng: () => number,
+  spawnCenter: Vec3,
+  goalCenter: Vec3
+): MiniVillageSpec {
+  const n = islands.length;
+  if (n === 0) return { houses: [] };
+  /** Spawn sits on island 0 — mini village is never placed there. */
+  if (n <= 1) return { houses: [] };
+
+  const margin = 1.05 * BLOCK_SIZE;
+  const minFromSpawn = 2.0 * BLOCK_SIZE;
+  const minFromGoal = 2.0 * BLOCK_SIZE;
+
+  const tryIslandAnchor = (
+    islandIdx: number
+  ): { worldX: number; worldZ: number } | null => {
+    const is = islands[islandIdx]!;
+    const maxHalfX = Math.max(0, is.halfX - margin);
+    const maxHalfZ = Math.max(0, is.halfZ - margin);
+    if (maxHalfX < 0.2 || maxHalfZ < 0.2) return null;
+
+    const isFirst = islandIdx === 0;
+    const isLast = islandIdx === islands.length - 1;
+    const { ox: coinOx, oz: coinOz } = coinOffsetFromIslandCenter(is);
+
+    for (let attempt = 0; attempt < 56; attempt++) {
+      const relax = attempt > 32;
+      const ox = (rng() * 2 - 1) * maxHalfX;
+      const oz = (rng() * 2 - 1) * maxHalfZ;
+      const wx = is.worldX + ox;
+      const wz = is.worldZ + oz;
+      if (
+        Math.hypot(ox - coinOx, oz - coinOz) <
+        MIN_DECORATION_FROM_COIN * (relax ? 0.62 : 1)
+      ) {
+        continue;
+      }
+      if (isFirst) {
+        const ds = Math.hypot(wx - spawnCenter[0], wz - spawnCenter[2]);
+        if (ds < minFromSpawn * (relax ? 0.62 : 1)) continue;
+      }
+      if (isLast) {
+        const dg = Math.hypot(wx - goalCenter[0], wz - goalCenter[2]);
+        if (dg < minFromGoal * (relax ? 0.62 : 1)) continue;
+      }
+      return { worldX: wx, worldZ: wz };
+    }
+
+    const sx = spawnCenter[0] - is.worldX;
+    const sz = spawnCenter[2] - is.worldZ;
+    const gx = goalCenter[0] - is.worldX;
+    const gz = goalCenter[2] - is.worldZ;
+    let ox = maxHalfX * 0.55 * (sx >= 0 ? -1 : 1);
+    let oz = maxHalfZ * 0.55 * (sz >= 0 ? -1 : 1);
+    if (isLast) {
+      ox = maxHalfX * 0.55 * (gx >= 0 ? -1 : 1);
+      oz = maxHalfZ * 0.55 * (gz >= 0 ? -1 : 1);
+    }
+    ox = Math.max(-maxHalfX, Math.min(maxHalfX, ox));
+    oz = Math.max(-maxHalfZ, Math.min(maxHalfZ, oz));
+    return { worldX: is.worldX + ox, worldZ: is.worldZ + oz };
+  };
+
+  let anchor: { worldX: number; worldZ: number } | null = null;
+  let islandIdx = 1;
+  const firstForbidden = 1;
+  const eligible = n - firstForbidden;
+  const startIdx = firstForbidden + Math.floor(rng() * eligible);
+  for (let k = 0; k < eligible; k++) {
+    const idx = firstForbidden + ((startIdx - firstForbidden + k) % eligible);
+    const p = tryIslandAnchor(idx);
+    if (p) {
+      anchor = p;
+      islandIdx = idx;
+      break;
+    }
+  }
+  if (!anchor) {
+    return { houses: [] };
+  }
+
+  const island = islands[islandIdx]!;
+  let targetCount = 2 + Math.floor(rng() * 5);
+
+  const tryBuild = (count: number): MiniVillageHouse[] | null => {
+    const scales = [1.62, 1.38, 1.12, 0.92, 0.78];
+    for (const scale of scales) {
+      for (let attempt = 0; attempt < 36; attempt++) {
+        const relax = attempt > 22;
+        const rot = rng() * Math.PI * 2;
+        const cosR = Math.cos(rot);
+        const sinR = Math.sin(rot);
+        const raw = fibonacciDiskOffsets(count, scale);
+        const pts: { wx: number; wz: number }[] = [];
+        let ok = true;
+        for (const [lx, lz] of raw) {
+          const rx = lx * cosR - lz * sinR;
+          const rz = lx * sinR + lz * cosR;
+          const wx = anchor!.worldX + rx;
+          const wz = anchor!.worldZ + rz;
+          if (
+            !miniVillagePointAllowed(
+              island,
+              islandIdx,
+              islands,
+              wx,
+              wz,
+              spawnCenter,
+              goalCenter,
+              relax
+            )
+          ) {
+            ok = false;
+            break;
+          }
+          for (const q of pts) {
+            if (Math.hypot(wx - q.wx, wz - q.wz) < MINI_VILLAGE_HOUSE_SEP) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) break;
+          pts.push({ wx, wz });
+        }
+        if (!ok || pts.length !== count) continue;
+
+        const stories = assignMiniVillageStories(count, rng);
+        const colors = shuffleMiniVillageColors(count, rng);
+        const houses: MiniVillageHouse[] = [];
+        for (let i = 0; i < count; i++) {
+          houses.push({
+            worldX: pts[i]!.wx,
+            worldZ: pts[i]!.wz,
+            stories: stories[i]!,
+            colorHex: colors[i]!,
+          });
+        }
+        return houses;
+      }
+    }
+    return null;
+  };
+
+  while (targetCount >= 2) {
+    const built = tryBuild(targetCount);
+    if (built) {
+      return { houses: built };
+    }
+    targetCount -= 1;
+  }
+
+  const stories = assignMiniVillageStories(2, rng);
+  const colors = shuffleMiniVillageColors(2, rng);
+  const dx = MINI_VILLAGE_HOUSE_SEP * 0.55;
+  const h0: MiniVillageHouse = {
+    worldX: anchor.worldX - dx,
+    worldZ: anchor.worldZ,
+    stories: stories[0]!,
+    colorHex: colors[0]!,
+  };
+  const h1: MiniVillageHouse = {
+    worldX: anchor.worldX + dx,
+    worldZ: anchor.worldZ,
+    stories: stories[1]!,
+    colorHex: colors[1]!,
+  };
+  return { houses: [h0, h1] };
 }
 
 /** Two random islands get one tree each (two trees on the only island if there is just one). */

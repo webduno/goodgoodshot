@@ -93,6 +93,7 @@ export function SceneContent({
   coinRenderTick,
   onCoinCollected,
   onBindFireInput,
+  isCharging,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -103,6 +104,8 @@ export function SceneContent({
   cooldownUntil: number | null;
   roundLocked: boolean;
   shotInFlight: boolean;
+  /** True while the charge window is open (after first Fire tap). */
+  isCharging: boolean;
   vehicle: PlayerVehicleConfig;
   onChargeHudUpdate: (
     next: { remainingMs: number; clicks: number } | null
@@ -288,6 +291,13 @@ export function SceneContent({
     (cooldownUntil === null || Date.now() >= cooldownUntil) &&
     !shotInFlight;
 
+  const shootTriggerPhase: "ready" | "charging" | "inactive" =
+    !shootTriggerReady
+      ? "inactive"
+      : isCharging
+        ? "charging"
+        : "ready";
+
   const fieldWidth = 2 * (2 * FIELD_PLANE_HALF_WIDTH_X);
   const z0 = -FIELD_PLANE_Z_BEFORE_SPAWN;
   const z1 = GOAL_Z_MAX + FIELD_PLANE_Z_PAST_GOAL;
@@ -342,7 +352,7 @@ export function SceneContent({
               color={accentColor}
             />
           ))}
-          <ShootTriggerCube ready={shootTriggerReady} onFireInput={onFireInput} />
+          <ShootTriggerCube phase={shootTriggerPhase} onFireInput={onFireInput} />
         </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}

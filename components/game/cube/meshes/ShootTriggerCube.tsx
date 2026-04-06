@@ -13,21 +13,30 @@ import * as THREE from "three";
  * handler as the Fire button / Space.
  */
 export function ShootTriggerCube({
-  ready,
+  phase,
   onFireInput,
 }: {
-  ready: boolean;
+  /** ready = red (can start shot); charging = orange (charge window); inactive = grey (ball / cooldown / locked). */
+  phase: "ready" | "charging" | "inactive";
   onFireInput: () => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const z = -BLOCK_SIZE / 2 - SHOOT_TRIGGER_CUBE_SIZE / 2;
+  const clickable = phase !== "inactive";
 
   useLayoutEffect(() => {
     const m = meshRef.current;
     if (!m) return;
     const defaultRaycast = THREE.Mesh.prototype.raycast.bind(m);
-    m.raycast = ready ? defaultRaycast : () => {};
-  }, [ready]);
+    m.raycast = clickable ? defaultRaycast : () => {};
+  }, [clickable]);
+
+  const color =
+    phase === "ready"
+      ? "#c62828"
+      : phase === "charging"
+        ? "#ea580c"
+        : "#8a8a8a";
 
   return (
     <mesh
@@ -42,7 +51,7 @@ export function ShootTriggerCube({
     >
       <boxGeometry args={[SHOOT_TRIGGER_CUBE_SIZE, SHOOT_TRIGGER_CUBE_SIZE, SHOOT_TRIGGER_CUBE_SIZE]} />
       <meshStandardMaterial
-        color={ready ? "#c62828" : "#8a8a8a"}
+        color={color}
         roughness={0.35}
         metalness={0.15}
       />

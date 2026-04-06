@@ -17,9 +17,14 @@ const glassDisabled =
 const glassFaceRed =
   "linear-gradient(165deg, #ffffff 0%, #fecaca 16%, #fb7185 44%, #dc2626 78%, #991b1b 100%)";
 
+/** Orange — charge window active (first tap started). */
+const glassFaceFireCharging =
+  "linear-gradient(165deg, #ffffff 0%, #ffedd5 14%, #fdba74 38%, #ea580c 72%, #9a3412 100%)";
+
 const edgeLight = "inset 0 1px 0 rgba(255,255,255,0.55)";
 const dropSm = "0 3px 10px rgba(0, 82, 130, 0.22)";
 const dropSmRed = "0 3px 12px rgba(160, 28, 28, 0.42)";
+const dropSmOrange = "0 3px 12px rgba(220, 100, 20, 0.38)";
 
 const textOnGlass: CSSProperties = {
   color: "#003d5c",
@@ -193,20 +198,45 @@ export function hudRoundPowerupButtonStyle(disabled: boolean): CSSProperties {
   };
 }
 
-/** Circular red glass — bottom-dock Fire. */
-export function hudRoundFireButtonStyle(disabled: boolean): CSSProperties {
+export type FireButtonHudVariant = "ready" | "charging" | "disabled";
+
+/** Circular Fire — bottom dock: red (ready), orange (charging), grey (shot / cooldown / locked). */
+export function hudRoundFireButtonStyle(
+  variant: FireButtonHudVariant
+): CSSProperties {
+  const disabled = variant === "disabled";
+  const charging = variant === "charging";
+  const bg = disabled
+    ? glassDisabled
+    : charging
+      ? glassFaceFireCharging
+      : glassFaceRed;
+  const shadow = disabled
+    ? dropSm
+    : charging
+      ? dropSmOrange
+      : dropSmRed;
+  const text = disabled
+    ? textOnGlossButtonDisabled
+    : charging
+      ? {
+          color: "#7c2d12",
+          textShadow:
+            "0 1px 2px rgba(80, 30, 0, 0.35), 0 0 1px rgba(80, 30, 0, 0.25)",
+        }
+      : textOnGlossButton;
   return {
     ...hudFont,
-    ...(disabled ? textOnGlossButtonDisabled : textOnGlossButton),
+    ...text,
     width: HUD_ROUND_ACTION_PX,
     height: HUD_ROUND_ACTION_PX,
     padding: 0,
     borderRadius: "50%",
     border: disabled ? "1px solid #9ca8b4" : "1px solid rgba(255,255,255,0.9)",
-    backgroundImage: disabled ? glassDisabled : glassFaceRed,
+    backgroundImage: bg,
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.72 : 1,
-    boxShadow: `${edgeLight}, ${disabled ? dropSm : dropSmRed}`,
+    boxShadow: `${edgeLight}, ${shadow}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

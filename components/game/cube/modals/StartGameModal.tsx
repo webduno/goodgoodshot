@@ -1,6 +1,8 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
   goldPillButtonStyle,
@@ -8,7 +10,14 @@ import {
   hudFont,
   hudMiniPanel,
   modalBackdrop,
+  POWERUP_SLOT_ACCENT,
 } from "@/components/gameHudStyles";
+import {
+  PREDETERMINED_VEHICLES,
+  rgbTupleToCss,
+  resolveVehicleFromUrlParam,
+} from "@/components/playerVehicleConfig";
+import { INITIAL_POWERUP_CHARGES } from "@/lib/game/constants";
 import {
   formatSessionScoreHud,
   type PlaySession,
@@ -57,6 +66,72 @@ const statLabel: CSSProperties = {
   marginBottom: 6,
 };
 
+const linkButtonStyle: CSSProperties = {
+  ...hudFont,
+  margin: 0,
+  padding: 0,
+  border: "none",
+  background: "none",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 700,
+  color: hudColors.accent,
+  textDecoration: "underline",
+  textUnderlineOffset: 3,
+};
+
+const newSessionIntroSteps = 3;
+
+function PowerupLegendRow({
+  slot,
+  title,
+  children,
+}: {
+  slot: "strength" | "noBounce" | "nowind";
+  title: string;
+  children: ReactNode;
+}) {
+  const a = POWERUP_SLOT_ACCENT[slot];
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "flex-start",
+        marginBottom: 10,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          width: 30,
+          height: 24,
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.85)",
+          backgroundImage: a.ready,
+          boxShadow: a.shadow,
+        }}
+      />
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 12,
+            color: hudColors.value,
+            marginBottom: 4,
+          }}
+        >
+          {title}
+        </div>
+        <div style={{ fontSize: 11.5, lineHeight: 1.5, color: hudColors.label }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function StartGameModal({
   open,
   sessionReady,
@@ -70,6 +145,33 @@ export function StartGameModal({
   onContinue: () => void;
   onStartSession: (battleCount: SessionBattleCount) => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [newSessionStep, setNewSessionStep] = useState(0);
+
+  const setVehicleInUrl = useCallback(
+    (vehicleId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (!vehicleId || vehicleId.toLowerCase() === "default") {
+        params.delete("vehicle");
+      } else {
+        params.set("vehicle", vehicleId);
+      }
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  const selectedVehicle = resolveVehicleFromUrlParam(
+    searchParams.get("vehicle")
+  );
+
+  useEffect(() => {
+    if (open) setNewSessionStep(0);
+  }, [open]);
+
   if (!open) return null;
 
   if (!sessionReady) {
@@ -105,6 +207,13 @@ export function StartGameModal({
 
   const title =
     inProgress && hasStartedBattles ? "Continue session" : "Welcome";
+
+  const rulesPanelContinue: CSSProperties = {
+    ...rulesPanel,
+    minHeight: 168,
+    display: "flex",
+    flexDirection: "column",
+  };
 
   return (
     <div
@@ -149,14 +258,13 @@ export function StartGameModal({
           />
         </div>
 
-        <div style={rulesPanel}>
-          Win a battle — hit the goal at or under par (strokes ≤ coins on the
-          hole). The session is a win if your battle wins are at least your
-          battle losses (ties count).
-        </div>
-
         {inProgress && session ? (
           <>
+            <div style={rulesPanel}>
+              Win a battle — hit the goal at or under par (strokes ≤ coins on the
+              hole). The session is a win if your battle wins are at least your
+              battle losses (ties count).
+            </div>
             <div
               style={{
                 display: "grid",
@@ -246,6 +354,230 @@ export function StartGameModal({
           </>
         ) : (
           <>
+            <div style={rulesPanelContinue}>
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: hudColors.muted,
+                }}
+              >
+                {newSessionStep === 0 && "Step 1 — Vehicle"}
+                {newSessionStep === 1 && "Step 2 — How to play"}
+                {newSessionStep === 2 && "Step 3 — Power-ups"}
+              </p>
+
+              {newSessionStep === 0 && (
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: 12.5,
+                      lineHeight: 1.5,
+                      color: hudColors.label,
+                    }}
+                  >
+                    Pick a vehicle for this session. You can change it here any
+                    time before starting battles.
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                    }}
+                  >
+                    {PREDETERMINED_VEHICLES.map((v) => {
+                      const selected = selectedVehicle.id === v.id;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => setVehicleInUrl(v.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "8px 10px",
+                            borderRadius: 12,
+                            border: selected
+                              ? "2px solid #0072bc"
+                              : "1px solid rgba(0, 114, 188, 0.18)",
+                            background: selected
+                              ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(210, 240, 255, 0.55) 100%)"
+                              : "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(230, 248, 255, 0.35) 100%)",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            ...hudFont,
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "flex",
+                              gap: 4,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: 4,
+                                border: "1px solid rgba(0,0,0,0.12)",
+                                backgroundColor: rgbTupleToCss(v.mainRgb),
+                              }}
+                            />
+                            <span
+                              style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: 4,
+                                border: "1px solid rgba(0,0,0,0.12)",
+                                backgroundColor: rgbTupleToCss(v.accentRgb),
+                              }}
+                            />
+                          </span>
+                          <span
+                            style={{
+                              flex: 1,
+                              fontSize: 12.5,
+                              fontWeight: 700,
+                              color: hudColors.value,
+                            }}
+                          >
+                            {v.name}
+                          </span>
+                          {selected ? (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: hudColors.accent,
+                              }}
+                              aria-hidden
+                            >
+                              ✓
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {newSessionStep === 1 && (
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
+                    Win a battle — hit the goal at or under par (strokes ≤ coins
+                    on the hole). The session is a win if your battle wins are at
+                    least your battle losses (ties count).
+                  </p>
+                  <p
+                    style={{
+                      margin: "12px 0 0",
+                      fontSize: 12.5,
+                      lineHeight: 1.55,
+                      color: hudColors.label,
+                    }}
+                  >
+                    Aim with the on-screen controls or{" "}
+                    <strong style={{ color: hudColors.value }}>WASD</strong> /{" "}
+                    <strong style={{ color: hudColors.value }}>arrows</strong>.
+                    Tap <strong style={{ color: hudColors.value }}>Fire</strong>{" "}
+                    or press <strong style={{ color: hudColors.value }}>Space</strong>{" "}
+                    to start a charge window; extra taps add power. Open{" "}
+                    <strong style={{ color: hudColors.value }}>Power-ups</strong>{" "}
+                    before your first tap in a shot to apply boosts.
+                  </p>
+                </div>
+              )}
+
+              {newSessionStep === 2 && (
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: 12.5,
+                      lineHeight: 1.5,
+                      color: hudColors.label,
+                    }}
+                  >
+                    Colors match the Power-ups dock. Tap a slot before your first
+                    click on a shot (while not charging). You start with{" "}
+                    {INITIAL_POWERUP_CHARGES} charges per implemented type.
+                  </p>
+                  <PowerupLegendRow slot="strength" title="Strength (orange)">
+                    Each tap multiplies launch strength by 2 for that shot and
+                    spends one strength charge. Stacks multiply (2×, 4×, 8×, …).
+                  </PowerupLegendRow>
+                  <PowerupLegendRow slot="noBounce" title="No bounce (violet)">
+                    One tap spends one no-bounce charge: no bounces and no roll
+                    after landing — the ball stops on first ground contact.
+                  </PowerupLegendRow>
+                  <PowerupLegendRow slot="nowind" title="No wind (cyan)">
+                    One tap spends one charge and removes wind on the ball for
+                    that shot (wind still updates for the next shot).
+                  </PowerupLegendRow>
+                </div>
+              )}
+
+              <div
+                style={{
+                  marginTop: "auto",
+                  paddingTop: 10,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  borderTop: "1px solid rgba(0, 114, 188, 0.1)",
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  {newSessionStep > 0 ? (
+                    <button
+                      type="button"
+                      style={linkButtonStyle}
+                      onClick={() =>
+                        setNewSessionStep((s) => Math.max(0, s - 1))
+                      }
+                    >
+                      Back
+                    </button>
+                  ) : (
+                    <span aria-hidden style={{ display: "inline-block" }} />
+                  )}
+                </span>
+                <span>
+                  {newSessionStep < newSessionIntroSteps - 1 ? (
+                    <button
+                      type="button"
+                      style={linkButtonStyle}
+                      onClick={() =>
+                        setNewSessionStep((s) =>
+                          Math.min(newSessionIntroSteps - 1, s + 1)
+                        )
+                      }
+                    >
+                      Continue
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      style={linkButtonStyle}
+                      onClick={() => setNewSessionStep(0)}
+                    >
+                      Change vehicle
+                    </button>
+                  )}
+                </span>
+              </div>
+            </div>
+
             <p
               style={{
                 margin: "0 0 12px",

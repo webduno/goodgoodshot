@@ -6,6 +6,8 @@ import {
   modalCard,
   modalBackdrop,
 } from "@/components/gameHudStyles";
+import { burstFinishBattleConfetti } from "@/lib/game/confetti";
+import { useEffect } from "react";
 
 export function FinishGameModal({
   open,
@@ -18,6 +20,11 @@ export function FinishGameModal({
   par: number;
   battleWon: boolean;
 }) {
+  useEffect(() => {
+    if (!open || !battleWon) return;
+    burstFinishBattleConfetti();
+  }, [open, battleWon]);
+
   if (!open) return null;
 
   return (

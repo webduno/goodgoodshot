@@ -41,6 +41,7 @@ import {
 } from "@/lib/game/constants";
 import { createInitialGameState, gameReducer } from "@/lib/game/gameState";
 import {
+  clearPlaySession,
   defaultPlaySession,
   loadActivePlaySession,
   loadPlaySession,
@@ -464,6 +465,9 @@ export default function CubeScene() {
         onFireButtonPress();
         return;
       }
+      if (chargeHud !== null) {
+        return;
+      }
       if (k === "w" || k === "W" || k === "ArrowUp") {
         setAimPitchOffsetRad((p) =>
           clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD)
@@ -498,6 +502,7 @@ export default function CubeScene() {
     showHelpModal,
     showProfileModal,
     inCooldown,
+    chargeHud,
     onFireButtonPress,
   ]);
 
@@ -556,6 +561,7 @@ export default function CubeScene() {
             coinRenderTick={coinRenderTick}
             onCoinCollected={onCoinCollected}
             onBindFireInput={bindFireInput}
+            isCharging={chargeHud !== null}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
@@ -818,6 +824,10 @@ export default function CubeScene() {
                     showStartGameModal ||
                     showSessionEndModal ||
                     inCooldown
+                    ? "disabled"
+                    : chargeHud !== null
+                      ? "charging"
+                      : "ready"
                 )}
               >
                 {chargeHud === null ? (
@@ -862,6 +872,14 @@ export default function CubeScene() {
         sessionWon={sessionEndWon}
         battlesWon={sessionEndBattlesWon}
         battlesLost={sessionEndBattlesLost}
+        onDone={() => {
+          clearPlaySession();
+          window.location.reload();
+        }}
+        onStartNewSession={(battleCount) => {
+          setShowSessionEndModal(false);
+          onStartNewSession(battleCount);
+        }}
       />
       <HelpModal
         open={showHelpModal}

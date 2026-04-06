@@ -405,7 +405,7 @@ export function StatsHud({
         <div
           role="status"
           aria-label={`Base launch strength ${baseLaunchStrength.toFixed(2)}`}
-          title="Launch strength on the first tap in the charge window"
+          title="Launch strength on the first tap in the charge window; hold Fire, Space, or the rear button to ramp clicks"
           style={{
             color: "#ffffff",
             fontWeight: 700,

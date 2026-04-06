@@ -46,6 +46,9 @@ import type { IslandRect } from "@/lib/game/islands";
 import { INITIAL_LANE_ORIGIN, type Projectile, type Vec3 } from "@/lib/game/types";
 import { TerrainTextured } from "../TerrainTextured";
 
+/** Interval between automatic +power steps while Fire / Space / rear trigger is held (charge window). */
+const CHARGE_HOLD_REPEAT_MS = 85;
+
 function LaneCoin({ position }: { position: Vec3 }) {
   const spinRef = useRef<THREE.Group>(null);
   useFrame((_, delta) => {
@@ -92,7 +95,7 @@ export function SceneContent({
   collectedCoinKeysRef,
   coinRenderTick,
   onCoinCollected,
-  onBindFireInput,
+  onBindFireHeld,
   isCharging,
 }: {
   spawnCenter: Vec3;
@@ -122,8 +125,8 @@ export function SceneContent({
   /** Bumps when a coin is collected or the hole goal changes (re-render visibility). */
   coinRenderTick: number;
   onCoinCollected: (key: string) => void;
-  /** Supplies the fire input handler to outer HUD controls. */
-  onBindFireInput: (handler: (() => void) | null) => void;
+  /** Press/release for fire + hold-to-add-power (Fire button, Space, rear red cube). */
+  onBindFireHeld: (handler: ((held: boolean) => void) | null) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -133,11 +136,15 @@ export function SceneContent({
   const chargeEndsAtRef = useRef(0);
   const chargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chargeTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chargeHoldRepeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Counts simultaneous press sources (pointer + Space) so hold repeat stops only when all release. */
+  const fireHeldPressCountRef = useRef(0);
 
   useEffect(() => {
     return () => {
       if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
       if (chargeTickRef.current) clearInterval(chargeTickRef.current);
+      if (chargeHoldRepeatRef.current) clearInterval(chargeHoldRepeatRef.current);
     };
   }, []);
 
@@ -220,12 +227,33 @@ export function SceneContent({
       }
       chargeTimerRef.current = null;
       chargingRef.current = false;
+      fireHeldPressCountRef.current = 0;
+      if (chargeHoldRepeatRef.current) {
+        clearInterval(chargeHoldRepeatRef.current);
+        chargeHoldRepeatRef.current = null;
+      }
 
       const n = clickCountRef.current;
       onChargeHudUpdate(null);
       fireProjectile(n);
     }, chargeMs);
   }, [fireProjectile, onChargeHudUpdate, onChargeWindowStart, vehicle]);
+
+  const bumpChargeClicks = useCallback(() => {
+    if (!chargingRef.current) return;
+    clickCountRef.current += 1;
+    onChargeHudUpdate({
+      remainingMs: Math.max(0, chargeEndsAtRef.current - performance.now()),
+      clicks: clickCountRef.current,
+    });
+  }, [onChargeHudUpdate]);
+
+  const clearChargeHoldRepeat = useCallback(() => {
+    if (chargeHoldRepeatRef.current) {
+      clearInterval(chargeHoldRepeatRef.current);
+      chargeHoldRepeatRef.current = null;
+    }
+  }, []);
 
   const yellowLaneMarkers = useMemo(
     () => coinCentersForIslands(islands, INITIAL_LANE_ORIGIN[1]),
@@ -246,23 +274,42 @@ export function SceneContent({
     if (projectileRef.current) return;
 
     if (chargingRef.current) {
-      clickCountRef.current += 1;
-      onChargeHudUpdate({
-        remainingMs: Math.max(0, chargeEndsAtRef.current - performance.now()),
-        clicks: clickCountRef.current,
-      });
+      bumpChargeClicks();
       return;
     }
 
     beginChargeWindow();
   },
-    [roundLocked, cooldownUntil, beginChargeWindow, onChargeHudUpdate]
+    [roundLocked, cooldownUntil, beginChargeWindow, bumpChargeClicks, onChargeHudUpdate]
+  );
+
+  const setFireHeld = useCallback(
+    (held: boolean) => {
+      if (held) {
+        fireHeldPressCountRef.current += 1;
+        if (fireHeldPressCountRef.current !== 1) return;
+        onFireInput();
+        clearChargeHoldRepeat();
+        chargeHoldRepeatRef.current = setInterval(() => {
+          if (!chargingRef.current) {
+            clearChargeHoldRepeat();
+            return;
+          }
+          bumpChargeClicks();
+        }, CHARGE_HOLD_REPEAT_MS);
+      } else {
+        fireHeldPressCountRef.current = Math.max(0, fireHeldPressCountRef.current - 1);
+        if (fireHeldPressCountRef.current !== 0) return;
+        clearChargeHoldRepeat();
+      }
+    },
+    [onFireInput, bumpChargeClicks, clearChargeHoldRepeat]
   );
 
   useEffect(() => {
-    onBindFireInput(onFireInput);
-    return () => onBindFireInput(null);
-  }, [onBindFireInput, onFireInput]);
+    onBindFireHeld(setFireHeld);
+    return () => onBindFireHeld(null);
+  }, [onBindFireHeld, setFireHeld]);
 
   const half = BLOCK_SIZE / 2;
   const wh = 0;
@@ -352,7 +399,7 @@ export function SceneContent({
               color={accentColor}
             />
           ))}
-          <ShootTriggerCube phase={shootTriggerPhase} onFireInput={onFireInput} />
+          <ShootTriggerCube phase={shootTriggerPhase} onFireHeld={setFireHeld} />
         </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}

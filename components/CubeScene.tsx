@@ -124,7 +124,7 @@ export default function CubeScene() {
   const [hudToastAccent, setHudToastAccent] = useState<
     "strength" | "noBounce" | "nowind" | undefined
   >(undefined);
-  const fireInputRef = useRef<(() => void) | null>(null);
+  const fireHeldRef = useRef<((held: boolean) => void) | null>(null);
 
   const pushHudToast = useCallback(
     (
@@ -330,15 +330,11 @@ export default function CubeScene() {
   );
 
   const onChargeWindowStart = useCallback(() => {
-    pushHudToast("Tap again to add power");
+    pushHudToast("Tap or hold to add power");
   }, [pushHudToast]);
 
-  const bindFireInput = useCallback((handler: (() => void) | null) => {
-    fireInputRef.current = handler;
-  }, []);
-
-  const onFireButtonPress = useCallback(() => {
-    fireInputRef.current?.();
+  const bindFireHeld = useCallback((handler: ((held: boolean) => void) | null) => {
+    fireHeldRef.current = handler;
   }, []);
 
   const onShootStart = useCallback(() => {
@@ -522,8 +518,9 @@ export default function CubeScene() {
         ) {
           return;
         }
+        if (e.repeat) return;
         e.preventDefault();
-        onFireButtonPress();
+        fireHeldRef.current?.(true);
         return;
       }
       if (chargeHud !== null) {
@@ -564,9 +561,27 @@ export default function CubeScene() {
     showProfileModal,
     inCooldown,
     chargeHud,
-    onFireButtonPress,
     activatePowerup,
   ]);
+
+  useEffect(() => {
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== " ") return;
+      const t = e.target;
+      if (
+        t instanceof HTMLElement &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      ) {
+        return;
+      }
+      fireHeldRef.current?.(false);
+    };
+    window.addEventListener("keyup", onKeyUp);
+    return () => window.removeEventListener("keyup", onKeyUp);
+  }, []);
 
   const powerupMenuLocked = chargeHud !== null || shotInFlight;
   const powerupMenuOpen = showPowerupMenu && !powerupMenuLocked;
@@ -622,7 +637,7 @@ export default function CubeScene() {
             collectedCoinKeysRef={collectedCoinKeysRef}
             coinRenderTick={coinRenderTick}
             onCoinCollected={onCoinCollected}
-            onBindFireInput={bindFireInput}
+            onBindFireHeld={bindFireHeld}
             isCharging={chargeHud !== null}
           />
         </TeleportOrbitRig>
@@ -874,7 +889,36 @@ export default function CubeScene() {
               <button
                 type="button"
                 aria-label="Fire"
-                onClick={onFireButtonPress}
+                onPointerDown={(e) => {
+                  const fireDisabled =
+                    shotInFlight ||
+                    showFinishModal ||
+                    showStartGameModal ||
+                    showSessionEndModal ||
+                    inCooldown;
+                  if (fireDisabled) return;
+                  if (e.pointerType === "mouse" && e.button !== 0) return;
+                  if (e.currentTarget instanceof HTMLElement) {
+                    try {
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                    } catch {
+                      /* ignore */
+                    }
+                  }
+                  fireHeldRef.current?.(true);
+                }}
+                onPointerUp={(e) => {
+                  if (e.pointerType === "mouse" && e.button !== 0) return;
+                  if (e.currentTarget instanceof HTMLElement) {
+                    try {
+                      e.currentTarget.releasePointerCapture(e.pointerId);
+                    } catch {
+                      /* ignore */
+                    }
+                  }
+                  fireHeldRef.current?.(false);
+                }}
+                onPointerCancel={() => fireHeldRef.current?.(false)}
                 disabled={
                   shotInFlight ||
                   showFinishModal ||
@@ -907,7 +951,7 @@ export default function CubeScene() {
                       fontWeight: 700,
                     }}
                   >
-                    <span>Tap Fire</span>
+                    <span>Tap / hold</span>
                     <span>+Power</span>
                   </span>
                 )}

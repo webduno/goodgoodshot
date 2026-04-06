@@ -9,16 +9,16 @@ import * as THREE from "three";
 
 /**
  * Small cube on the rear of the vehicle (not part of bodyParts). Parented to the
- * same yaw group as the hull so it rotates with the tank; click calls the same
- * handler as the Fire button / Space.
+ * same yaw group as the hull so it rotates with the tank; pointer press/release
+ * match the Fire button / Space (hold adds power in the charge window).
  */
 export function ShootTriggerCube({
   phase,
-  onFireInput,
+  onFireHeld,
 }: {
   /** ready = red (can start shot); charging = orange (charge window); inactive = grey (ball / cooldown / locked). */
   phase: "ready" | "charging" | "inactive";
-  onFireInput: () => void;
+  onFireHeld: (held: boolean) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const z = -BLOCK_SIZE / 2 - SHOOT_TRIGGER_CUBE_SIZE / 2;
@@ -44,9 +44,20 @@ export function ShootTriggerCube({
       position={[0, 0, z]}
       castShadow
       receiveShadow
-      onClick={(e) => {
+      onPointerDown={(e) => {
+        if (!clickable) return;
         e.stopPropagation();
-        onFireInput();
+        onFireHeld(true);
+      }}
+      onPointerUp={(e) => {
+        if (!clickable) return;
+        e.stopPropagation();
+        onFireHeld(false);
+      }}
+      onPointerCancel={(e) => {
+        if (!clickable) return;
+        e.stopPropagation();
+        onFireHeld(false);
       }}
     >
       <boxGeometry args={[SHOOT_TRIGGER_CUBE_SIZE, SHOOT_TRIGGER_CUBE_SIZE, SHOOT_TRIGGER_CUBE_SIZE]} />

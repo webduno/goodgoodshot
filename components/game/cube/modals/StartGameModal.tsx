@@ -149,6 +149,8 @@ export function StartGameModal({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [newSessionStep, setNewSessionStep] = useState(0);
+  /** Optional vehicle / controls / power-ups wizard; default is a short overview only. */
+  const [gameConfigOpen, setGameConfigOpen] = useState(false);
 
   const setVehicleInUrl = useCallback(
     (vehicleId: string) => {
@@ -169,7 +171,10 @@ export function StartGameModal({
   );
 
   useEffect(() => {
-    if (open) setNewSessionStep(0);
+    if (open) {
+      setNewSessionStep(0);
+      setGameConfigOpen(false);
+    }
   }, [open]);
 
   if (!open) return null;
@@ -354,6 +359,43 @@ export function StartGameModal({
           </>
         ) : (
           <>
+            {!gameConfigOpen ? (
+              <div style={rulesPanel}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12.5,
+                    lineHeight: 1.55,
+                    color: hudColors.label,
+                  }}
+                >
+                  Win battles by hitting the goal at or under par (strokes ≤ lane
+                  coins). Your session wins if your battle wins are at least your
+                  battle losses (ties count). Pick a length below to start.
+                </p>
+                <p
+                  style={{
+                    margin: "12px 0 6px",
+                    fontSize: 11,
+                    lineHeight: 1.45,
+                    color: hudColors.muted,
+                  }}
+                >
+                  Changing vehicle or reading extra help is optional — only if you
+                  want to tweak your setup.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGameConfigOpen(true);
+                    setNewSessionStep(0);
+                  }}
+                  style={{ ...linkButtonStyle, display: "inline" }}
+                >
+                  Change game config
+                </button>
+              </div>
+            ) : (
             <div style={rulesPanelContinue}>
               <p
                 style={{
@@ -380,8 +422,8 @@ export function StartGameModal({
                       color: hudColors.label,
                     }}
                   >
-                    Pick a vehicle for this session. You can change it here any
-                    time before starting battles.
+                    Optional — pick a vehicle for this session (default works
+                    fine). You can change it any time before starting battles.
                   </p>
                   <div
                     style={{
@@ -549,7 +591,13 @@ export function StartGameModal({
                       Back
                     </button>
                   ) : (
-                    <span aria-hidden style={{ display: "inline-block" }} />
+                    <button
+                      type="button"
+                      style={linkButtonStyle}
+                      onClick={() => setGameConfigOpen(false)}
+                    >
+                      Back to overview
+                    </button>
                   )}
                 </span>
                 <span>
@@ -569,14 +617,15 @@ export function StartGameModal({
                     <button
                       type="button"
                       style={linkButtonStyle}
-                      onClick={() => setNewSessionStep(0)}
+                      onClick={() => setGameConfigOpen(false)}
                     >
-                      Change vehicle
+                      Back to overview
                     </button>
                   )}
                 </span>
               </div>
             </div>
+            )}
 
             <p
               style={{

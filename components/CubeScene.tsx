@@ -43,11 +43,13 @@ import {
   loadActivePlaySession,
   loadPlaySession,
   savePlaySession,
+  formatSessionScoreHud,
   type PlaySession,
   type SessionBattleCount,
 } from "@/lib/game/playSession";
 import { wrapYawRad } from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
+import { parCoinCountForIslands } from "@/lib/game/path";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
 import { Canvas } from "@react-three/fiber";
 import { useSearchParams } from "next/navigation";
@@ -102,6 +104,11 @@ export default function CubeScene() {
   const [sessionEndTotalStrokes, setSessionEndTotalStrokes] = useState(0);
   const [sessionEndTargetBattles, setSessionEndTargetBattles] =
     useState<SessionBattleCount>(3);
+  const [sessionEndWon, setSessionEndWon] = useState(true);
+  const [sessionEndBattlesWon, setSessionEndBattlesWon] = useState(0);
+  const [sessionEndBattlesLost, setSessionEndBattlesLost] = useState(0);
+  const [finishBattleWon, setFinishBattleWon] = useState(true);
+  const [finishPar, setFinishPar] = useState(0);
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -300,30 +307,43 @@ export default function CubeScene() {
       } else {
         if (outcome === "hit") {
           const g = gameRef.current;
+          const par = parCoinCountForIslands(
+            g.islands,
+            INITIAL_LANE_ORIGIN[1]
+          );
+          const shots = sessionShotsRef.current;
+          const battleWon = shots <= par;
           recordHoleCompleted({
             vehicleId: playerVehicle.id,
-            shots: sessionShotsRef.current,
+            shots,
             ponds: g.ponds,
             goalWorldX: g.goalWorldX,
             goalWorldZ: g.goalWorldZ,
             strengthUses: strengthUsesRoundRef.current,
             noBounceUses: noBounceUsesRoundRef.current,
             waterPenaltiesThisRound: waterPenaltiesRoundRef.current,
+            battleOutcome: battleWon ? "win" : "loss",
           });
           const session = loadPlaySession();
           if (session) {
-            const nextWon = session.battlesWon + 1;
-            const nextTotal = session.totalStrokes + sessionShotsRef.current;
+            const nextWon = session.battlesWon + (battleWon ? 1 : 0);
+            const nextLost = session.battlesLost + (battleWon ? 0 : 1);
+            const nextTotal = session.totalStrokes + shots;
             const updated: PlaySession = {
               ...session,
               battlesWon: nextWon,
+              battlesLost: nextLost,
               totalStrokes: nextTotal,
             };
             savePlaySession(updated);
             setPlaySession(updated);
-            if (nextWon >= session.targetBattles) {
+            const roundsDone = nextWon + nextLost;
+            if (roundsDone >= session.targetBattles) {
               setSessionEndTotalStrokes(nextTotal);
               setSessionEndTargetBattles(session.targetBattles);
+              setSessionEndWon(nextWon >= nextLost);
+              setSessionEndBattlesWon(nextWon);
+              setSessionEndBattlesLost(nextLost);
               dispatch({
                 type: "PROJECTILE_END",
                 outcome,
@@ -333,6 +353,8 @@ export default function CubeScene() {
               return;
             }
           }
+          setFinishBattleWon(battleWon);
+          setFinishPar(par);
         }
         dispatch({
           type: "PROJECTILE_END",
@@ -464,7 +486,6 @@ export default function CubeScene() {
       />
       {!showStartGameModal && !showSessionEndModal && (
         <StatsHud
-          spawnCenter={game.spawnCenter}
           sessionShots={sessionShots}
           chargeHud={chargeHud}
           shotInFlight={shotInFlight}
@@ -478,6 +499,7 @@ export default function CubeScene() {
           windHud={windHud}
           vehicle={playerVehicle}
           totalGoldCoins={stats.totalGoldCoins}
+          sessionScoreDisplay={formatSessionScoreHud(playSession, sessionShots)}
         />
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
@@ -732,11 +754,19 @@ export default function CubeScene() {
         onContinue={onContinueSession}
         onStartSession={onStartNewSession}
       />
-      <FinishGameModal open={showFinishModal} sessionShots={sessionShots} />
+      <FinishGameModal
+        open={showFinishModal}
+        sessionShots={sessionShots}
+        par={finishPar}
+        battleWon={finishBattleWon}
+      />
       <SessionEndModal
         open={showSessionEndModal}
         totalStrokes={sessionEndTotalStrokes}
         targetBattles={sessionEndTargetBattles}
+        sessionWon={sessionEndWon}
+        battlesWon={sessionEndBattlesWon}
+        battlesLost={sessionEndBattlesLost}
       />
       <HelpModal
         open={showHelpModal}

@@ -5,6 +5,7 @@ import {
   vehicleChargeMs,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
+import { useFrame } from "@react-three/fiber";
 import {
   useCallback,
   useEffect,
@@ -43,6 +44,31 @@ import { coinCellKey, coinCentersForIslands } from "@/lib/game/path";
 import type { IslandRect } from "@/lib/game/islands";
 import { INITIAL_LANE_ORIGIN, type Projectile, type Vec3 } from "@/lib/game/types";
 import { TerrainTextured } from "../TerrainTextured";
+
+function LaneCoin({ position }: { position: Vec3 }) {
+  const spinRef = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    // After parent R_x(π/2), local Y → world Z; use Z so spin is around world Y (horizontal plane).
+    if (spinRef.current) spinRef.current.rotation.z += delta * 5;
+  });
+  return (
+    <group position={[...position]}>
+      {/** Y-up cylinder → rotate so axis is horizontal: coin stands on edge (vertical faces). */}
+      <group rotation={[Math.PI / 2, 0, 0]}>
+        <group ref={spinRef}>
+          <mesh castShadow receiveShadow>
+            <cylinderGeometry args={[0.42, 0.42, 0.07, 12]} />
+            <meshStandardMaterial
+              color="#e8c547"
+              roughness={0.28}
+              metalness={0.88}
+            />
+          </mesh>
+        </group>
+      </group>
+    </group>
+  );
+}
 
 export function SceneContent({
   spawnCenter,
@@ -317,31 +343,7 @@ export function SceneContent({
       {yellowLaneMarkers.map((center, i) => {
         const ck = coinCellKey(center);
         if (collectedCoinKeysRef.current.has(ck)) return null;
-        return (
-          <group key={`lane-coin-${i}-${ck}`} position={[...center]}>
-            {/** Y-up cylinder → rotate so axis is horizontal: coin stands on edge (vertical faces). */}
-            <group rotation={[Math.PI / 2, 0, 0]}>
-              <mesh castShadow receiveShadow>
-                <cylinderGeometry args={[0.42, 0.42, 0.07, 40]} />
-                <meshStandardMaterial
-                  color="#e8c547"
-                  roughness={0.28}
-                  metalness={0.88}
-                />
-              </mesh>
-              {/*
-              <mesh position={[0, 0.036, 0]} castShadow receiveShadow>
-                <torusGeometry args={[0.44, 0.028, 10, 40]} />
-                <meshStandardMaterial
-                  color="#c9a227"
-                  roughness={0.35}
-                  metalness={0.75}
-                />
-              </mesh>
-              */}
-            </group>
-          </group>
-        );
+        return <LaneCoin key={`lane-coin-${i}-${ck}`} position={center} />;
       })}
       <SphereToGoal
         meshRef={meshRef}

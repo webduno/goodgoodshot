@@ -12,10 +12,16 @@ export function SessionEndModal({
   open,
   totalStrokes,
   targetBattles,
+  sessionWon,
+  battlesWon,
+  battlesLost,
 }: {
   open: boolean;
   totalStrokes: number;
   targetBattles: number;
+  sessionWon: boolean;
+  battlesWon: number;
+  battlesLost: number;
 }) {
   if (!open) return null;
 
@@ -36,7 +42,7 @@ export function SessionEndModal({
             color: hudColors.value,
           }}
         >
-          Session ended
+          {sessionWon ? "Session won" : "Session lost"}
         </h2>
         <p
           style={{
@@ -46,7 +52,15 @@ export function SessionEndModal({
             lineHeight: 1.5,
           }}
         >
-          All {targetBattles} battles won.
+          {targetBattles} battles:{" "}
+          <strong style={{ color: hudColors.value }}>
+            {battlesWon} won
+          </strong>
+          ,{" "}
+          <strong style={{ color: hudColors.value }}>
+            {battlesLost} lost
+          </strong>
+          .
         </p>
         <p
           style={{

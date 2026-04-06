@@ -38,4 +38,6 @@ export type HoleCompletedPayload = {
   strengthUses: number;
   noBounceUses: number;
   waterPenaltiesThisRound: number;
+  /** Win = strokes ≤ par (coin count); loss = goal hit but over par. */
+  battleOutcome: "win" | "loss";
 };

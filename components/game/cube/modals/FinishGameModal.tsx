@@ -10,9 +10,13 @@ import {
 export function FinishGameModal({
   open,
   sessionShots,
+  par,
+  battleWon,
 }: {
   open: boolean;
   sessionShots: number;
+  par: number;
+  battleWon: boolean;
 }) {
   if (!open) return null;
 
@@ -33,7 +37,7 @@ export function FinishGameModal({
             color: hudColors.value,
           }}
         >
-          Level complete
+          {battleWon ? "Battle won" : "Battle lost"}
         </h2>
         <p
           style={{
@@ -43,7 +47,9 @@ export function FinishGameModal({
             lineHeight: 1.5,
           }}
         >
-          You hit the goal. More levels coming later.
+          {battleWon
+            ? "You reached the goal at or under par (strokes ≤ coins on this hole)."
+            : "You reached the goal, but over par (more strokes than coins)."}
         </p>
         <p
           style={{
@@ -54,8 +60,11 @@ export function FinishGameModal({
             fontVariantNumeric: "tabular-nums",
           }}
         >
-          Shots this round:{" "}
+          Shots:{" "}
           <strong style={{ color: hudColors.value }}>{sessionShots}</strong>
+          {" · "}
+          Par (coins):{" "}
+          <strong style={{ color: hudColors.value }}>{par}</strong>
         </p>
         <button
           type="button"

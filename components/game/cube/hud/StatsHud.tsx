@@ -12,14 +12,11 @@ import {
   hudFont,
   hudMiniPanel,
 } from "@/components/gameHudStyles";
-import { formatVec3 } from "@/lib/game/math";
-import type { Vec3 } from "@/lib/game/types";
 import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 
 import { HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
 
 export function StatsHud({
-  spawnCenter,
   sessionShots,
   chargeHud,
   shotInFlight,
@@ -33,8 +30,8 @@ export function StatsHud({
   windHud,
   vehicle,
   totalGoldCoins,
+  sessionScoreDisplay,
 }: {
-  spawnCenter: Vec3;
   sessionShots: number;
   chargeHud: { remainingMs: number; clicks: number } | null;
   shotInFlight: boolean;
@@ -48,6 +45,8 @@ export function StatsHud({
   windHud: { x: number; z: number };
   vehicle: PlayerVehicleConfig;
   totalGoldCoins: number;
+  /** e.g. `12/3(+1)` — strokes/targetBattles(win−loss spread). */
+  sessionScoreDisplay: string;
 }) {
   const remainingMs =
     cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
@@ -82,7 +81,7 @@ export function StatsHud({
         display: "flex",
         flexDirection: "column",
         gap: 8,
-        alignItems: "stretch",
+        alignItems: "flex-start",
         width: "fit-content",
         maxWidth: "min(94vw, 168px)",
       }}
@@ -105,7 +104,7 @@ export function StatsHud({
           textTransform: "uppercase",
         }}
       >
-        n°
+        Shot n°
       </div>
       <div
         style={{
@@ -123,29 +122,6 @@ export function StatsHud({
           color: hudColors.muted,
           marginBottom: 2,
           marginTop: 4,
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-        }}
-      >
-        Gold coins
-      </div>
-      <div
-        style={{
-          color: "#b8860b",
-          fontWeight: 700,
-          fontSize: 13,
-          fontVariantNumeric: "tabular-nums",
-          marginBottom: 8,
-        }}
-      >
-        {totalGoldCoins}
-      </div>
-      <div
-        style={{
-          color: hudColors.muted,
-          marginBottom: 2,
           fontSize: 9,
           fontWeight: 600,
           letterSpacing: "0.04em",
@@ -211,140 +187,172 @@ export function StatsHud({
           m/s²
         </span>
       </div>
-      <div
-        style={{
-          color: hudColors.muted,
-          marginBottom: 2,
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-        }}
-      >
-        Position
-      </div>
-      <div
-        style={{
-          fontFamily:
-            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-          color: hudColors.value,
-          fontWeight: 600,
-        }}
-      >
-        ({formatVec3(spawnCenter)})
-      </div>
 
       {shotInFlight && (
         <div style={{ ...metricsDivider, color: hudColors.value, fontSize: 10 }}>
           Shot in flight…
         </div>
       )}
+      </div>
 
-      {charging && !shotInFlight && chargeHud && (
-        <div style={metricsDivider}>
-          <div style={{ lineHeight: 1.35, fontSize: 9, color: hudColors.label }}>
-            Time left:{" "}
-            <strong
-              style={{
-                color: hudColors.value,
-                fontVariantNumeric: "tabular-nums",
-                fontWeight: 600,
-              }}
-            >
-              {(chargeHud.remainingMs / 1000).toFixed(1)}
-            </strong>
-            s · Clicks:{" "}
-            <strong
-              style={{
-                color: hudColors.accent,
-                fontVariantNumeric: "tabular-nums",
-                fontWeight: 600,
-              }}
-            >
-              {chargeHud.clicks}
-            </strong>
-          </div>
+      {(charging && !shotInFlight && chargeHud) ||
+      (inCooldown && !shotInFlight && !charging) ? (
+        <div
+          style={{
+            padding: "6px 8px",
+            ...hudMiniPanel,
+            fontSize: 10,
+            lineHeight: 1.4,
+          }}
+        >
           <div
             style={{
-              marginTop: 4,
+              color: hudColors.muted,
+              marginBottom: 4,
               fontSize: 9,
-              lineHeight: 1.35,
-              color: hudColors.label,
-            }}
-          >
-            Strength{" "}
-            <strong
-              style={{
-                color: hudColors.value,
-                fontVariantNumeric: "tabular-nums",
-                fontWeight: 600,
-              }}
-            >
-              {(
-                launchStrengthFromClicks(chargeHud.clicks, vehicle) *
-                powerupMult
-              ).toFixed(2)}
-            </strong>
-            {powerupStackCount > 0 && (
-              <span style={{ color: hudColors.accent }}> (×{powerupMult})</span>
-            )}
-            <span style={{ color: hudColors.muted }}>
-              {" "}
-              · +
-              {Math.round(vehicle.extraClickStrengthFraction * 100)}% / extra
-              click
-            </span>
-          </div>
-          {noBounceActive && (
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 9,
-                lineHeight: 1.35,
-                color: hudColors.label,
-              }}
-            >
-              No bounce / roll{" "}
-              <strong style={{ color: hudColors.accent, fontWeight: 600 }}>
-                on
-              </strong>{" "}
-              for this shot
-            </div>
-          )}
-          {noWindActive && (
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 9,
-                lineHeight: 1.35,
-                color: hudColors.label,
-              }}
-            >
-              No wind{" "}
-              <strong style={{ color: hudColors.accent, fontWeight: 600 }}>
-                on
-              </strong>{" "}
-              for this shot
-            </div>
-          )}
-        </div>
-      )}
-
-      {inCooldown && !shotInFlight && !charging && (
-        <div style={{ ...metricsDivider, fontSize: 9, color: hudColors.label }}>
-          Next shot in{" "}
-          <strong
-            style={{
-              color: hudColors.value,
-              fontVariantNumeric: "tabular-nums",
               fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
             }}
           >
-            {(remainingMs / 1000).toFixed(1)}
-          </strong>
-          s
+            {charging && !shotInFlight && chargeHud ? "Charge" : "Cooldown"}
+          </div>
+          {charging && !shotInFlight && chargeHud ? (
+            <>
+              <div style={{ lineHeight: 1.35, fontSize: 9, color: hudColors.label }}>
+                Time left:{" "}
+                <strong
+                  style={{
+                    color: hudColors.value,
+                    fontVariantNumeric: "tabular-nums",
+                    fontWeight: 600,
+                  }}
+                >
+                  {(chargeHud.remainingMs / 1000).toFixed(1)}
+                </strong>
+                s · Clicks:{" "}
+                <strong
+                  style={{
+                    color: hudColors.accent,
+                    fontVariantNumeric: "tabular-nums",
+                    fontWeight: 600,
+                  }}
+                >
+                  {chargeHud.clicks}
+                </strong>
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 9,
+                  lineHeight: 1.35,
+                  color: hudColors.label,
+                }}
+              >
+                Strength{" "}
+                <strong
+                  style={{
+                    color: hudColors.value,
+                    fontVariantNumeric: "tabular-nums",
+                    fontWeight: 600,
+                  }}
+                >
+                  {(
+                    launchStrengthFromClicks(chargeHud.clicks, vehicle) *
+                    powerupMult
+                  ).toFixed(2)}
+                </strong>
+                {powerupStackCount > 0 && (
+                  <span style={{ color: hudColors.accent }}> (×{powerupMult})</span>
+                )}
+                <span style={{ color: hudColors.muted }}>
+                  {" "}
+                  · +
+                  {Math.round(vehicle.extraClickStrengthFraction * 100)}% / extra
+                  click
+                </span>
+              </div>
+              {noBounceActive && (
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 9,
+                    lineHeight: 1.35,
+                    color: hudColors.label,
+                  }}
+                >
+                  No bounce / roll{" "}
+                  <strong style={{ color: hudColors.accent, fontWeight: 600 }}>
+                    on
+                  </strong>{" "}
+                  for this shot
+                </div>
+              )}
+              {noWindActive && (
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 9,
+                    lineHeight: 1.35,
+                    color: hudColors.label,
+                  }}
+                >
+                  No wind{" "}
+                  <strong style={{ color: hudColors.accent, fontWeight: 600 }}>
+                    on
+                  </strong>{" "}
+                  for this shot
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ fontSize: 9, color: hudColors.label }}>
+              Next shot in{" "}
+              <strong
+                style={{
+                  color: hudColors.value,
+                  fontVariantNumeric: "tabular-nums",
+                  fontWeight: 600,
+                }}
+              >
+                {(remainingMs / 1000).toFixed(1)}
+              </strong>
+              s
+            </div>
+          )}
         </div>
-      )}
+      ) : null}
+
+      <div
+        style={{
+          padding: "6px 8px",
+          ...hudMiniPanel,
+          fontSize: 10,
+          lineHeight: 1.4,
+        }}
+      >
+        <div
+          style={{
+            color: hudColors.muted,
+            marginBottom: 2,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+          }}
+        >
+          Coins
+        </div>
+        <div
+          style={{
+            color: "#b8860b",
+            fontWeight: 700,
+            fontSize: 14,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {totalGoldCoins}
+        </div>
       </div>
 
       <div
@@ -407,6 +415,42 @@ export function StatsHud({
         >
           <HudIdleClockIcon color="rgba(255,255,255,0.95)" />
           {vehicle.secondsBeforeShotTrigger}s
+        </div>
+      </div>
+
+      <div
+        style={{
+          padding: "6px 8px",
+          ...hudMiniPanel,
+          fontSize: 10,
+          lineHeight: 1.4,
+        }}
+      >
+        <div
+          style={{
+            color: hudColors.muted,
+            marginBottom: 2,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+          }}
+        >
+          Score
+        </div>
+        <div
+          role="status"
+          aria-label={`Score ${sessionScoreDisplay}`}
+          style={{
+            color: hudColors.value,
+            fontWeight: 700,
+            fontSize: 12,
+            lineHeight: 1.2,
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {sessionScoreDisplay}
         </div>
       </div>
     </div>

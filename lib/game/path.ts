@@ -25,6 +25,14 @@ export function coinCentersForIslands(
   );
 }
 
+/** Par for the hole: same count as lane bonus coins (one per island). */
+export function parCoinCountForIslands(
+  islands: readonly { worldX: number; worldZ: number }[],
+  laneY: number
+): number {
+  return coinCentersForIslands(islands, laneY).length;
+}
+
 /** Axis-aligned grid steps from lane origin to goal (Z first, then X); includes goal as last point. */
 export function manhattanPathLaneToGoal(laneOrigin: Vec3, goalCenter: Vec3): Vec3[] {
   const sy = laneOrigin[1];

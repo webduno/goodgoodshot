@@ -120,8 +120,9 @@ export function mergeHoleCompleted(
     halfZ: pond.halfZ,
   }));
   const completedAt = new Date().toISOString();
+  const wonDelta = payload.battleOutcome === "win" ? 1 : 0;
   return {
-    gamesWon: prev.gamesWon + 1,
+    gamesWon: prev.gamesWon + wonDelta,
     totalShotsLifetime: prev.totalShotsLifetime + payload.shots,
     totalStrengthPowerupsUsed:
       prev.totalStrengthPowerupsUsed + payload.strengthUses,

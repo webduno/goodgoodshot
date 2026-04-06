@@ -60,8 +60,10 @@ export const POND_SECOND_SURFACE_DROP = 0.028;
 
 /** Tee marker at hole start (origin): putting green, just above pond surface height. */
 export const GOAL_GREEN = "#39b54a";
-/** End-of-hole goal block (hit target). */
+/** End-of-hole goal block (hit target) — sphere / accent. */
 export const GOAL_BLOCK_COLOR = "#c62828";
+/** Great Pyramid of Giza–style casing limestone (warm sandstone). */
+export const GOAL_PYRAMID_COLOR = "#c9a66b";
 export const TEE_GAP_ABOVE_WATER = 0.02;
 export const TEE_PAD_HALF_Y = 0.035;
 

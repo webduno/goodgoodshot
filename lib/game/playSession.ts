@@ -8,8 +8,10 @@ export type SessionBattleCount = 3 | 9 | 18;
 
 export type PlaySession = {
   targetBattles: SessionBattleCount;
-  /** Battles won this session (each goal hit = one battle). */
+  /** Battles won at or under par (strokes ≤ par). */
   battlesWon: number;
+  /** Battles lost (goal hit but strokes > par). */
+  battlesLost: number;
   /** Sum of strokes for all completed battles in this session. */
   totalStrokes: number;
   startedAtMs: number;
@@ -19,9 +21,27 @@ export function defaultPlaySession(targetBattles: SessionBattleCount): PlaySessi
   return {
     targetBattles,
     battlesWon: 0,
+    battlesLost: 0,
     totalStrokes: 0,
     startedAtMs: Date.now(),
   };
+}
+
+/**
+ * Compact session line: strokes/targetBattles(winSpread), e.g. `0/3(+0)` or `12/3(+1)`.
+ * `sessionShots` adds the current hole (in-flight) to persisted `totalStrokes`.
+ */
+export function formatSessionScoreHud(
+  session: PlaySession | null,
+  sessionShots: number
+): string {
+  if (!session) {
+    return "0/0(+0)";
+  }
+  const strokes = session.totalStrokes + sessionShots;
+  const spread = session.battlesWon - session.battlesLost;
+  const spreadStr = `${spread >= 0 ? "+" : ""}${spread}`;
+  return `${strokes}/${session.targetBattles}(${spreadStr})`;
 }
 
 function isSessionBattleCount(n: number): n is SessionBattleCount {
@@ -42,18 +62,31 @@ function normalizePlaySession(parsed: unknown): PlaySession | null {
   const wonRaw =
     o.battlesWon ?? o.tanksDestroyed ?? o.holesCompleted;
   if (typeof wonRaw !== "number") return null;
-  const battlesWon = wonRaw;
+
+  let battlesWon: number;
+  let battlesLost: number;
+  if (typeof o.battlesLost === "number") {
+    battlesWon = Math.max(0, wonRaw);
+    battlesLost = Math.max(0, o.battlesLost);
+  } else {
+    /** Legacy: `wonRaw` was holes completed (each counted as a win). */
+    const roundsCompleted = Math.max(0, wonRaw);
+    battlesWon = roundsCompleted;
+    battlesLost = 0;
+  }
 
   if (typeof o.totalStrokes !== "number" || typeof o.startedAtMs !== "number") {
     return null;
   }
 
-  if (battlesWon < 0 || o.totalStrokes < 0) return null;
-  if (battlesWon > targetBattles) return null;
+  const roundsDone = battlesWon + battlesLost;
+  if (roundsDone < 0 || o.totalStrokes < 0) return null;
+  if (roundsDone > targetBattles) return null;
 
   return {
     targetBattles,
     battlesWon,
+    battlesLost,
     totalStrokes: o.totalStrokes,
     startedAtMs: o.startedAtMs,
   };
@@ -63,7 +96,7 @@ function normalizePlaySession(parsed: unknown): PlaySession | null {
 export function loadActivePlaySession(): PlaySession | null {
   if (typeof window === "undefined") return null;
   const s = loadPlaySession();
-  if (s && s.battlesWon >= s.targetBattles) {
+  if (s && s.battlesWon + s.battlesLost >= s.targetBattles) {
     clearPlaySession();
     return null;
   }

@@ -9,8 +9,8 @@ export const BLOCK_SIZE = 1;
 export const GOAL_Z_MIN = 20;
 export const GOAL_Z_MAX = 200;
 /** Random sideways offset for the green goal (grid units). */
-export const GOAL_X_MIN = -8;
-export const GOAL_X_MAX = 8;
+export const GOAL_X_MIN = -18;
+export const GOAL_X_MAX = 18;
 
 /** Horizontal aim: radians from +Z toward +X (left button increases yaw, right decreases). */
 export const AIM_YAW_STEP_RAD = THREE.MathUtils.degToRad(5);
@@ -38,6 +38,9 @@ export const GOAL_HALF = BLOCK_SIZE / 2;
 
 /** Clear color + page chrome — Frutiger Aero sky; penalty ponds use the same tint. */
 export const BG = "#78d4ff";
+/** Linear fog (world units): ramp from `FOG_NEAR` to sky color by `FOG_FAR` — distant play barely visible. */
+export const FOG_NEAR = 70;
+export const FOG_FAR = 175;
 
 /**
  * Penalty hazard: wide/long on XZ (pond). Physics uses block height on Y so the ball
@@ -83,6 +86,11 @@ export const VEHICLE_FOOTPRINT_HALF_XZ =
 /** Full player span on XZ ≈ 2× this; tee is 4× that width → half-extent = 4× footprint half. */
 export const TEE_PAD_HALF_X = VEHICLE_FOOTPRINT_HALF_XZ * 4;
 export const TEE_PAD_HALF_Z = VEHICLE_FOOTPRINT_HALF_XZ * 4;
+/**
+ * Extra pad length toward −Z only (`SpawnTeePad`), so the green extends under `TeeHoleSign`
+ * (sign sits just past the nominal back edge at `−TEE_PAD_HALF_Z`).
+ */
+export const TEE_PAD_EXTEND_BACK_Z = 0.55;
 export const TEE_PAD_CENTER_Y = TEE_PAD_HALF_Y;
 
 /** Prism length for the weakest predetermined vehicle; stronger builds scale up linearly. */

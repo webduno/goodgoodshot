@@ -2,19 +2,21 @@
 
 import {
   launchStrengthFromClicks,
+  rgbTupleToCss,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
 import type { CSSProperties } from "react";
 
 import {
   hudColors,
+  hudFont,
   hudMiniPanel,
 } from "@/components/gameHudStyles";
 import { formatVec3 } from "@/lib/game/math";
 import type { Vec3 } from "@/lib/game/types";
 import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 
-import { HudIdleBoltIcon, HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
+import { HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
 
 export function StatsHud({
   spawnCenter,
@@ -59,6 +61,9 @@ export function StatsHud({
     (Math.atan2(-windHud.z, -windHud.x) * 180) / Math.PI;
   const windArrowLen = 6 + (Math.min(windMag, WIND_ACCEL_MAX) / WIND_ACCEL_MAX) * 14;
 
+  const mainCss = rgbTupleToCss(vehicle.mainRgb);
+  const accentCss = rgbTupleToCss(vehicle.accentRgb);
+
   const metricsDivider: CSSProperties = {
     marginTop: 8,
     paddingTop: 8,
@@ -74,13 +79,22 @@ export function StatsHud({
         zIndex: 40,
         pointerEvents: "none",
         userSelect: "none",
-        padding: "6px 8px",
-        maxWidth: 220,
-        ...hudMiniPanel,
-        fontSize: 10,
-        lineHeight: 1.4,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        alignItems: "stretch",
+        width: "fit-content",
+        maxWidth: "min(94vw, 168px)",
       }}
     >
+      <div
+        style={{
+          padding: "6px 8px",
+          ...hudMiniPanel,
+          fontSize: 10,
+          lineHeight: 1.4,
+        }}
+      >
       <div
         style={{
           color: hudColors.muted,
@@ -103,28 +117,6 @@ export function StatsHud({
         }}
       >
         {sessionShots}
-      </div>
-      <div
-        style={{
-          color: hudColors.muted,
-          marginBottom: 2,
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-        }}
-      >
-        Vehicle
-      </div>
-      <div
-        style={{
-          color: hudColors.value,
-          fontWeight: 600,
-          fontSize: 10,
-          marginBottom: 6,
-        }}
-      >
-        {vehicle.name}
       </div>
       <div
         style={{
@@ -350,51 +342,73 @@ export function StatsHud({
           >
             {(remainingMs / 1000).toFixed(1)}
           </strong>
-          s · Boost: Str {strengthCharges} · Nb {noBounceCharges} · Nw{" "}
-          {noWindCharges}
+          s
         </div>
       )}
+      </div>
 
-      {!shotInFlight && !inCooldown && !charging && (
+      <div
+        style={{
+          padding: "6px 8px",
+          ...hudFont,
+          fontSize: 10,
+          lineHeight: 1.4,
+          borderRadius: 14,
+          border: "1px solid rgba(255,255,255,0.88)",
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 10px rgba(0, 55, 95, 0.2)",
+          backgroundImage: [
+            "linear-gradient(165deg, rgba(255,255,255,0.42) 0%, transparent 46%)",
+            `linear-gradient(135deg, ${mainCss} 0%, ${accentCss} 100%)`,
+          ].join(", "),
+        }}
+      >
         <div
-          role="status"
-          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds, ${strengthCharges} strength, ${noBounceCharges} no-bounce, ${noWindCharges} no-wind charges available`}
           style={{
-            ...metricsDivider,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            color: hudColors.muted,
-            fontSize: 10,
-            lineHeight: 1,
+            color: "rgba(255,255,255,0.88)",
+            marginBottom: 2,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
           }}
         >
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              fontVariantNumeric: "tabular-nums",
-            }}
-            title="Charge window length"
-          >
-            <HudIdleClockIcon color={hudColors.accent} />
-            {vehicle.secondsBeforeShotTrigger}s
-          </span>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              fontVariantNumeric: "tabular-nums",
-            }}
-            title="Boost charges left (strength / no-bounce / no-wind)"
-          >
-            <HudIdleBoltIcon color={hudColors.accent} />
-            {strengthCharges}/{noBounceCharges}/{noWindCharges}
-          </span>
+          Vehicle
         </div>
-      )}
+        <div
+          style={{
+            color: "#ffffff",
+            fontWeight: 700,
+            fontSize: 11,
+            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+            marginBottom: 2,
+          }}
+        >
+          {vehicle.name}
+        </div>
+        <div
+          role="status"
+          aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds`}
+          style={{
+            marginTop: 8,
+            paddingTop: 8,
+            borderTop: "1px solid rgba(255,255,255,0.28)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            color: "rgba(255,255,255,0.95)",
+            fontSize: 10,
+            lineHeight: 1,
+            fontVariantNumeric: "tabular-nums",
+            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+          }}
+          title="Charge window length"
+        >
+          <HudIdleClockIcon color="rgba(255,255,255,0.95)" />
+          {vehicle.secondsBeforeShotTrigger}s
+        </div>
+      </div>
     </div>
   );
 }

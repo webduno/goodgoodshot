@@ -14,6 +14,16 @@ export type PondSpec = {
   surfaceLayer: 0 | 1;
 };
 
+/** Axis-aligned island footprint (center + half extents on XZ). */
+export type IslandRect = {
+  worldX: number;
+  worldZ: number;
+  halfX: number;
+  halfZ: number;
+  /** Visual block height (Y); top face stays at `TURF_TOP_Y` in the renderer. */
+  blockThickness: number;
+};
+
 export type GameState = {
   spawnCenter: Vec3;
   /** World-space Z of green goal center; unchanged on miss, rerolled only on hit. */
@@ -22,6 +32,11 @@ export type GameState = {
   goalWorldX: number;
   /** Penalty ponds (0–2); rerolled with goal on hole-out. */
   ponds: readonly PondSpec[];
+  /**
+   * Course turf layout for the current hole — same between shots until a goal is hit
+   * (then recomputed for the new goal).
+   */
+  islands: readonly IslandRect[];
 };
 
 export type GameAction = {

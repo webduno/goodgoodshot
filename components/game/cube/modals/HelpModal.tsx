@@ -106,10 +106,9 @@ export function HelpModal({
             </li>
             <li style={{ marginBottom: 8 }}>
               <strong style={{ color: hudColors.value }}>Power-ups</strong> —
-              use the <strong style={{ color: hudColors.value }}>Power-ups</strong>{" "}
-              chip above the aim row when you are not charging to pick boosts before
-              your first click; the same slots also appear during the charge
-              window. Six slots (left to right):{" "}
+              tap the <strong style={{ color: hudColors.value }}>Power-ups</strong>{" "}
+              button on the left when you are not charging to open the slot panel
+              and pick boosts before your first click. Six slots (left to right):{" "}
               <strong style={{ color: hudColors.value }}>Strength</strong>,{" "}
               <strong style={{ color: hudColors.value }}>No bounce</strong>, and{" "}
               <strong style={{ color: hudColors.value }}>No wind</strong> are

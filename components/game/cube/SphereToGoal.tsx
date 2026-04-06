@@ -11,24 +11,21 @@ import {
   SPHERE_RADIUS,
 } from "@/lib/game/constants";
 import {
+  pointInVoidXZ,
   sphereIntersectsAabb,
   sphereIntersectsGoalBox,
 } from "@/lib/game/collision";
 import { coinCellKey } from "@/lib/game/path";
 import { spawnTopYFromBlockCenterY } from "@/lib/game/math";
-import {
-  INITIAL_LANE_ORIGIN,
-  type PondSpec,
-  type Projectile,
-  type Vec3,
-} from "@/lib/game/types";
+import type { IslandRect } from "@/lib/game/islands";
+import { type Projectile, type Vec3 } from "@/lib/game/types";
 
 export function SphereToGoal({
   meshRef,
   projectileRef,
   shotWindAccelRef,
   spawnCenter,
-  ponds,
+  islands,
   goalCenter,
   gravityY,
   bounceRestitution,
@@ -42,7 +39,7 @@ export function SphereToGoal({
   projectileRef: MutableRefObject<Projectile | null>;
   shotWindAccelRef: MutableRefObject<{ x: number; z: number }>;
   spawnCenter: Vec3;
-  ponds: readonly PondSpec[];
+  islands: readonly IslandRect[];
   goalCenter: Vec3;
   gravityY: number;
   bounceRestitution: number;
@@ -102,28 +99,12 @@ export function SphereToGoal({
       mesh.rotation.z -= (p.vx * dt) / SPHERE_RADIUS;
       mesh.position.set(p.x, p.y, p.z);
 
-      for (const pond of ponds) {
-        const obstacleCenter: Vec3 = [
-          pond.worldX,
-          INITIAL_LANE_ORIGIN[1],
-          pond.worldZ,
-        ];
-        const hitObstacle = sphereIntersectsAabb(
-          p.x,
-          p.y,
-          p.z,
-          SPHERE_RADIUS,
-          obstacleCenter,
-          pond.halfX,
-          GOAL_HALF,
-          pond.halfZ
-        );
-        if (hitObstacle) {
-          projectileRef.current = null;
-          mesh.visible = false;
-          onProjectileEnd("penalty");
-          return;
-        }
+      if (pointInVoidXZ(p.x, p.z, islands)) {
+        projectileRef.current = null;
+        mesh.position.set(p.x, FLOOR_CONTACT_CENTER_Y, p.z);
+        mesh.visible = false;
+        onProjectileEnd("penalty");
+        return;
       }
 
       tryCollectCoins(p.x, p.y, p.z);
@@ -162,31 +143,6 @@ export function SphereToGoal({
     p.x += p.vx * dt;
     p.y += vyAfterGravity * dt;
     p.z += p.vz * dt;
-    mesh.position.set(p.x, p.y, p.z);
-
-    for (const pond of ponds) {
-      const obstacleCenter: Vec3 = [
-        pond.worldX,
-        INITIAL_LANE_ORIGIN[1],
-        pond.worldZ,
-      ];
-      const hitObstacle = sphereIntersectsAabb(
-        p.x,
-        p.y,
-        p.z,
-        SPHERE_RADIUS,
-        obstacleCenter,
-        pond.halfX,
-        GOAL_HALF,
-        pond.halfZ
-      );
-      if (hitObstacle) {
-        projectileRef.current = null;
-        mesh.visible = false;
-        onProjectileEnd("penalty");
-        return;
-      }
-    }
 
     tryCollectCoins(p.x, p.y, p.z);
 
@@ -204,15 +160,27 @@ export function SphereToGoal({
       return;
     }
 
-    if (p.y > FLOOR_CONTACT_CENTER_Y) return;
-
     let landingX = p.x;
     let landingZ = p.z;
     if (y0 > FLOOR_CONTACT_CENTER_Y && p.y !== y0) {
-      const t =
-        (FLOOR_CONTACT_CENTER_Y - y0) / (p.y - y0);
+      const t = (FLOOR_CONTACT_CENTER_Y - y0) / (p.y - y0);
       landingX = x0 + t * (p.x - x0);
       landingZ = z0 + t * (p.z - z0);
+    }
+
+    if (p.y <= FLOOR_CONTACT_CENTER_Y) {
+      if (pointInVoidXZ(landingX, landingZ, islands)) {
+        projectileRef.current = null;
+        mesh.position.set(landingX, FLOOR_CONTACT_CENTER_Y, landingZ);
+        mesh.visible = false;
+        onProjectileEnd("penalty");
+        return;
+      }
+    }
+
+    if (p.y > FLOOR_CONTACT_CENTER_Y) {
+      mesh.position.set(p.x, p.y, p.z);
+      return;
     }
 
     const canBounce =
@@ -245,6 +213,7 @@ export function SphereToGoal({
     }
 
     projectileRef.current = null;
+    mesh.position.set(landingX, FLOOR_CONTACT_CENTER_Y, landingZ);
     mesh.visible = false;
     /** Raw block center on ground; parent snaps to integer grid. */
     onProjectileEnd("miss", [landingX, spawnCenter[1], landingZ]);

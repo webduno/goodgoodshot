@@ -14,21 +14,21 @@ import {
 } from "react";
 import * as THREE from "three";
 
-import { TerrainTextured } from "@/components/game/TerrainTextured";
 import { Block } from "@/components/game/cube/meshes/Block";
 import { AimYawPrism } from "@/components/game/cube/meshes/AimYawPrism";
-import { PenaltyPond } from "@/components/game/cube/meshes/PenaltyPond";
 import { SpawnTeePad } from "@/components/game/cube/meshes/SpawnTeePad";
+import { TeeCornerTree } from "@/components/game/cube/meshes/TeeCornerTree";
+import { TeeHoleSign } from "@/components/game/cube/meshes/TeeHoleSign";
 import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
 import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
 import { SpawnVisualGroup } from "@/components/game/cube/TeleportOrbitRig";
 import {
   BLOCK_SIZE,
+  GOAL_BLOCK_COLOR,
   FIELD_PLANE_HALF_WIDTH_X,
   FIELD_PLANE_Z_BEFORE_SPAWN,
   FIELD_PLANE_Z_PAST_GOAL,
-  GOAL_BLOCK_COLOR,
   GOAL_Z_MAX,
   VEHICLE_CORNER_BLOCK_SIZE,
   VEHICLE_WHEEL_FLOOR_Y_EPS,
@@ -39,18 +39,15 @@ import {
   bodyYawQuarterSnappedFromWorldAim,
   spawnTopYFromBlockCenterY,
 } from "@/lib/game/math";
-import { coinCellKey, laneMarkerCenters } from "@/lib/game/path";
-import {
-  INITIAL_LANE_ORIGIN,
-  type PondSpec,
-  type Projectile,
-  type Vec3,
-} from "@/lib/game/types";
+import { coinCellKey, coinCentersForIslands } from "@/lib/game/path";
+import type { IslandRect } from "@/lib/game/islands";
+import { INITIAL_LANE_ORIGIN, type Projectile, type Vec3 } from "@/lib/game/types";
+import { TerrainTextured } from "../TerrainTextured";
 
 export function SceneContent({
   spawnCenter,
   goalCenter,
-  ponds,
+  islands,
   aimYawRad,
   cooldownUntil,
   roundLocked,
@@ -70,7 +67,7 @@ export function SceneContent({
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
-  ponds: readonly PondSpec[];
+  islands: readonly IslandRect[];
   aimYawRad: number;
   cooldownUntil: number | null;
   roundLocked: boolean;
@@ -194,9 +191,16 @@ export function SceneContent({
   }, [fireProjectile, onChargeHudUpdate, onChargeWindowStart, vehicle]);
 
   const yellowLaneMarkers = useMemo(
-    () => laneMarkerCenters(INITIAL_LANE_ORIGIN, goalCenter),
-    [goalCenter]
+    () => coinCentersForIslands(islands, INITIAL_LANE_ORIGIN[1]),
+    [islands]
   );
+
+  const goalLength = useMemo(() => {
+    const dx = goalCenter[0] - spawnCenter[0];
+    const dz = goalCenter[2] - spawnCenter[2];
+    return Math.hypot(dx, dz);
+  }, [goalCenter, spawnCenter]);
+
   void coinRenderTick;
 
   const onFireInput = useCallback(() => {
@@ -244,6 +248,7 @@ export function SceneContent({
     () => bodyYawQuarterSnappedFromWorldAim(aimYawRad),
     [aimYawRad]
   );
+  
 
   const fieldWidth = 2 * (2 * FIELD_PLANE_HALF_WIDTH_X);
   const z0 = -FIELD_PLANE_Z_BEFORE_SPAWN;
@@ -260,12 +265,17 @@ export function SceneContent({
   return (
     <>
       <group
-        position={[0, -10, fieldZCenter]}
+        position={[0, -55, fieldZCenter]}
         scale={[fieldWidth / 5, 1, fieldDepth / 5]}
       >
         <TerrainTextured clickedHandler={onTerrainTexturedClick} />
       </group>
       <SpawnTeePad />
+      <TeeCornerTree />
+      <TeeHoleSign
+        goalLength={goalLength}
+        coinCount={yellowLaneMarkers.length}
+      />
       <SpawnVisualGroup>
         <group rotation={[0, bodyYawRad, 0]}>
           {vehicle.bodyParts != null && vehicle.bodyParts.length > 0 ? (
@@ -304,19 +314,6 @@ export function SceneContent({
         />
       </SpawnVisualGroup>
       <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />
-      {ponds.map((pond, i) => (
-        <PenaltyPond
-          key={`pond-${i}-${pond.worldX}-${pond.worldZ}-${pond.halfX}-${pond.halfZ}`}
-          center={[
-            pond.worldX,
-            INITIAL_LANE_ORIGIN[1],
-            pond.worldZ,
-          ]}
-          halfX={pond.halfX}
-          halfZ={pond.halfZ}
-          surfaceLayer={pond.surfaceLayer}
-        />
-      ))}
       {yellowLaneMarkers.map((center, i) => {
         const ck = coinCellKey(center);
         if (collectedCoinKeysRef.current.has(ck)) return null;
@@ -351,7 +348,7 @@ export function SceneContent({
         projectileRef={projectileRef}
         shotWindAccelRef={shotWindAccelRef}
         spawnCenter={spawnCenter}
-        ponds={ponds}
+        islands={islands}
         goalCenter={goalCenter}
         gravityY={vehicle.gravityY}
         bounceRestitution={vehicle.bounceRestitution}

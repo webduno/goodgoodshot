@@ -6,6 +6,7 @@ import * as THREE from "three";
 import {
   GOAL_GREEN,
   TEE_PAD_CENTER_Y,
+  TEE_PAD_EXTEND_BACK_Z,
   TEE_PAD_HALF_X,
   TEE_PAD_HALF_Y,
   TEE_PAD_HALF_Z,
@@ -21,10 +22,14 @@ export function SpawnTeePad() {
     m.raycast = () => {};
   }, []);
 
+  /** Keep +Z edge at `+TEE_PAD_HALF_Z`; extend only backward so the sign sits on the green. */
+  const padDepthZ = TEE_PAD_HALF_Z * 2 + TEE_PAD_EXTEND_BACK_Z;
+  const padCenterZ = -TEE_PAD_EXTEND_BACK_Z / 2;
+
   return (
     <mesh
       ref={meshRef}
-      position={[0, TEE_PAD_CENTER_Y - .55, 0]}
+      position={[0, TEE_PAD_CENTER_Y - .55, padCenterZ]}
       receiveShadow
       castShadow
     >
@@ -32,7 +37,7 @@ export function SpawnTeePad() {
         args={[
           TEE_PAD_HALF_X * 2,
           TEE_PAD_HALF_Y * 6,
-          TEE_PAD_HALF_Z * 2,
+          padDepthZ,
         ]}
       />
       <meshStandardMaterial

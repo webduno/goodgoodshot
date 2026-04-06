@@ -1,10 +1,11 @@
 import type { RootState } from "@react-three/fiber";
 import * as THREE from "three";
 
-import { BG, CAMERA_FAR, CAMERA_NEAR } from "./constants";
+import { BG, CAMERA_FAR, CAMERA_NEAR, FOG_FAR, FOG_NEAR } from "./constants";
 
 export function onCanvasCreated({ camera, gl, scene }: RootState) {
   scene.background = new THREE.Color(BG);
+  scene.fog = new THREE.Fog(BG, FOG_NEAR, FOG_FAR);
   gl.setClearColor(new THREE.Color(BG), 1);
 
   if (camera instanceof THREE.PerspectiveCamera) {

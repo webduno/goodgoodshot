@@ -13,8 +13,13 @@ const glassFace =
 const glassDisabled =
   "linear-gradient(165deg, #e4e8ec 0%, #b0b8c4 100%)";
 
+/** Glossy red glass for primary Fire control. */
+const glassFaceRed =
+  "linear-gradient(165deg, #ffffff 0%, #fecaca 16%, #fb7185 44%, #dc2626 78%, #991b1b 100%)";
+
 const edgeLight = "inset 0 1px 0 rgba(255,255,255,0.55)";
 const dropSm = "0 3px 10px rgba(0, 82, 130, 0.22)";
+const dropSmRed = "0 3px 12px rgba(160, 28, 28, 0.42)";
 
 const textOnGlass: CSSProperties = {
   color: "#003d5c",
@@ -79,11 +84,13 @@ export const hudAimPanelStrip: CSSProperties = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  gap: 6,
+  gap: 3,
   pointerEvents: "auto",
   userSelect: "none",
-  padding: "3px 5px",
+  padding: "1px 0",
   borderRadius: 14,
+  width: "fit-content",
+  boxSizing: "border-box",
   backgroundColor: "rgba(230, 248, 255, 0.35)",
   backgroundImage: [
     "radial-gradient(ellipse 130% 95% at 50% -5%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.35) 48%, transparent 58%)",
@@ -92,6 +99,9 @@ export const hudAimPanelStrip: CSSProperties = {
   ].join(", "),
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
 };
+
+/** Inner width of aim strip: horizontal padding 0, four 36px buttons, three 3px gaps (matches `hudAimPanelStrip`). */
+export const HUD_AIM_STRIP_CONTENT_WIDTH_PX = 36 * 4 + 3 * 3;
 
 export const hudMiniPanel: CSSProperties = {
   ...hudFont,
@@ -108,8 +118,8 @@ export function goldIconButtonStyle(disabled: boolean): CSSProperties {
     ...hudFont,
     ...(disabled ? textOnGlossButtonDisabled : textOnGlossButton),
     width: 36,
-    height: 34,
-    borderRadius: 11,
+    height: 36,
+    borderRadius: "50%",
     border: disabled ? "1px solid #9ca8b4" : "1px solid rgba(255,255,255,0.9)",
     backgroundImage: disabled ? glassDisabled : glassFace,
     fontSize: 16,
@@ -156,6 +166,54 @@ export function goldChipButtonStyle(): CSSProperties {
     backgroundImage: glassFace,
     cursor: "pointer",
     boxShadow: `${edgeLight}, ${dropSm}`,
+  };
+}
+
+const HUD_ROUND_ACTION_PX = 68;
+
+/** Circular blue glass — bottom-dock Power-ups. */
+export function hudRoundPowerupButtonStyle(disabled: boolean): CSSProperties {
+  return {
+    ...hudFont,
+    ...(disabled ? textOnGlossButtonDisabled : textOnGlossButton),
+    width: HUD_ROUND_ACTION_PX,
+    height: HUD_ROUND_ACTION_PX,
+    padding: 0,
+    borderRadius: "50%",
+    border: disabled ? "1px solid #9ca8b4" : "1px solid rgba(255,255,255,0.9)",
+    backgroundImage: disabled ? glassDisabled : glassFace,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.72 : 1,
+    boxShadow: `${edgeLight}, ${dropSm}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    flexShrink: 0,
+  };
+}
+
+/** Circular red glass — bottom-dock Fire. */
+export function hudRoundFireButtonStyle(disabled: boolean): CSSProperties {
+  return {
+    ...hudFont,
+    ...(disabled ? textOnGlossButtonDisabled : textOnGlossButton),
+    width: HUD_ROUND_ACTION_PX,
+    height: HUD_ROUND_ACTION_PX,
+    padding: 0,
+    borderRadius: "50%",
+    border: disabled ? "1px solid #9ca8b4" : "1px solid rgba(255,255,255,0.9)",
+    backgroundImage: disabled ? glassDisabled : glassFaceRed,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.72 : 1,
+    boxShadow: `${edgeLight}, ${disabled ? dropSm : dropSmRed}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    flexShrink: 0,
+    fontSize: 11,
+    fontWeight: 700,
   };
 }
 
@@ -261,32 +319,47 @@ export function powerupSlotStyle(opts: {
   };
 }
 
-export const progressTrack: CSSProperties = {
-  width: "100%",
-  maxWidth: 220,
+const progressTrackShared: CSSProperties = {
+  width: HUD_AIM_STRIP_CONTENT_WIDTH_PX,
+  maxWidth: HUD_AIM_STRIP_CONTENT_WIDTH_PX,
   height: 7,
   borderRadius: 999,
   padding: 1,
   boxSizing: "border-box",
-  background: "linear-gradient(180deg, #2d8a3e, #b8f0c8)",
   boxShadow: "inset 0 1px 4px rgba(0,0,0,0.18)",
+};
+
+/** Charge / cooldown timer bar — same width as aim button row. */
+export const progressTrack: CSSProperties = {
+  ...progressTrackShared,
+  background: "linear-gradient(180deg, #2d8a3e, #b8f0c8)",
+};
+
+/** Strength build-up bar (above timer during charge). */
+export const progressTrackStrength: CSSProperties = {
+  ...progressTrackShared,
+  background: "linear-gradient(180deg, #78350f, #fde68a)",
 };
 
 export function progressFillStyle(
   pct: number,
-  variant: "charge" | "cooldown"
+  variant: "charge" | "cooldown" | "strength"
 ): CSSProperties {
   const fill =
     variant === "charge"
       ? "linear-gradient(180deg, #f472b6, #db2777)"
-      : "linear-gradient(180deg, #7dd3fc, #0072bc)";
+      : variant === "cooldown"
+        ? "linear-gradient(180deg, #7dd3fc, #0072bc)"
+        : "linear-gradient(180deg, #fb923c, #ea580c)";
   return {
     width: `${pct * 100}%`,
     height: "100%",
     borderRadius: 999,
     background: fill,
     transition:
-      variant === "charge" ? "width 0.05s linear" : "width 0.1s linear",
+      variant === "charge" || variant === "strength"
+        ? "width 0.05s linear"
+        : "width 0.1s linear",
   };
 }
 

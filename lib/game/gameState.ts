@@ -4,8 +4,17 @@ import {
   GOAL_Z_MAX,
   GOAL_Z_MIN,
 } from "./constants";
+import {
+  computeIslandsForLane,
+  ensureSpawnAndGoalOnIslandsImmutable,
+} from "./islands";
 import { pickPondsLayout } from "./pondLayout";
-import type { GameAction, GameState, Vec3 } from "./types";
+import {
+  INITIAL_LANE_ORIGIN,
+  type GameAction,
+  type GameState,
+  type Vec3,
+} from "./types";
 import { randomIntInclusive, snapBlockCenterToGrid } from "./math";
 
 export function createInitialGameState(): GameState {
@@ -14,11 +23,23 @@ export function createInitialGameState(): GameState {
   const spawnX = 0;
   const spawnZ = 0;
   const ponds = pickPondsLayout(spawnX, spawnZ, goalWorldX, goalWorldZ);
+  const spawnCenter: Vec3 = [0, 0, 0];
+  const goalCenter: Vec3 = [
+    goalWorldX,
+    INITIAL_LANE_ORIGIN[1],
+    goalWorldZ,
+  ];
+  const islands = computeIslandsForLane(
+    INITIAL_LANE_ORIGIN,
+    goalCenter,
+    spawnCenter
+  );
   return {
-    spawnCenter: [0, 0, 0],
+    spawnCenter,
     goalWorldZ,
     goalWorldX,
     ponds,
+    islands,
   };
 }
 
@@ -30,6 +51,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   let nextGoalWorldZ = state.goalWorldZ;
   let nextGoalWorldX = state.goalWorldX;
   let nextPonds = state.ponds;
+
+  let nextIslands = state.islands;
 
   if (action.outcome === "hit") {
     next = snapBlockCenterToGrid([
@@ -45,10 +68,36 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       nextGoalWorldX,
       nextGoalWorldZ
     );
+    const goalCenter: Vec3 = [
+      nextGoalWorldX,
+      INITIAL_LANE_ORIGIN[1],
+      nextGoalWorldZ,
+    ];
+    nextIslands = computeIslandsForLane(INITIAL_LANE_ORIGIN, goalCenter, next);
   } else if (action.outcome === "penalty" && action.revertSpawn) {
     next = snapBlockCenterToGrid(action.revertSpawn);
+    const goalCenter: Vec3 = [
+      state.goalWorldX,
+      INITIAL_LANE_ORIGIN[1],
+      state.goalWorldZ,
+    ];
+    nextIslands = ensureSpawnAndGoalOnIslandsImmutable(
+      state.islands,
+      next,
+      goalCenter
+    );
   } else if (action.landing) {
     next = snapBlockCenterToGrid(action.landing);
+    const goalCenter: Vec3 = [
+      state.goalWorldX,
+      INITIAL_LANE_ORIGIN[1],
+      state.goalWorldZ,
+    ];
+    nextIslands = ensureSpawnAndGoalOnIslandsImmutable(
+      state.islands,
+      next,
+      goalCenter
+    );
   } else {
     next = prev;
   }
@@ -59,5 +108,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     goalWorldZ: nextGoalWorldZ,
     goalWorldX: nextGoalWorldX,
     ponds: nextPonds,
+    islands: nextIslands,
   };
 }

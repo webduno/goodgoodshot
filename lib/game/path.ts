@@ -9,6 +9,22 @@ export function coinCellKey(center: Vec3): string {
   return `${center[0]},${center[1]},${center[2]}`;
 }
 
+/**
+ * One coin per island, snapped to integer block centers (same convention as `snapBlockCenterToGrid`).
+ */
+export function coinCentersForIslands(
+  islands: readonly { worldX: number; worldZ: number }[],
+  laneY: number
+): Vec3[] {
+  return islands.map(
+    (is): Vec3 => [
+      Math.round(is.worldX),
+      laneY,
+      Math.round(is.worldZ),
+    ]
+  );
+}
+
 /** Axis-aligned grid steps from lane origin to goal (Z first, then X); includes goal as last point. */
 export function manhattanPathLaneToGoal(laneOrigin: Vec3, goalCenter: Vec3): Vec3[] {
   const sy = laneOrigin[1];

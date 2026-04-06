@@ -1,7 +1,65 @@
 import * as THREE from "three";
 
-import { BLOCK_SIZE, GOAL_HALF, PLAYER_GROUND_HALF } from "./constants";
+import {
+  BLOCK_SIZE,
+  FIELD_PLANE_HALF_WIDTH_X,
+  FIELD_PLANE_Z_BEFORE_SPAWN,
+  FIELD_PLANE_Z_PAST_GOAL,
+  GOAL_HALF,
+  GOAL_Z_MAX,
+  PLAYER_GROUND_HALF,
+} from "./constants";
+import type { IslandRect } from "./islands";
 import type { PondSpec, Vec3 } from "./types";
+
+/** Half-extent on X for the outer field rect (matches `InitialFieldGround` width / 2). */
+export function fieldOuterHalfExtentX(): number {
+  return 2 * FIELD_PLANE_HALF_WIDTH_X;
+}
+
+export function fieldZBounds(): { z0: number; z1: number } {
+  const z0 = -FIELD_PLANE_Z_BEFORE_SPAWN;
+  const z1 = GOAL_Z_MAX + FIELD_PLANE_Z_PAST_GOAL;
+  return { z0, z1 };
+}
+
+export function pointInOuterFieldXZ(px: number, pz: number): boolean {
+  const hx = fieldOuterHalfExtentX();
+  const { z0, z1 } = fieldZBounds();
+  return Math.abs(px) <= hx && pz >= z0 && pz <= z1;
+}
+
+export function pointInPondXZ(px: number, pz: number, pond: PondSpec): boolean {
+  return (
+    Math.abs(px - pond.worldX) <= pond.halfX &&
+    Math.abs(pz - pond.worldZ) <= pond.halfZ
+  );
+}
+
+export function pointOnAnyIsland(
+  px: number,
+  pz: number,
+  islands: readonly IslandRect[]
+): boolean {
+  for (const is of islands) {
+    if (
+      Math.abs(px - is.worldX) <= is.halfX &&
+      Math.abs(pz - is.worldZ) <= is.halfZ
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** True when (x,z) is not on any island platform (void / sky gap). */
+export function pointInVoidXZ(
+  px: number,
+  pz: number,
+  islands: readonly IslandRect[]
+): boolean {
+  return !pointOnAnyIsland(px, pz, islands);
+}
 
 export function rectsOverlapXZ(
   ax: number,

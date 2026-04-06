@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  launchStrengthFromClicks,
   vehicleChargeMs,
   vehicleShotCooldownMs,
   type PlayerVehicleConfig,
@@ -10,32 +11,31 @@ import {
   hudFont,
   progressFillStyle,
   progressTrack,
+  progressTrackStrength,
 } from "@/components/gameHudStyles";
 
-import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
-import type { PowerupSlotId } from "@/lib/game/types";
+/** Fill 0→1: bonus launch strength from extra taps vs a reference max tap count for this charge window. */
+function strengthBarRatio(clicks: number, v: PlayerVehicleConfig): number {
+  const maxClicksRef = Math.max(
+    2,
+    Math.round(v.secondsBeforeShotTrigger * 6) + 1
+  );
+  const sMin = launchStrengthFromClicks(1, v);
+  const sMaxRef = launchStrengthFromClicks(maxClicksRef, v);
+  const sCur = launchStrengthFromClicks(clicks, v);
+  if (sMaxRef <= sMin) return 0;
+  return Math.min(1, Math.max(0, (sCur - sMin) / (sMaxRef - sMin)));
+}
 
 export function ShotHud({
   shotInFlight,
   cooldownUntil,
   chargeHud,
-  strengthCharges,
-  noBounceCharges,
-  noWindCharges,
-  noBounceActive,
-  noWindActive,
-  onPowerup,
   vehicle,
 }: {
   shotInFlight: boolean;
   cooldownUntil: number | null;
   chargeHud: { remainingMs: number; clicks: number } | null;
-  strengthCharges: number;
-  noBounceCharges: number;
-  noWindCharges: number;
-  noBounceActive: boolean;
-  noWindActive: boolean;
-  onPowerup: (slotId: PowerupSlotId) => void;
   vehicle: PlayerVehicleConfig;
 }) {
   const chargeMs = vehicleChargeMs(vehicle);
@@ -48,45 +48,24 @@ export function ShotHud({
   const charging = chargeHud !== null;
   const chargeProgress =
     charging && chargeMs > 0 ? chargeHud.remainingMs / chargeMs : 0;
-  const canUseStrength =
-    charging && !shotInFlight && strengthCharges > 0;
-  const canUseNoBounce =
-    charging && !shotInFlight && noBounceCharges > 0 && !noBounceActive;
-  const canUseNoWind =
-    charging && !shotInFlight && noWindCharges > 0 && !noWindActive;
 
   if (charging && !shotInFlight && chargeHud) {
+    const strengthPct = strengthBarRatio(chargeHud.clicks, vehicle);
     return (
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          alignItems: "stretch",
-          gap: 6,
-          width: "100%",
+          alignItems: "center",
+          gap: 2,
+          width: "fit-content",
           pointerEvents: "none",
           userSelect: "none",
           ...hudFont,
         }}
       >
-        <div
-          style={{
-            pointerEvents: "auto",
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          <PowerupSlotRow
-            strengthCharges={strengthCharges}
-            noBounceCharges={noBounceCharges}
-            noWindCharges={noWindCharges}
-            canUseStrength={canUseStrength}
-            canUseNoBounce={canUseNoBounce}
-            canUseNoWind={canUseNoWind}
-            onPowerup={onPowerup}
-          />
+        <div style={{ ...progressTrackStrength, overflow: "hidden" }}>
+          <div style={progressFillStyle(strengthPct, "strength")} />
         </div>
         <div style={{ ...progressTrack, overflow: "hidden" }}>
           <div style={progressFillStyle(chargeProgress, "charge")} />
@@ -99,7 +78,10 @@ export function ShotHud({
     return (
       <div
         style={{
-          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          width: "fit-content",
           pointerEvents: "none",
           ...hudFont,
         }}

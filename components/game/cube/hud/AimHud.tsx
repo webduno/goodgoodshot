@@ -1,12 +1,8 @@
 "use client";
 
-import * as THREE from "three";
-
 import {
   goldIconButtonStyle,
   hudAimPanelStrip,
-  hudBottomReadoutLabel,
-  hudBottomReadoutValue,
   hudFont,
 } from "@/components/gameHudStyles";
 import type { CSSProperties } from "react";
@@ -24,26 +20,24 @@ function aimQuarterButtonStyle(disabled: boolean): CSSProperties {
 }
 
 export function AimHud({
-  aimYawRad,
   disabled,
   onMinus90,
   onLeft,
   onRight,
   onPlus90,
 }: {
-  aimYawRad: number;
   disabled: boolean;
   onMinus90: () => void;
   onLeft: () => void;
   onRight: () => void;
   onPlus90: () => void;
 }) {
-  const deg = THREE.MathUtils.radToDeg(aimYawRad);
   return (
     <div
       style={{
         ...hudAimPanelStrip,
         ...hudFont,
+        alignSelf: "center",
       }}
     >
       <button
@@ -64,29 +58,6 @@ export function AimHud({
       >
         ←
       </button>
-      <span
-        style={{
-          minWidth: 92,
-          textAlign: "center",
-          fontSize: 12,
-          fontWeight: 600,
-          fontVariantNumeric: "tabular-nums",
-          letterSpacing: "0.01em",
-          ...hudBottomReadoutLabel,
-        }}
-      >
-        Aim{" "}
-        <span
-          style={{
-            ...hudBottomReadoutValue,
-            fontWeight: 700,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {deg >= 0 ? "+" : ""}
-          {deg.toFixed(1)}°
-        </span>
-      </span>
       <button
         type="button"
         aria-label="Aim right"

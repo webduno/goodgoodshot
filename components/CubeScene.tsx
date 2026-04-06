@@ -5,6 +5,7 @@ import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
+import { SessionEndModal } from "@/components/game/cube/modals/SessionEndModal";
 import { StartGameModal } from "@/components/game/cube/modals/StartGameModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
@@ -19,9 +20,11 @@ import {
 import { StaticSceneLights } from "@/components/game/cube/StaticSceneLights";
 import {
   goldChipButtonStyle,
-  goldPillButtonStyle,
   hudBottomPanel,
   hudFont,
+  hudMiniPanel,
+  hudRoundFireButtonStyle,
+  hudRoundPowerupButtonStyle,
 } from "@/components/gameHudStyles";
 import {
   resolveVehicleFromUrlParam,
@@ -35,6 +38,14 @@ import {
   INITIAL_POWERUP_CHARGES,
 } from "@/lib/game/constants";
 import { createInitialGameState, gameReducer } from "@/lib/game/gameState";
+import {
+  defaultPlaySession,
+  loadActivePlaySession,
+  loadPlaySession,
+  savePlaySession,
+  type PlaySession,
+  type SessionBattleCount,
+} from "@/lib/game/playSession";
 import { wrapYawRad } from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
@@ -69,6 +80,8 @@ export default function CubeScene() {
     INITIAL_LANE_ORIGIN[1],
     game.goalWorldZ,
   ];
+
+  const islands = game.islands;
   const gameSpawnRef = useRef<Vec3>(game.spawnCenter);
   gameSpawnRef.current = game.spawnCenter;
   const spawnBeforeShotRef = useRef<Vec3>(game.spawnCenter);
@@ -77,7 +90,18 @@ export default function CubeScene() {
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [shotInFlight, setShotInFlight] = useState(false);
   const [sessionShots, setSessionShots] = useState(0);
+  const [playSession, setPlaySession] = useState<PlaySession | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    setPlaySession(loadActivePlaySession());
+    setSessionReady(true);
+  }, []);
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const [showSessionEndModal, setShowSessionEndModal] = useState(false);
+  const [sessionEndTotalStrokes, setSessionEndTotalStrokes] = useState(0);
+  const [sessionEndTargetBattles, setSessionEndTargetBattles] =
+    useState<SessionBattleCount>(3);
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -101,10 +125,21 @@ export default function CubeScene() {
     []
   );
 
-  const onStartGame = useCallback(() => {
+  const onContinueSession = useCallback(() => {
     setShowStartGameModal(false);
     pushHudToast(`Tap Fire to start`);
   }, [pushHudToast]);
+
+  const onStartNewSession = useCallback(
+    (battleCount: SessionBattleCount) => {
+      const next = defaultPlaySession(battleCount);
+      savePlaySession(next);
+      setPlaySession(next);
+      setShowStartGameModal(false);
+      pushHudToast(`Tap Fire to start`);
+    },
+    [pushHudToast]
+  );
   const [chargeHud, setChargeHud] = useState<{
     remainingMs: number;
     clicks: number;
@@ -222,7 +257,7 @@ export default function CubeScene() {
         pushHudToast(`"No wind" used`, "nowind");
       }
     },
-    [pushHudToast, shotInFlight, showFinishModal]
+    [pushHudToast, shotInFlight, showFinishModal, showSessionEndModal]
   );
 
   const onChargeHudUpdate = useCallback(
@@ -275,6 +310,29 @@ export default function CubeScene() {
             noBounceUses: noBounceUsesRoundRef.current,
             waterPenaltiesThisRound: waterPenaltiesRoundRef.current,
           });
+          const session = loadPlaySession();
+          if (session) {
+            const nextWon = session.battlesWon + 1;
+            const nextTotal = session.totalStrokes + sessionShotsRef.current;
+            const updated: PlaySession = {
+              ...session,
+              battlesWon: nextWon,
+              totalStrokes: nextTotal,
+            };
+            savePlaySession(updated);
+            setPlaySession(updated);
+            if (nextWon >= session.targetBattles) {
+              setSessionEndTotalStrokes(nextTotal);
+              setSessionEndTargetBattles(session.targetBattles);
+              dispatch({
+                type: "PROJECTILE_END",
+                outcome,
+                landing,
+              });
+              setShowSessionEndModal(true);
+              return;
+            }
+          }
         }
         dispatch({
           type: "PROJECTILE_END",
@@ -303,11 +361,11 @@ export default function CubeScene() {
   }, [cooldownUntil]);
 
   useEffect(() => {
-    if (showFinishModal) {
+    if (showFinishModal || showSessionEndModal) {
       setShowHelpModal(false);
       setShowProfileModal(false);
     }
-  }, [showFinishModal]);
+  }, [showFinishModal, showSessionEndModal]);
 
   useEffect(() => {
     if (!showHelpModal) return;
@@ -319,8 +377,8 @@ export default function CubeScene() {
   }, [showHelpModal]);
 
   useEffect(() => {
-    if (chargeHud !== null) setShowPowerupMenu(false);
-  }, [chargeHud]);
+    if (chargeHud !== null || shotInFlight) setShowPowerupMenu(false);
+  }, [chargeHud, shotInFlight]);
 
   useEffect(() => {
     if (!showPowerupMenu) return;
@@ -339,6 +397,18 @@ export default function CubeScene() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [showProfileModal]);
+
+  const powerupMenuLocked = chargeHud !== null || shotInFlight;
+  const powerupMenuOpen = showPowerupMenu && !powerupMenuLocked;
+
+  const remainingCooldownMs =
+    cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
+  const inCooldownActive =
+    cooldownUntil !== null && remainingCooldownMs > 0;
+  /** Match `ShotHud`: only show the glass panel when it has content (idle was an empty full-width strip). */
+  const showShotHudPanel =
+    (chargeHud !== null && !shotInFlight) ||
+    (inCooldownActive && !shotInFlight && chargeHud === null);
 
   return (
     <div
@@ -362,10 +432,12 @@ export default function CubeScene() {
           <SceneContent
             spawnCenter={game.spawnCenter}
             goalCenter={goalCenter}
-            ponds={game.ponds}
+            islands={islands}
             aimYawRad={aimYawRad}
             cooldownUntil={cooldownUntil}
-            roundLocked={showFinishModal || showStartGameModal}
+            roundLocked={
+              showFinishModal || showStartGameModal || showSessionEndModal
+            }
             vehicle={playerVehicle}
             onChargeHudUpdate={onChargeHudUpdate}
             onShootStart={onShootStart}
@@ -382,7 +454,7 @@ export default function CubeScene() {
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
-        <InitialFieldGround />
+        <InitialFieldGround islands={islands} />
       </Canvas>
       <ToastNotif
         showToken={hudToastToken}
@@ -390,7 +462,7 @@ export default function CubeScene() {
         top={16}
         accent={hudToastAccent}
       />
-      {!showStartGameModal && (
+      {!showStartGameModal && !showSessionEndModal && (
         <StatsHud
           spawnCenter={game.spawnCenter}
           sessionShots={sessionShots}
@@ -408,7 +480,7 @@ export default function CubeScene() {
           totalGoldCoins={stats.totalGoldCoins}
         />
       )}
-      {!showFinishModal && !showStartGameModal && (
+      {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
         <div
           style={{
             position: "absolute",
@@ -443,114 +515,127 @@ export default function CubeScene() {
           </button>
         </div>
       )}
-      {!showFinishModal && !showStartGameModal && (
+      {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
         <div
           className="hud-bottom-dock"
           style={{
             position: "absolute",
             left: 0,
             right: 0,
+            bottom: 0,
             display: "flex",
+            flexDirection: "row",
+            alignItems: "flex-end",
             justifyContent: "center",
+            gap: 4,
+            padding: "0 6px 8px",
+            boxSizing: "border-box",
             zIndex: 41,
             pointerEvents: "none",
+            overflow: "visible",
           }}
         >
           <div
             style={{
-              ...hudBottomPanel,
+              position: "relative",
               pointerEvents: "auto",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "stretch",
-              gap: 4,
+              flexShrink: 0,
+              alignSelf: "flex-end",
             }}
           >
-            {chargeHud === null && !shotInFlight && !showFinishModal && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "stretch",
-                  gap: 4,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                  }}
-                >
-                  <button
-                    type="button"
-                    aria-expanded={showPowerupMenu}
-                    aria-controls="powerup-precharge-panel"
-                    onClick={() => setShowPowerupMenu((v) => !v)}
-                    style={goldChipButtonStyle()}
-                  >
-                    {showPowerupMenu ? "Hide power-ups" : "Power-ups"}
-                  </button>
-                </div>
-                {showPowerupMenu && (
-                  <div
-                    id="powerup-precharge-panel"
+            <button
+              type="button"
+              disabled={powerupMenuLocked}
+              aria-expanded={powerupMenuOpen}
+              aria-controls="powerup-precharge-panel"
+              onClick={() => {
+                if (powerupMenuLocked) return;
+                setShowPowerupMenu((v) => !v);
+              }}
+              style={hudRoundPowerupButtonStyle(powerupMenuLocked)}
+            >
+                {powerupMenuOpen ? (
+                  <span
                     style={{
-                      ...hudFont,
-                      padding: "4px 2px 2px",
-                      borderRadius: 12,
-                      backgroundColor: "rgba(230, 248, 255, 0.45)",
-                      border: "1px solid rgba(255,255,255,0.75)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      lineHeight: 1.05,
+                      fontSize: 9,
+                      fontWeight: 700,
                     }}
                   >
-                    <PowerupSlotRow
-                      strengthCharges={strengthCharges}
-                      noBounceCharges={noBounceCharges}
-                      noWindCharges={noWindCharges}
-                      canUseStrength={strengthCharges > 0}
-                      canUseNoBounce={
-                        noBounceCharges > 0 && !noBounceActive
-                      }
-                      canUseNoWind={noWindCharges > 0 && !noWindActive}
-                      onPowerup={activatePowerup}
-                    />
-                  </div>
+                    <span>Hide</span>
+                    <span style={{ fontSize: 8, fontWeight: 600 }}>
+                      power-ups
+                    </span>
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      lineHeight: 1.05,
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span>Power</span>
+                    <span style={{ fontSize: 9 }}>-ups</span>
+                  </span>
                 )}
-              </div>
-            )}
-            {!showFinishModal && (
+            </button>
+            {powerupMenuOpen && (
               <div
+                id="powerup-precharge-panel"
+                role="region"
+                aria-label="Power-up slots"
                 style={{
-                  display: "flex",
-                  justifyContent: "center",
+                  ...hudMiniPanel,
+                  ...hudFont,
+                  position: "absolute",
+                  left: "50%",
+                  bottom: "100%",
+                  transform: "translateX(-50%)",
+                  marginBottom: 8,
+                  zIndex: 50,
+                  padding: "8px 10px",
+                  minWidth: "min(92vw, 260px)",
+                  maxWidth: "min(92vw, 280px)",
+                  pointerEvents: "auto",
+                  boxShadow:
+                    "inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 10px rgba(0, 82, 130, 0.22), 0 -8px 28px rgba(0, 55, 95, 0.18)",
                 }}
               >
-                <button
-                  type="button"
-                  aria-label="Fire"
-                  onClick={onFireButtonPress}
-                  disabled={
-                    shotInFlight ||
-                    showFinishModal ||
-                    showStartGameModal ||
-                    inCooldown
+                <PowerupSlotRow
+                  strengthCharges={strengthCharges}
+                  noBounceCharges={noBounceCharges}
+                  noWindCharges={noWindCharges}
+                  canUseStrength={strengthCharges > 0}
+                  canUseNoBounce={
+                    noBounceCharges > 0 && !noBounceActive
                   }
-                  style={goldPillButtonStyle({
-                    disabled:
-                      shotInFlight ||
-                      showFinishModal ||
-                      showStartGameModal ||
-                      inCooldown,
-                    fullWidth: true,
-                  })}
-                >
-                  {chargeHud === null ? "Fire" : "Tap Fire +Power"}
-                </button>
+                  canUseNoWind={noWindCharges > 0 && !noWindActive}
+                  onPowerup={activatePowerup}
+                />
               </div>
             )}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+              flex: "0 0 auto",
+              width: "fit-content",
+              maxWidth: "min(94vw, 340px)",
+              pointerEvents: "auto",
+            }}
+          >
             {chargeHud === null && (
               <AimHud
-                aimYawRad={aimYawRad}
                 disabled={shotInFlight}
                 onMinus90={() =>
                   setAimYawRad((a) =>
@@ -570,26 +655,89 @@ export default function CubeScene() {
                 }
               />
             )}
-            <ShotHud
-              shotInFlight={shotInFlight}
-              cooldownUntil={cooldownUntil}
-              chargeHud={chargeHud}
-              strengthCharges={strengthCharges}
-              noBounceCharges={noBounceCharges}
-              noWindCharges={noWindCharges}
-              noBounceActive={noBounceActive}
-              noWindActive={noWindActive}
-              onPowerup={activatePowerup}
-              vehicle={playerVehicle}
-            />
+            {showShotHudPanel && (
+              <div
+                style={{
+                  ...hudBottomPanel,
+                  width: "fit-content",
+                  maxWidth: "none",
+                  boxSizing: "border-box",
+                  alignSelf: "center",
+                }}
+              >
+                <ShotHud
+                  shotInFlight={shotInFlight}
+                  cooldownUntil={cooldownUntil}
+                  chargeHud={chargeHud}
+                  vehicle={playerVehicle}
+                />
+              </div>
+            )}
           </div>
+          {!showFinishModal && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                pointerEvents: "auto",
+                flexShrink: 0,
+              }}
+            >
+              <button
+                type="button"
+                aria-label="Fire"
+                onClick={onFireButtonPress}
+                disabled={
+                  shotInFlight ||
+                  showFinishModal ||
+                  showStartGameModal ||
+                  showSessionEndModal ||
+                  inCooldown
+                }
+                style={hudRoundFireButtonStyle(
+                  shotInFlight ||
+                    showFinishModal ||
+                    showStartGameModal ||
+                    showSessionEndModal ||
+                    inCooldown
+                )}
+              >
+                {chargeHud === null ? (
+                  "Fire"
+                ) : (
+                  <span
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      lineHeight: 1.05,
+                      fontSize: 8,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span>Tap Fire</span>
+                    <span>+Power</span>
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
       <StartGameModal
         open={showStartGameModal}
-        onStart={onStartGame}
+        sessionReady={sessionReady}
+        session={playSession}
+        onContinue={onContinueSession}
+        onStartSession={onStartNewSession}
       />
       <FinishGameModal open={showFinishModal} sessionShots={sessionShots} />
+      <SessionEndModal
+        open={showSessionEndModal}
+        totalStrokes={sessionEndTotalStrokes}
+        targetBattles={sessionEndTargetBattles}
+      />
       <HelpModal
         open={showHelpModal}
         onClose={() => setShowHelpModal(false)}

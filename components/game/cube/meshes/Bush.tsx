@@ -20,10 +20,10 @@ const LEAVES: readonly LeafSpec[] = [
 ];
 
 const LEAF_COLORS = [
-  "#2f6b3c",
-  "#3a7d47",
-  "#347040",
-  "#2d6338",
+  "#3e874e",
+  "#4b9b5c",
+  "#448a52",
+  "#3c7d4b",
 ] as const;
 
 /**

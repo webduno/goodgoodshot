@@ -74,7 +74,7 @@ export const POND_VIS_BOTTOM_Y = POND_VIS_TOP_Y - 2 * POND_HALF_Y_VIS;
 export const POND_SECOND_SURFACE_DROP = 0.028;
 
 /** Tee marker at hole start (origin): putting green, just above pond surface height. */
-export const GOAL_GREEN = "#39b54a";
+export const GOAL_GREEN = "#4bcd5f";
 /** End-of-hole goal block (hit target) — sphere / accent. */
 export const GOAL_BLOCK_COLOR = "#c62828";
 /** Great Pyramid of Giza–style casing limestone (warm sandstone). */
@@ -124,7 +124,7 @@ export const FIELD_PLANE_HALF_WIDTH_X =
   2 * (LANE_MARKER_SIDE_OFFSET_X / 2 + BLOCK_SIZE * 1.5);
 export const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 export const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
-export const FIELD_GROUND_MUTED_GREEN = "#3a9d4a";
+export const FIELD_GROUND_MUTED_GREEN = "#52c066";
 
 /** Starting charges per power-up type (Strength, No bounce, No wind each have their own pool). */
 export const INITIAL_POWERUP_CHARGES = 2;

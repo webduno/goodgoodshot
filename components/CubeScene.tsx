@@ -17,6 +17,7 @@ import { IslandMiniVillage } from "@/components/game/cube/meshes/IslandMiniVilla
 import { IslandTrees } from "@/components/game/cube/meshes/IslandTrees";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
+import { RetroTvPostFx } from "@/components/game/cube/effects/RetroTvPostFx";
 import { SceneContent } from "@/components/game/cube/SceneContent";
 import {
   TeleportOrbitRig,
@@ -59,6 +60,10 @@ import {
   type PlaySession,
   type SessionBattleCount,
 } from "@/lib/game/playSession";
+import {
+  loadRetroTvEnabled,
+  persistRetroTvEnabled,
+} from "@/lib/game/retroTvSettings";
 import { clampAimPitchOffsetRad, wrapYawRad } from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
 import { parCoinCountForIslands } from "@/lib/game/path";
@@ -125,7 +130,12 @@ export default function CubeScene() {
   const [finishPar, setFinishPar] = useState(0);
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [retroTvEnabled, setRetroTvEnabled] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  useEffect(() => {
+    setRetroTvEnabled(loadRetroTvEnabled());
+  }, []);
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
   const [hudToastToken, setHudToastToken] = useState(0);
   const [hudToastMessage, setHudToastMessage] = useState("");
@@ -145,6 +155,11 @@ export default function CubeScene() {
     },
     []
   );
+
+  const onRetroTvChange = useCallback((next: boolean) => {
+    setRetroTvEnabled(next);
+    persistRetroTvEnabled(next);
+  }, []);
 
   const prevWindMagRef = useRef<number | null>(null);
   const maybeWindToast = useCallback(
@@ -662,6 +677,7 @@ export default function CubeScene() {
         <IslandMiniVillage miniVillage={game.miniVillage} />
         <IslandBushes islands={islands} />
         <IslandTrees islands={islands} />
+        <RetroTvPostFx enabled={retroTvEnabled} />
       </Canvas>
       <ToastNotif
         showToken={hudToastToken}
@@ -1011,6 +1027,8 @@ export default function CubeScene() {
         open={showHelpModal}
         onClose={() => setShowHelpModal(false)}
         vehicle={playerVehicle}
+        retroTvEnabled={retroTvEnabled}
+        onRetroTvChange={onRetroTvChange}
       />
       <ProfileModal
         open={showProfileModal}

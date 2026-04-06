@@ -27,10 +27,14 @@ export function HelpModal({
   open,
   onClose,
   vehicle,
+  retroTvEnabled,
+  onRetroTvChange,
 }: {
   open: boolean;
   onClose: () => void;
   vehicle: PlayerVehicleConfig;
+  retroTvEnabled: boolean;
+  onRetroTvChange: (next: boolean) => void;
 }) {
   if (!open) return null;
 
@@ -269,20 +273,101 @@ export function HelpModal({
             that vehicle&apos;s shot stats.
           </p>
         </details>
-        <button
-          type="button"
-          onClick={clearAllSavedData}
+        <details
           style={{
-            ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
             marginTop: 14,
-            backgroundImage:
-              "linear-gradient(135deg, #e85d5d 0%, #b91c1c 100%)",
-            color: "#ffffff",
-            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
           }}
         >
-          Clear saved data
-        </button>
+          <summary
+            style={{
+              color: hudColors.value,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginBottom: 8,
+            }}
+          >
+            ▶ Game Config
+          </summary>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  color: hudColors.label,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Retro TV effect
+              </span>
+              <button
+                type="button"
+                aria-pressed={retroTvEnabled}
+                aria-label={
+                  retroTvEnabled
+                    ? "Disable retro TV effect"
+                    : "Enable retro TV effect"
+                }
+                onClick={() => onRetroTvChange(!retroTvEnabled)}
+                style={{
+                  ...goldChipButtonStyle(),
+                  minWidth: 72,
+                  fontWeight: 700,
+                  ...(retroTvEnabled
+                    ? {
+                        backgroundImage:
+                          "linear-gradient(135deg, #22c55e 0%, #15803d 100%)",
+                        color: "#ffffff",
+                      }
+                    : {
+                        opacity: 0.85,
+                      }),
+                }}
+              >
+                {retroTvEnabled ? "On" : "Off"}
+              </button>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10,
+                lineHeight: 1.45,
+                color: hudColors.muted,
+              }}
+            >
+              Curved screen, darker corners, and scanlines. Preference is saved
+              in this browser.
+            </p>
+            <button
+              type="button"
+              onClick={clearAllSavedData}
+              style={{
+                ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
+                marginTop: 4,
+                backgroundImage:
+                  "linear-gradient(135deg, #e85d5d 0%, #b91c1c 100%)",
+                color: "#ffffff",
+                textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+              }}
+            >
+              Clear saved data
+            </button>
+          </div>
+        </details>
         <button
           type="button"
           onClick={onClose}

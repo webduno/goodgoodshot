@@ -712,6 +712,13 @@ export default function CubeScene() {
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
             biome={game.biome}
+            onTerrainCoordsClick={(coords) =>
+            {
+              // pushHudToast(
+              //   `lat ${coords.lat.toFixed(4)}, lng ${coords.lng.toFixed(4)}`
+              // )
+            }
+            }
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}

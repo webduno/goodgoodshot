@@ -220,6 +220,7 @@ export function SceneContent({
   noBounceActive,
   noWindActive,
   biome,
+  onTerrainCoordsClick,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -255,6 +256,8 @@ export function SceneContent({
   powerupStackCount: number;
   noBounceActive: boolean;
   noWindActive: boolean;
+  /** Earth / terrain mesh pick: parent can show HUD toast (e.g. coordinates). */
+  onTerrainCoordsClick?: (coords: { lat: number; lng: number }) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -481,22 +484,25 @@ export function SceneContent({
   const fieldZCenter = 200
   // const fieldZCenter = (z0 + z1) / 2;
 
-  const onTerrainTexturedClick = useCallback((_coords: { lat: number; lng: number }) => {
-    // Reserved for future map / terrain interactions
-  }, []);
+  const onTerrainTexturedClick = useCallback(
+    (coords: { lat: number; lng: number }) => {
+      onTerrainCoordsClick?.(coords);
+    },
+    [onTerrainCoordsClick]
+  );
 
   return (
     <>
 
 
 <group
-      position={[0, -25, -150]}
-      scale={[50, 50, 50]}
+      position={[0, -50, -150]}
+      scale={[99, 99, 99]}
     >
       <EarthTextured clickedHandler={onTerrainTexturedClick} />
     </group>
 
-
+{/* 
     <group
       position={[0, -55, fieldZCenter]}
       scale={[fieldWidth / 15, 1, fieldDepth / 15]}
@@ -509,7 +515,7 @@ export function SceneContent({
         scale={[fieldWidth / 15, 1, fieldDepth / 15]}
       >
         <TerrainTextured clickedHandler={onTerrainTexturedClick} />
-      </group>
+      </group> */}
       <SpawnTeePad />
       <TeeCornerTree biome={biome} />
       <TeeHoleSign

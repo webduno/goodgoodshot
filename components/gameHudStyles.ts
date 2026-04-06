@@ -228,6 +228,10 @@ export function hudRoundFireButtonStyle(
   return {
     ...hudFont,
     ...text,
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    WebkitTouchCallout: "none",
+    touchAction: "manipulation",
     width: HUD_ROUND_ACTION_PX,
     height: HUD_ROUND_ACTION_PX,
     padding: 0,

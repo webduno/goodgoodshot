@@ -24,6 +24,7 @@ import {
   type PlaySession,
   type SessionBattleCount,
 } from "@/lib/game/playSession";
+import type { SessionBiomeChoice } from "@/lib/game/sessionBattleMaps";
 
 const BATTLE_OPTIONS: SessionBattleCount[] = [3, 9, 18];
 
@@ -189,7 +190,7 @@ const linkButtonStyle: CSSProperties = {
   textUnderlineOffset: 3,
 };
 
-const newSessionIntroSteps = 3;
+const newSessionIntroSteps = 4;
 
 function PowerupLegendRow({
   slot,
@@ -252,7 +253,10 @@ export function StartGameModal({
   sessionReady: boolean;
   session: PlaySession | null;
   onContinue: () => void;
-  onStartSession: (battleCount: SessionBattleCount) => void;
+  onStartSession: (
+    battleCount: SessionBattleCount,
+    biomeChoice: SessionBiomeChoice
+  ) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -260,6 +264,8 @@ export function StartGameModal({
   const [newSessionStep, setNewSessionStep] = useState(0);
   /** Optional vehicle / controls / power-ups wizard; default is a short overview only. */
   const [gameConfigOpen, setGameConfigOpen] = useState(false);
+  const [biomeChoice, setBiomeChoice] =
+    useState<SessionBiomeChoice>("random");
 
   const setVehicleInUrl = useCallback(
     (vehicleId: string) => {
@@ -283,6 +289,7 @@ export function StartGameModal({
     if (open) {
       setNewSessionStep(0);
       setGameConfigOpen(false);
+      setBiomeChoice("random");
     }
   }, [open]);
 
@@ -574,12 +581,93 @@ export function StartGameModal({
                   color: hudColors.muted,
                 }}
               >
-                {newSessionStep === 0 && "Step 1 — Vehicle"}
-                {newSessionStep === 1 && "Step 2 — How to play"}
-                {newSessionStep === 2 && "Step 3 — Power-ups"}
+                {newSessionStep === 0 && "Step 1 — Biome"}
+                {newSessionStep === 1 && "Step 2 — Vehicle"}
+                {newSessionStep === 2 && "Step 3 — How to play"}
+                {newSessionStep === 3 && "Step 4 — Power-ups"}
               </p>
 
               {newSessionStep === 0 && (
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: 12.5,
+                      lineHeight: 1.5,
+                      color: hudColors.label,
+                    }}
+                  >
+                    Choose fairway style for this session. Random picks plain or
+                    desert independently for each battle; a fixed choice uses
+                    that biome for every battle.
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                    }}
+                  >
+                    {(
+                      [
+                        { id: "random" as const, label: "Random (each battle)" },
+                        { id: "plain" as const, label: "Plain" },
+                        { id: "desert" as const, label: "Desert" },
+                      ] as const
+                    ).map((opt) => {
+                      const selected = biomeChoice === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setBiomeChoice(opt.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "8px 10px",
+                            borderRadius: 12,
+                            border: selected
+                              ? "2px solid #0072bc"
+                              : "1px solid rgba(0, 114, 188, 0.18)",
+                            background: selected
+                              ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(210, 240, 255, 0.55) 100%)"
+                              : "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(230, 248, 255, 0.35) 100%)",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            ...hudFont,
+                          }}
+                        >
+                          <span
+                            style={{
+                              flex: 1,
+                              fontSize: 12.5,
+                              fontWeight: 700,
+                              color: hudColors.value,
+                            }}
+                          >
+                            {opt.label}
+                          </span>
+                          {selected ? (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: hudColors.accent,
+                              }}
+                              aria-hidden
+                            >
+                              ✓
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {newSessionStep === 1 && (
                 <div style={{ flex: 1 }}>
                   <p
                     style={{
@@ -678,7 +766,7 @@ export function StartGameModal({
                 </div>
               )}
 
-              {newSessionStep === 1 && (
+              {newSessionStep === 2 && (
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
                     Win a battle — hit the goal at or under par (strokes ≤ coins
@@ -705,7 +793,7 @@ export function StartGameModal({
                 </div>
               )}
 
-              {newSessionStep === 2 && (
+              {newSessionStep === 3 && (
                 <div style={{ flex: 1 }}>
                   <p
                     style={{
@@ -823,7 +911,7 @@ export function StartGameModal({
                       selectedVehicle.mainRgb,
                       selectedVehicle.accentRgb
                     );
-                    onStartSession(battleCount);
+                    onStartSession(battleCount, biomeChoice);
                   }}
                   style={{
                     ...goldPillButtonStyle({

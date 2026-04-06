@@ -49,7 +49,17 @@ import {
   SKY_GRADIENT_CSS,
   INITIAL_POWERUP_CHARGES,
 } from "@/lib/game/constants";
-import { createInitialGameState, gameReducer } from "@/lib/game/gameState";
+import {
+  createInitialGameState,
+  gameReducer,
+} from "@/lib/game/gameState";
+import {
+  clearSessionBattleMaps,
+  generateSessionBattleMaps,
+  getSessionBattleMapForSession,
+  saveSessionBattleMaps,
+  type SessionBiomeChoice,
+} from "@/lib/game/sessionBattleMaps";
 import {
   clearPlaySession,
   defaultPlaySession,
@@ -67,12 +77,17 @@ import {
 import { clampAimPitchOffsetRad, wrapYawRad } from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
 import { parCoinCountForIslands } from "@/lib/game/path";
-import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
+import {
+  INITIAL_LANE_ORIGIN,
+  type PowerupSlotId,
+  type Vec3,
+} from "@/lib/game/types";
 import { Canvas } from "@react-three/fiber";
 import { useSearchParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
@@ -118,6 +133,24 @@ export default function CubeScene() {
     setPlaySession(loadActivePlaySession());
     setSessionReady(true);
   }, []);
+
+  const sessionMapHydrationKeyRef = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!sessionReady) return;
+    const session = playSession;
+    const key = session
+      ? `${session.startedAtMs}-${session.targetBattles}-${session.battlesWon + session.battlesLost}`
+      : "none";
+    if (sessionMapHydrationKeyRef.current === key) return;
+    sessionMapHydrationKeyRef.current = key;
+
+    if (!session) return;
+    const mapped = getSessionBattleMapForSession(session);
+    if (mapped) {
+      dispatch({ type: "REPLACE_GAME_STATE", state: mapped });
+    }
+  }, [sessionReady, playSession]);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSessionEndModal, setShowSessionEndModal] = useState(false);
   const [sessionEndTotalStrokes, setSessionEndTotalStrokes] = useState(0);
@@ -130,7 +163,7 @@ export default function CubeScene() {
   const [finishPar, setFinishPar] = useState(0);
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [retroTvEnabled, setRetroTvEnabled] = useState(true);
+  const [retroTvEnabled, setRetroTvEnabled] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
@@ -183,10 +216,18 @@ export default function CubeScene() {
   }, [pushHudToast]);
 
   const onStartNewSession = useCallback(
-    (battleCount: SessionBattleCount) => {
+    (battleCount: SessionBattleCount, biomeChoice: SessionBiomeChoice) => {
+      clearSessionBattleMaps();
       const next = defaultPlaySession(battleCount);
+      const maps = generateSessionBattleMaps(battleCount, biomeChoice);
+      saveSessionBattleMaps({
+        startedAtMs: next.startedAtMs,
+        targetBattles: battleCount,
+        maps,
+      });
       savePlaySession(next);
       setPlaySession(next);
+      dispatch({ type: "REPLACE_GAME_STATE", state: maps[0] });
       setShowStartGameModal(false);
       pushHudToast(`Tap Fire to start`);
     },
@@ -670,13 +711,14 @@ export default function CubeScene() {
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
+            biome={game.biome}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
-        <InitialFieldGround islands={islands} />
+        <InitialFieldGround islands={islands} biome={game.biome} />
         <IslandMiniVillage miniVillage={game.miniVillage} />
-        <IslandBushes islands={islands} />
-        <IslandTrees islands={islands} />
+        <IslandBushes islands={islands} biome={game.biome} />
+        <IslandTrees islands={islands} biome={game.biome} />
         <RetroTvPostFx enabled={retroTvEnabled} />
       </Canvas>
       <ToastNotif
@@ -1015,12 +1057,13 @@ export default function CubeScene() {
         battlesWon={sessionEndBattlesWon}
         battlesLost={sessionEndBattlesLost}
         onDone={() => {
+          clearSessionBattleMaps();
           clearPlaySession();
           window.location.reload();
         }}
         onStartNewSession={(battleCount) => {
           setShowSessionEndModal(false);
-          onStartNewSession(battleCount);
+          onStartNewSession(battleCount, "random");
         }}
       />
       <HelpModal

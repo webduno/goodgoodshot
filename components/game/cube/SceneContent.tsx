@@ -45,10 +45,16 @@ import {
 } from "@/lib/game/math";
 import { coinCellKey, coinCentersForIslands } from "@/lib/game/path";
 import type { IslandRect } from "@/lib/game/islands";
-import { INITIAL_LANE_ORIGIN, type Projectile, type Vec3 } from "@/lib/game/types";
+import {
+  INITIAL_LANE_ORIGIN,
+  type BiomeId,
+  type Projectile,
+  type Vec3,
+} from "@/lib/game/types";
 import { TerrainTextured } from "../TerrainTextured";
 import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
 import { POWERUP_SLOT_ACCENT } from "@/components/gameHudStyles";
+import { EarthTextured } from "../EarthTextured";
 
 /** Interval between automatic +power steps while Fire / Space / rear trigger is held (charge window). */
 const CHARGE_HOLD_REPEAT_MS = 85;
@@ -213,10 +219,12 @@ export function SceneContent({
   powerupStackCount,
   noBounceActive,
   noWindActive,
+  biome,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
   islands: readonly IslandRect[];
+  biome: BiomeId;
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
   aimPitchOffsetRad: number;
@@ -479,6 +487,16 @@ export function SceneContent({
 
   return (
     <>
+
+
+<group
+      position={[0, -25, -150]}
+      scale={[50, 50, 50]}
+    >
+      <EarthTextured clickedHandler={onTerrainTexturedClick} />
+    </group>
+
+
     <group
       position={[0, -55, fieldZCenter]}
       scale={[fieldWidth / 15, 1, fieldDepth / 15]}
@@ -493,7 +511,7 @@ export function SceneContent({
         <TerrainTextured clickedHandler={onTerrainTexturedClick} />
       </group>
       <SpawnTeePad />
-      <TeeCornerTree />
+      <TeeCornerTree biome={biome} />
       <TeeHoleSign
         goalLength={goalLength}
         coinCount={yellowLaneMarkers.length}

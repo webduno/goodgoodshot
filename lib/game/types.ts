@@ -52,6 +52,9 @@ export type MiniVillageSpec = {
   houses: readonly MiniVillageHouse[];
 };
 
+/** Visual theme for fairway decorations (trees vs cactus, etc.). */
+export type BiomeId = "plain" | "desert";
+
 export type GameState = {
   spawnCenter: Vec3;
   /** World-space Z of green goal center; unchanged on miss, rerolled only on hit. */
@@ -67,15 +70,22 @@ export type GameState = {
   islands: readonly IslandRect[];
   /** Decorative mini village; rerolled only when the goal is hit (new hole). */
   miniVillage: MiniVillageSpec;
+  /** Fairway / tee decoration set; preserved when the course rerolls on goal hit. */
+  biome: BiomeId;
 };
 
-export type GameAction = {
-  type: "PROJECTILE_END";
-  outcome: "hit" | "miss" | "penalty";
-  landing?: Vec3;
-  /** Spawn position before the shot that hit the penalty (snapped). */
-  revertSpawn?: Vec3;
-};
+export type GameAction =
+  | {
+      type: "PROJECTILE_END";
+      outcome: "hit" | "miss" | "penalty";
+      landing?: Vec3;
+      /** Spawn position before the shot that hit the penalty (snapped). */
+      revertSpawn?: Vec3;
+    }
+  | {
+      type: "REPLACE_GAME_STATE";
+      state: GameState;
+    };
 
 export type Projectile = {
   x: number;

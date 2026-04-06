@@ -125,6 +125,8 @@ export const FIELD_PLANE_HALF_WIDTH_X =
 export const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 export const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
 export const FIELD_GROUND_MUTED_GREEN = "#52c066";
+/** Island turf top for desert biome (fairway slabs). */
+export const FIELD_GROUND_DESERT_SAND = "#d4a574";
 
 /** Starting charges per power-up type (Strength, No bounce, No wind each have their own pool). */
 export const INITIAL_POWERUP_CHARGES = 2;

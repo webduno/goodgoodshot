@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  FIELD_GROUND_DESERT_SAND,
   FIELD_GROUND_MUTED_GREEN,
   TURF_TOP_Y,
 } from "@/lib/game/constants";
 import type { IslandRect } from "@/lib/game/islands";
+import type { BiomeId } from "@/lib/game/types";
 
 /** Muted stone under the turf slab — visual only (physics uses island rects). */
 const ISLAND_FOUNDATION_GREY = "#6b6f76";
@@ -19,9 +21,14 @@ const GRASS_STONE_OVERLAP_Y = 0.06;
  */
 export function InitialFieldGround({
   islands,
+  biome,
 }: {
   islands: readonly IslandRect[];
+  biome: BiomeId;
 }) {
+  const turfColor =
+    biome === "desert" ? FIELD_GROUND_DESERT_SAND : FIELD_GROUND_MUTED_GREEN;
+
   return (
     <group>
       {islands.map((is, i) => {
@@ -51,7 +58,7 @@ export function InitialFieldGround({
             <mesh position={[is.worldX, cy, is.worldZ]} castShadow receiveShadow>
               <boxGeometry args={[is.halfX * 2, th, is.halfZ * 2]} />
               <meshStandardMaterial
-                color={FIELD_GROUND_MUTED_GREEN}
+                color={turfColor}
                 roughness={0.92}
                 metalness={0}
               />

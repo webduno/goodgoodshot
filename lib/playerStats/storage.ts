@@ -109,6 +109,15 @@ export function savePlayerStats(state: PlayerStatsState): void {
   }
 }
 
+export function clearPlayerStats(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(PLAYER_STATS_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function mergeHoleCompleted(
   prev: PlayerStatsState,
   payload: HoleCompletedPayload

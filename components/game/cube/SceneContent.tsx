@@ -20,6 +20,7 @@ import { AimYawPrism } from "@/components/game/cube/meshes/AimYawPrism";
 import { SpawnTeePad } from "@/components/game/cube/meshes/SpawnTeePad";
 import { TeeCornerTree } from "@/components/game/cube/meshes/TeeCornerTree";
 import { TeeHoleSign } from "@/components/game/cube/meshes/TeeHoleSign";
+import { ShootTriggerCube } from "@/components/game/cube/meshes/ShootTriggerCube";
 import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
 import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
@@ -75,8 +76,10 @@ export function SceneContent({
   goalCenter,
   islands,
   aimYawRad,
+  aimPitchOffsetRad,
   cooldownUntil,
   roundLocked,
+  shotInFlight,
   vehicle,
   onChargeHudUpdate,
   onShootStart,
@@ -95,8 +98,11 @@ export function SceneContent({
   goalCenter: Vec3;
   islands: readonly IslandRect[];
   aimYawRad: number;
+  /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
+  aimPitchOffsetRad: number;
   cooldownUntil: number | null;
   roundLocked: boolean;
+  shotInFlight: boolean;
   vehicle: PlayerVehicleConfig;
   onChargeHudUpdate: (
     next: { remainingMs: number; clicks: number } | null
@@ -140,8 +146,9 @@ export function SceneContent({
         launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
       const noBounceShot = getNoBounceActive();
       resetPowerupStack();
-      const horizontalMag = force * Math.cos(vehicle.launchAngleRad);
-      const vy = force * Math.sin(vehicle.launchAngleRad);
+      const launchAngleRad = vehicle.launchAngleRad + aimPitchOffsetRad;
+      const horizontalMag = force * Math.cos(launchAngleRad);
+      const vy = force * Math.sin(launchAngleRad);
       const topY = spawnTopYFromBlockCenterY(spawnCenter[1]);
       const topZ = spawnCenter[2];
       const topX = spawnCenter[0];
@@ -164,6 +171,7 @@ export function SceneContent({
       onShootStart();
     },
     [
+      aimPitchOffsetRad,
       aimYawRad,
       getNoBounceActive,
       getPowerupMultiplier,
@@ -274,7 +282,11 @@ export function SceneContent({
     () => bodyYawQuarterSnappedFromWorldAim(aimYawRad),
     [aimYawRad]
   );
-  
+
+  const shootTriggerReady =
+    !roundLocked &&
+    (cooldownUntil === null || Date.now() >= cooldownUntil) &&
+    !shotInFlight;
 
   const fieldWidth = 2 * (2 * FIELD_PLANE_HALF_WIDTH_X);
   const z0 = -FIELD_PLANE_Z_BEFORE_SPAWN;
@@ -330,11 +342,12 @@ export function SceneContent({
               color={accentColor}
             />
           ))}
+          <ShootTriggerCube ready={shootTriggerReady} onFireInput={onFireInput} />
         </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}
           aimYawRad={aimYawRad}
-          defaultVerticalAngleRad={vehicle.launchAngleRad}
+          defaultVerticalAngleRad={vehicle.launchAngleRad + aimPitchOffsetRad}
           prismLength={aimPrismLengthForStrength(vehicle.strengthPerBaseClick)}
           color={accentColor}
         />

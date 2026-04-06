@@ -15,7 +15,13 @@ import {
   hudColors,
   modalBackdrop,
 } from "@/components/gameHudStyles";
-import { AIM_YAW_STEP_RAD, INITIAL_POWERUP_CHARGES } from "@/lib/game/constants";
+import {
+  AIM_PITCH_MAX_RAD,
+  AIM_YAW_STEP_RAD,
+  INITIAL_POWERUP_CHARGES,
+} from "@/lib/game/constants";
+import { clearPlaySession } from "@/lib/game/playSession";
+import { clearPlayerStats } from "@/lib/playerStats/storage";
 
 export function HelpModal({
   open,
@@ -32,6 +38,7 @@ export function HelpModal({
   const cooldownSec = vehicle.shotCooldownSeconds;
   const launchDeg = THREE.MathUtils.radToDeg(vehicle.launchAngleRad);
   const yawDeg = THREE.MathUtils.radToDeg(AIM_YAW_STEP_RAD);
+  const pitchMaxDeg = THREE.MathUtils.radToDeg(AIM_PITCH_MAX_RAD);
 
   const reloadWithVehicle = (vId: string) => {
     const url = new URL(window.location.href);
@@ -40,6 +47,21 @@ export function HelpModal({
     } else {
       url.searchParams.set("vehicle", vId);
     }
+    window.location.assign(url.toString());
+  };
+
+  const clearAllSavedData = () => {
+    if (
+      !window.confirm(
+        "Clear all saved progress, stats, and session data? The page will reload."
+      )
+    ) {
+      return;
+    }
+    clearPlaySession();
+    clearPlayerStats();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("vehicle");
     window.location.assign(url.toString());
   };
 
@@ -89,13 +111,17 @@ export function HelpModal({
           >
             <li style={{ marginBottom: 8 }}>
               <strong style={{ color: hudColors.value }}>Aim</strong> — ⇐ / ⇒
-              jump a quarter turn; ← → nudge ({yawDeg.toFixed(0)}° per tap). The
-              white wedge points where the shot goes.
+              jump a quarter turn; ← → nudge horizontally ({yawDeg.toFixed(0)}°
+              per tap). ⇈ / ⇊ snap pitch; ↑ ↓ nudge vertically (±
+              {pitchMaxDeg.toFixed(0)}° from this vehicle&apos;s base angle).{" "}
+              <strong style={{ color: hudColors.value }}>WASD</strong> / arrow
+              keys match ↑↓←→. The white wedge points where the shot goes.
             </li>
             <li style={{ marginBottom: 8 }}>
               <strong style={{ color: hudColors.value }}>Shoot</strong> — Click
-              the <strong style={{ color: hudColors.value }}>Fire</strong> button.
-              The first click starts a {chargeSec}s charge window.
+              the <strong style={{ color: hudColors.value }}>Fire</strong> button
+              or press <strong style={{ color: hudColors.value }}>Space</strong>.
+              The first click (or Space) starts a {chargeSec}s charge window.
             </li>
             <li style={{ marginBottom: 8 }}>
               <strong style={{ color: hudColors.value }}>Power</strong> — Extra
@@ -245,10 +271,24 @@ export function HelpModal({
         </details>
         <button
           type="button"
-          onClick={onClose}
+          onClick={clearAllSavedData}
           style={{
             ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
             marginTop: 14,
+            backgroundImage:
+              "linear-gradient(135deg, #e85d5d 0%, #b91c1c 100%)",
+            color: "#ffffff",
+            textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+          }}
+        >
+          Clear saved data
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
+            marginTop: 10,
           }}
         >
           Close

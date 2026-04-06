@@ -32,6 +32,8 @@ import {
 } from "@/components/playerVehicleConfig";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
+  AIM_PITCH_MAX_RAD,
+  AIM_PITCH_STEP_RAD,
   AIM_YAW_QUARTER_TURN_RAD,
   AIM_YAW_STEP_RAD,
   BG,
@@ -47,7 +49,7 @@ import {
   type PlaySession,
   type SessionBattleCount,
 } from "@/lib/game/playSession";
-import { wrapYawRad } from "@/lib/game/math";
+import { clampAimPitchOffsetRad, wrapYawRad } from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
 import { parCoinCountForIslands } from "@/lib/game/path";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
@@ -89,6 +91,7 @@ export default function CubeScene() {
   const spawnBeforeShotRef = useRef<Vec3>(game.spawnCenter);
 
   const [aimYawRad, setAimYawRad] = useState(0);
+  const [aimPitchOffsetRad, setAimPitchOffsetRad] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [shotInFlight, setShotInFlight] = useState(false);
   const [sessionShots, setSessionShots] = useState(0);
@@ -193,6 +196,10 @@ export default function CubeScene() {
     collectedCoinKeysRef.current.clear();
     setCoinRenderTick((t) => t + 1);
   }, [game.goalWorldX, game.goalWorldZ]);
+
+  useEffect(() => {
+    setAimPitchOffsetRad(0);
+  }, [playerVehicle.id]);
 
   const onCoinCollected = useCallback(
     (key: string) => {
@@ -420,6 +427,80 @@ export default function CubeScene() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showProfileModal]);
 
+  useEffect(() => {
+    if (
+      shotInFlight ||
+      showFinishModal ||
+      showStartGameModal ||
+      showSessionEndModal ||
+      showHelpModal ||
+      showProfileModal
+    ) {
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target;
+      if (
+        t instanceof HTMLElement &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      ) {
+        return;
+      }
+      const k = e.key;
+      if (k === " ") {
+        if (
+          shotInFlight ||
+          showFinishModal ||
+          showStartGameModal ||
+          showSessionEndModal ||
+          inCooldown
+        ) {
+          return;
+        }
+        e.preventDefault();
+        onFireButtonPress();
+        return;
+      }
+      if (k === "w" || k === "W" || k === "ArrowUp") {
+        setAimPitchOffsetRad((p) =>
+          clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD)
+        );
+        if (k === "ArrowUp") e.preventDefault();
+        return;
+      }
+      if (k === "s" || k === "S" || k === "ArrowDown") {
+        setAimPitchOffsetRad((p) =>
+          clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD)
+        );
+        if (k === "ArrowDown") e.preventDefault();
+        return;
+      }
+      if (k === "a" || k === "A" || k === "ArrowLeft") {
+        setAimYawRad((a) => wrapYawRad(a + AIM_YAW_STEP_RAD));
+        if (k === "ArrowLeft") e.preventDefault();
+        return;
+      }
+      if (k === "d" || k === "D" || k === "ArrowRight") {
+        setAimYawRad((a) => wrapYawRad(a - AIM_YAW_STEP_RAD));
+        if (k === "ArrowRight") e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    shotInFlight,
+    showFinishModal,
+    showStartGameModal,
+    showSessionEndModal,
+    showHelpModal,
+    showProfileModal,
+    inCooldown,
+    onFireButtonPress,
+  ]);
+
   const powerupMenuLocked = chargeHud !== null || shotInFlight;
   const powerupMenuOpen = showPowerupMenu && !powerupMenuLocked;
 
@@ -456,10 +537,12 @@ export default function CubeScene() {
             goalCenter={goalCenter}
             islands={islands}
             aimYawRad={aimYawRad}
+            aimPitchOffsetRad={aimPitchOffsetRad}
             cooldownUntil={cooldownUntil}
             roundLocked={
               showFinishModal || showStartGameModal || showSessionEndModal
             }
+            shotInFlight={shotInFlight}
             vehicle={playerVehicle}
             onChargeHudUpdate={onChargeHudUpdate}
             onShootStart={onShootStart}
@@ -659,6 +742,18 @@ export default function CubeScene() {
             {chargeHud === null && (
               <AimHud
                 disabled={shotInFlight}
+                onPitchMaxUp={() => setAimPitchOffsetRad(AIM_PITCH_MAX_RAD)}
+                onPitchUp={() =>
+                  setAimPitchOffsetRad((p) =>
+                    clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD)
+                  )
+                }
+                onPitchDown={() =>
+                  setAimPitchOffsetRad((p) =>
+                    clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD)
+                  )
+                }
+                onPitchMaxDown={() => setAimPitchOffsetRad(-AIM_PITCH_MAX_RAD)}
                 onMinus90={() =>
                   setAimYawRad((a) =>
                     wrapYawRad(a - AIM_YAW_QUARTER_TURN_RAD)

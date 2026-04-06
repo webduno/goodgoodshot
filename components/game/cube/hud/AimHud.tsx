@@ -21,12 +21,20 @@ function aimQuarterButtonStyle(disabled: boolean): CSSProperties {
 
 export function AimHud({
   disabled,
+  onPitchMaxUp,
+  onPitchUp,
+  onPitchDown,
+  onPitchMaxDown,
   onMinus90,
   onLeft,
   onRight,
   onPlus90,
 }: {
   disabled: boolean;
+  onPitchMaxUp: () => void;
+  onPitchUp: () => void;
+  onPitchDown: () => void;
+  onPitchMaxDown: () => void;
   onMinus90: () => void;
   onLeft: () => void;
   onRight: () => void;
@@ -35,47 +43,99 @@ export function AimHud({
   return (
     <div
       style={{
-        ...hudAimPanelStrip,
-        ...hudFont,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 2,
         alignSelf: "center",
       }}
     >
-      <button
-        type="button"
-        aria-label="Aim plus 90 degrees"
-        disabled={disabled}
-        onClick={onPlus90}
-        style={aimQuarterButtonStyle(disabled)}
+      <div
+        style={{
+          ...hudAimPanelStrip,
+          ...hudFont,
+        }}
       >
-        ⇐
-      </button>
-      <button
-        type="button"
-        aria-label="Aim left"
-        disabled={disabled}
-        onClick={onLeft}
-        style={goldIconButtonStyle(disabled)}
+        <button
+          type="button"
+          aria-label="Aim pitch to maximum up"
+          disabled={disabled}
+          onClick={onPitchMaxUp}
+          style={aimQuarterButtonStyle(disabled)}
+        >
+          ⇈
+        </button>
+        <button
+          type="button"
+          aria-label="Aim pitch up"
+          disabled={disabled}
+          onClick={onPitchUp}
+          style={goldIconButtonStyle(disabled)}
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          aria-label="Aim pitch down"
+          disabled={disabled}
+          onClick={onPitchDown}
+          style={goldIconButtonStyle(disabled)}
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          aria-label="Aim pitch to maximum down"
+          disabled={disabled}
+          onClick={onPitchMaxDown}
+          style={aimQuarterButtonStyle(disabled)}
+        >
+          ⇊
+        </button>
+      </div>
+      <div
+        style={{
+          ...hudAimPanelStrip,
+          ...hudFont,
+        }}
       >
-        ←
-      </button>
-      <button
-        type="button"
-        aria-label="Aim right"
-        disabled={disabled}
-        onClick={onRight}
-        style={goldIconButtonStyle(disabled)}
-      >
-        →
-      </button>
-      <button
-        type="button"
-        aria-label="Aim minus 90 degrees"
-        disabled={disabled}
-        onClick={onMinus90}
-        style={aimQuarterButtonStyle(disabled)}
-      >
-        ⇒
-      </button>
+        <button
+          type="button"
+          aria-label="Aim plus 90 degrees"
+          disabled={disabled}
+          onClick={onPlus90}
+          style={aimQuarterButtonStyle(disabled)}
+        >
+          ⇐
+        </button>
+        <button
+          type="button"
+          aria-label="Aim left"
+          disabled={disabled}
+          onClick={onLeft}
+          style={goldIconButtonStyle(disabled)}
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          aria-label="Aim right"
+          disabled={disabled}
+          onClick={onRight}
+          style={goldIconButtonStyle(disabled)}
+        >
+          →
+        </button>
+        <button
+          type="button"
+          aria-label="Aim minus 90 degrees"
+          disabled={disabled}
+          onClick={onMinus90}
+          style={aimQuarterButtonStyle(disabled)}
+        >
+          ⇒
+        </button>
+      </div>
     </div>
   );
 }

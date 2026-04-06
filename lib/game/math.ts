@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 import {
+  AIM_PITCH_MAX_RAD,
   AIM_PRISM_LENGTH,
   BLOCK_SIZE,
   MIN_PREDETERMINED_STRENGTH_PER_BASE_CLICK,
@@ -11,6 +12,11 @@ import type { Vec3 } from "./types";
 /** Keep yaw in [-π, π] (~-180° … +180°) after stepping. */
 export function wrapYawRad(a: number): number {
   return THREE.MathUtils.euclideanModulo(a + Math.PI, Math.PI * 2) - Math.PI;
+}
+
+/** Clamps pitch offset from the vehicle base launch angle to ±`AIM_PITCH_MAX_RAD`. */
+export function clampAimPitchOffsetRad(offsetRad: number): number {
+  return Math.max(-AIM_PITCH_MAX_RAD, Math.min(AIM_PITCH_MAX_RAD, offsetRad));
 }
 
 /**

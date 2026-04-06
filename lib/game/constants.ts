@@ -2,6 +2,8 @@ import { PREDETERMINED_VEHICLES } from "@/components/playerVehicleConfig";
 import * as THREE from "three";
 
 export const BLOCK_SIZE = 1;
+/** Rear click target on the vehicle; local −Z is behind the default 1×1×1 hull. */
+export const SHOOT_TRIGGER_CUBE_SIZE = 0.2;
 /**
  * Min/max distance from spawn to goal along +Z (new random value after each shot).
  * Independent of launch strength — do not tune one from the other.
@@ -15,6 +17,11 @@ export const GOAL_X_MAX = 18;
 /** Horizontal aim: radians from +Z toward +X (left button increases yaw, right decreases). */
 export const AIM_YAW_STEP_RAD = THREE.MathUtils.degToRad(5);
 export const AIM_YAW_QUARTER_TURN_RAD = THREE.MathUtils.degToRad(90);
+
+/** Vertical aim: offset from `vehicle.launchAngleRad` (clamped to ± this value). */
+export const AIM_PITCH_MAX_RAD = THREE.MathUtils.degToRad(15);
+/** Nudge per tap (matches horizontal aim step). */
+export const AIM_PITCH_STEP_RAD = AIM_YAW_STEP_RAD;
 
 export const SPHERE_RADIUS = 0.2;
 

@@ -18,15 +18,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/** Bottom HUD: clear home gesture / thumb reach on narrow viewports */
+/** Bottom HUD: desktop flush; mobile sits ~50px up for thumb reach / browser chrome */
 .hud-bottom-dock {
-  bottom: 14px;
+  bottom: 0;
 }
 
 @media (max-width: 640px) {
-  /* +100px vs desktop offset: sit above mobile browser chrome / avoid scroll jank */
   .hud-bottom-dock {
-    bottom: calc(max(28px, env(safe-area-inset-bottom, 0px) + 22px) + 50px);
+    bottom: calc(50px + env(safe-area-inset-bottom, 0px));
   }
 }
 

@@ -17,6 +17,8 @@ export const GOAL_X_MAX = 18;
 /** Horizontal aim: radians from +Z toward +X (left button increases yaw, right decreases). */
 export const AIM_YAW_STEP_RAD = THREE.MathUtils.degToRad(5);
 export const AIM_YAW_QUARTER_TURN_RAD = THREE.MathUtils.degToRad(90);
+/** Aim pad: local yaw is ± this from the current side center (90° total arc: −45° … +45°). */
+export const AIM_PAD_LOCAL_YAW_HALF_RAD = THREE.MathUtils.degToRad(45);
 
 /** Vertical aim: offset from `vehicle.launchAngleRad` (clamped to ± this value). */
 export const AIM_PITCH_MAX_RAD = THREE.MathUtils.degToRad(15);

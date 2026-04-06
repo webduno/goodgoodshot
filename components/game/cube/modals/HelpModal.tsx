@@ -20,6 +20,7 @@ import {
   AIM_YAW_STEP_RAD,
   INITIAL_POWERUP_CHARGES,
 } from "@/lib/game/constants";
+import type { AimControlMode } from "@/lib/game/aimControlSettings";
 import { clearPlaySession } from "@/lib/game/playSession";
 import { clearPlayerStats } from "@/lib/playerStats/storage";
 
@@ -29,12 +30,16 @@ export function HelpModal({
   vehicle,
   retroTvEnabled,
   onRetroTvChange,
+  aimControlMode,
+  onAimControlModeChange,
 }: {
   open: boolean;
   onClose: () => void;
   vehicle: PlayerVehicleConfig;
   retroTvEnabled: boolean;
   onRetroTvChange: (next: boolean) => void;
+  aimControlMode: AimControlMode;
+  onAimControlModeChange: (next: AimControlMode) => void;
 }) {
   if (!open) return null;
 
@@ -303,6 +308,93 @@ export function HelpModal({
                 justifyContent: "space-between",
                 gap: 10,
                 flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  color: hudColors.label,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Aim control
+              </span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  type="button"
+                  aria-pressed={aimControlMode === "pad"}
+                  aria-label="Use aim pad"
+                  onClick={() => onAimControlModeChange("pad")}
+                  style={{
+                    ...goldChipButtonStyle(),
+                    minWidth: 72,
+                    fontWeight: 700,
+                    ...(aimControlMode === "pad"
+                      ? {
+                          backgroundImage:
+                            "linear-gradient(135deg, #22c55e 0%, #15803d 100%)",
+                          color: "#ffffff",
+                        }
+                      : {
+                          opacity: 0.85,
+                        }),
+                  }}
+                >
+                  Pad
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={aimControlMode === "buttons"}
+                  aria-label="Use aim buttons"
+                  onClick={() => onAimControlModeChange("buttons")}
+                  style={{
+                    ...goldChipButtonStyle(),
+                    minWidth: 72,
+                    fontWeight: 700,
+                    ...(aimControlMode === "buttons"
+                      ? {
+                          backgroundImage:
+                            "linear-gradient(135deg, #22c55e 0%, #15803d 100%)",
+                          color: "#ffffff",
+                        }
+                      : {
+                          opacity: 0.85,
+                        }),
+                  }}
+                >
+                  Buttons
+                </button>
+              </div>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10,
+                lineHeight: 1.45,
+                color: hudColors.muted,
+              }}
+            >
+              Pad: drag the red dot — up/down for pitch; left/right adjust yaw within
+              ±45° for the current side. Use the ⇐ / ⇒ buttons on the pad edge to turn
+              90° to the next side. A/D or ← → rotate yaw freely (5° steps). Both axes
+              snap to 5°. Buttons mode: the classic arrow rows.
+              Saved in this browser.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+                marginTop: 8,
               }}
             >
               <span

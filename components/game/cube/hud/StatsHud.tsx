@@ -26,6 +26,7 @@ export function StatsHud({
   windHud,
   vehicle,
   sessionScoreDisplay,
+  onScoreClick,
 }: {
   sessionShots: number;
   chargeHud: { remainingMs: number; clicks: number } | null;
@@ -41,6 +42,7 @@ export function StatsHud({
   vehicle: PlayerVehicleConfig;
   /** e.g. `12/3(+1)` — strokes/targetBattles(win−loss spread). */
   sessionScoreDisplay: string;
+  onScoreClick: () => void;
 }) {
   const [vehicleOpen, setVehicleOpen] = useState(false);
 
@@ -435,12 +437,23 @@ export function StatsHud({
         </div>
       ) : null}
 
-      <div
+      <button
+        type="button"
+        onClick={onScoreClick}
+        title="View session details"
+        aria-haspopup="dialog"
+        aria-label={`Score ${sessionScoreDisplay}. Open session details.`}
         style={{
+          pointerEvents: "auto",
+          margin: 0,
           padding: "6px 8px",
           ...hudMiniPanel,
           fontSize: 10,
           lineHeight: 1.4,
+          cursor: "pointer",
+          textAlign: "left",
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <div
@@ -456,8 +469,6 @@ export function StatsHud({
           Score
         </div>
         <div
-          role="status"
-          aria-label={`Score ${sessionScoreDisplay}`}
           style={{
             color: hudColors.value,
             fontWeight: 700,
@@ -469,7 +480,7 @@ export function StatsHud({
         >
           {sessionScoreDisplay}
         </div>
-      </div>
+      </button>
     </div>
   );
 }

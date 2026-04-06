@@ -1,8 +1,10 @@
 import * as THREE from "three";
 
 import {
+  AIM_PAD_LOCAL_YAW_HALF_RAD,
   AIM_PITCH_MAX_RAD,
   AIM_PRISM_LENGTH,
+  AIM_YAW_STEP_RAD,
   BLOCK_SIZE,
   MIN_PREDETERMINED_STRENGTH_PER_BASE_CLICK,
   SPHERE_RADIUS,
@@ -12,6 +14,20 @@ import type { Vec3 } from "./types";
 /** Keep yaw in [-π, π] (~-180° … +180°) after stepping. */
 export function wrapYawRad(a: number): number {
   return THREE.MathUtils.euclideanModulo(a + Math.PI, Math.PI * 2) - Math.PI;
+}
+
+/** Clamp shortest signed delta from a side center to the aim pad arc (±45°). */
+export function clampYawDeltaToPadArc(deltaRad: number): number {
+  const d = wrapYawRad(deltaRad);
+  return Math.max(
+    -AIM_PAD_LOCAL_YAW_HALF_RAD,
+    Math.min(AIM_PAD_LOCAL_YAW_HALF_RAD, d)
+  );
+}
+
+/** Snap to the same 5° grid as aim button steps (`AIM_YAW_STEP_RAD`). */
+export function snapAimAngleRad(rad: number): number {
+  return Math.round(rad / AIM_YAW_STEP_RAD) * AIM_YAW_STEP_RAD;
 }
 
 /** Clamps pitch offset from the vehicle base launch angle to ±`AIM_PITCH_MAX_RAD`. */

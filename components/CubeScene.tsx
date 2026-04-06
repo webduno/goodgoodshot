@@ -5,9 +5,11 @@ import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
+import { SessionStatsModal } from "@/components/game/cube/modals/SessionStatsModal";
 import { SessionEndModal } from "@/components/game/cube/modals/SessionEndModal";
 import { StartGameModal } from "@/components/game/cube/modals/StartGameModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
+import { AimPadHud } from "@/components/game/cube/hud/AimPadHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
 import { ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
@@ -71,10 +73,21 @@ import {
   type SessionBattleCount,
 } from "@/lib/game/playSession";
 import {
+  loadAimControlMode,
+  persistAimControlMode,
+  type AimControlMode,
+} from "@/lib/game/aimControlSettings";
+import {
   loadRetroTvEnabled,
   persistRetroTvEnabled,
 } from "@/lib/game/retroTvSettings";
-import { clampAimPitchOffsetRad, wrapYawRad } from "@/lib/game/math";
+import {
+  bodyYawQuarterSnappedFromWorldAim,
+  clampAimPitchOffsetRad,
+  clampYawDeltaToPadArc,
+  snapAimAngleRad,
+  wrapYawRad,
+} from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
 import { parCoinCountForIslands } from "@/lib/game/path";
 import {
@@ -122,7 +135,11 @@ export default function CubeScene() {
   const spawnBeforeShotRef = useRef<Vec3>(game.spawnCenter);
 
   const [aimYawRad, setAimYawRad] = useState(0);
+  /** Center of the aim pad’s 90° arc (multiples of 90°); pad adjusts ±45° around this. */
+  const [aimSideYawRad, setAimSideYawRad] = useState(0);
   const [aimPitchOffsetRad, setAimPitchOffsetRad] = useState(0);
+  const aimYawRef = useRef(0);
+  aimYawRef.current = aimYawRad;
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [shotInFlight, setShotInFlight] = useState(false);
   const [sessionShots, setSessionShots] = useState(0);
@@ -164,10 +181,16 @@ export default function CubeScene() {
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [retroTvEnabled, setRetroTvEnabled] = useState(false);
+  const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showSessionStatsModal, setShowSessionStatsModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
+  }, []);
+
+  useEffect(() => {
+    setAimControlMode(loadAimControlMode());
   }, []);
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
   const [hudToastToken, setHudToastToken] = useState(0);
@@ -192,6 +215,18 @@ export default function CubeScene() {
   const onRetroTvChange = useCallback((next: boolean) => {
     setRetroTvEnabled(next);
     persistRetroTvEnabled(next);
+  }, []);
+
+  const onAimControlModeChange = useCallback((next: AimControlMode) => {
+    if (next === "pad") {
+      const prev = aimYawRef.current;
+      const side = bodyYawQuarterSnappedFromWorldAim(prev);
+      const local = clampYawDeltaToPadArc(wrapYawRad(prev - side));
+      setAimSideYawRad(side);
+      setAimYawRad(wrapYawRad(side + snapAimAngleRad(local)));
+    }
+    setAimControlMode(next);
+    persistAimControlMode(next);
   }, []);
 
   const prevWindMagRef = useRef<number | null>(null);
@@ -609,12 +644,20 @@ export default function CubeScene() {
         return;
       }
       if (k === "a" || k === "A" || k === "ArrowLeft") {
-        setAimYawRad((a) => wrapYawRad(a + AIM_YAW_STEP_RAD));
+        setAimYawRad((a) => {
+          const next = wrapYawRad(a + AIM_YAW_STEP_RAD);
+          setAimSideYawRad(bodyYawQuarterSnappedFromWorldAim(next));
+          return next;
+        });
         if (k === "ArrowLeft") e.preventDefault();
         return;
       }
       if (k === "d" || k === "D" || k === "ArrowRight") {
-        setAimYawRad((a) => wrapYawRad(a - AIM_YAW_STEP_RAD));
+        setAimYawRad((a) => {
+          const next = wrapYawRad(a - AIM_YAW_STEP_RAD);
+          setAimSideYawRad(bodyYawQuarterSnappedFromWorldAim(next));
+          return next;
+        });
         if (k === "ArrowRight") e.preventDefault();
       }
     };
@@ -749,6 +792,7 @@ export default function CubeScene() {
           windHud={windHud}
           vehicle={playerVehicle}
           sessionScoreDisplay={formatSessionScoreHud(playSession, sessionShots)}
+          onScoreClick={() => setShowSessionStatsModal(true)}
         />
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
@@ -793,7 +837,6 @@ export default function CubeScene() {
             position: "absolute",
             left: 0,
             right: 0,
-            bottom: 0,
             display: "flex",
             flexDirection: "row",
             alignItems: "flex-end",
@@ -907,39 +950,61 @@ export default function CubeScene() {
               pointerEvents: "auto",
             }}
           >
-            {chargeHud === null && (
-              <AimHud
-                disabled={shotInFlight}
-                onPitchMaxUp={() => setAimPitchOffsetRad(AIM_PITCH_MAX_RAD)}
-                onPitchUp={() =>
-                  setAimPitchOffsetRad((p) =>
-                    clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD)
-                  )
-                }
-                onPitchDown={() =>
-                  setAimPitchOffsetRad((p) =>
-                    clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD)
-                  )
-                }
-                onPitchMaxDown={() => setAimPitchOffsetRad(-AIM_PITCH_MAX_RAD)}
-                onMinus90={() =>
-                  setAimYawRad((a) =>
-                    wrapYawRad(a - AIM_YAW_QUARTER_TURN_RAD)
-                  )
-                }
-                onLeft={() =>
-                  setAimYawRad((a) => wrapYawRad(a + AIM_YAW_STEP_RAD))
-                }
-                onRight={() =>
-                  setAimYawRad((a) => wrapYawRad(a - AIM_YAW_STEP_RAD))
-                }
-                onPlus90={() =>
-                  setAimYawRad((a) =>
-                    wrapYawRad(a + AIM_YAW_QUARTER_TURN_RAD)
-                  )
-                }
-              />
-            )}
+            {chargeHud === null &&
+              (aimControlMode === "pad" ? (
+                <AimPadHud
+                  disabled={shotInFlight}
+                  aimSideYawRad={aimSideYawRad}
+                  aimYawRad={aimYawRad}
+                  aimPitchOffsetRad={aimPitchOffsetRad}
+                  onAimChange={({ yawRad, pitchOffsetRad }) => {
+                    setAimYawRad(yawRad);
+                    setAimPitchOffsetRad(pitchOffsetRad);
+                  }}
+                  onSideRotate={(dir) => {
+                    setAimSideYawRad((s) =>
+                      wrapYawRad(s + dir * AIM_YAW_QUARTER_TURN_RAD)
+                    );
+                    setAimYawRad((a) =>
+                      wrapYawRad(a + dir * AIM_YAW_QUARTER_TURN_RAD)
+                    );
+                  }}
+                />
+              ) : (
+                <AimHud
+                  disabled={shotInFlight}
+                  onPitchMaxUp={() => setAimPitchOffsetRad(AIM_PITCH_MAX_RAD)}
+                  onPitchUp={() =>
+                    setAimPitchOffsetRad((p) =>
+                      clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD)
+                    )
+                  }
+                  onPitchDown={() =>
+                    setAimPitchOffsetRad((p) =>
+                      clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD)
+                    )
+                  }
+                  onPitchMaxDown={() =>
+                    setAimPitchOffsetRad(-AIM_PITCH_MAX_RAD)
+                  }
+                  onMinus90={() =>
+                    setAimYawRad((a) =>
+                      wrapYawRad(a - AIM_YAW_QUARTER_TURN_RAD)
+                    )
+                  }
+                  onLeft={() =>
+                    setAimYawRad((a) => wrapYawRad(a + AIM_YAW_STEP_RAD))
+                  }
+                  onRight={() =>
+                    setAimYawRad((a) => wrapYawRad(a - AIM_YAW_STEP_RAD))
+                  }
+                  onPlus90={() =>
+                    setAimYawRad((a) =>
+                      wrapYawRad(a + AIM_YAW_QUARTER_TURN_RAD)
+                    )
+                  }
+                />
+              ))}
             {showShotHudPanel && (
               <div
                 style={{
@@ -1079,10 +1144,18 @@ export default function CubeScene() {
         vehicle={playerVehicle}
         retroTvEnabled={retroTvEnabled}
         onRetroTvChange={onRetroTvChange}
+        aimControlMode={aimControlMode}
+        onAimControlModeChange={onAimControlModeChange}
       />
       <ProfileModal
         open={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+      />
+      <SessionStatsModal
+        open={showSessionStatsModal}
+        onClose={() => setShowSessionStatsModal(false)}
+        session={playSession}
+        sessionShots={sessionShots}
       />
     </div>
   );

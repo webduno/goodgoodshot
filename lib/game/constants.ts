@@ -176,22 +176,22 @@ export const POWERUP_SLOTS = [
 ] as const;
 
 /**
- * Gameplay orbit camera offset from spawn (in front of the tank; goal stays down +Z).
+ * Gameplay orbit camera offset from spawn (behind the tank along −Z; look toward +Z / sun).
  */
 export const CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
-  1.38, 1.78, 4.45,
+  -1.38, 1.78, -4.45,
 ];
 /**
  * First-frame camera matches gameplay (wider start — no intro zoom-in). Tank hull faces +Z
- * (shot / eyes); +Z offset sits in front of the face, not behind.
+ * (shot / eyes); same hemisphere as gameplay — behind the hull, view toward sun (+Z).
  */
 export const INTRO_CAMERA_OFFSET_FROM_SPAWN = CAMERA_OFFSET_FROM_SPAWN;
 /**
- * Fixed world offset from the ball while follow-ball mode is on: above the ball and toward
- * −Z (spawn side) so the shot stays in view; orbit controls are disabled for this mode.
+ * Fixed world offset from the ball while follow-ball mode is on: slightly above and behind
+ * (−Z, spawn side) so the shot stays in view without a steep top-down; orbit is disabled.
  */
 export const FOLLOW_BALL_CAMERA_OFFSET: readonly [number, number, number] = [
-  0.85, 10.8, -7.4,
+  -0.85, 4.2, -8.2,
 ];
 /** Seconds for intro tween when intro and gameplay offsets differ; 0 skips the wait. */
 export const INTRO_CAMERA_DURATION_SEC = 0;

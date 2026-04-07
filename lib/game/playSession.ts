@@ -28,20 +28,18 @@ export function defaultPlaySession(targetBattles: SessionBattleCount): PlaySessi
 }
 
 /**
- * Compact session line: strokes/targetBattles(winSpread), e.g. `0/3(+0)` or `12/3(+1)`.
- * `sessionShots` adds the current hole (in-flight) to persisted `totalStrokes`.
+ * Compact session line: battlesWon/targetBattles(totalStrokes), e.g. `2/9(45)`.
+ * `sessionShots` adds the current hole (in-flight) to persisted `totalStrokes` for the parenthetical.
  */
 export function formatSessionScoreHud(
   session: PlaySession | null,
   sessionShots: number
 ): string {
   if (!session) {
-    return "0/0(+0)";
+    return "0/0(0)";
   }
   const strokes = session.totalStrokes + sessionShots;
-  const spread = session.battlesWon - session.battlesLost;
-  const spreadStr = `${spread >= 0 ? "+" : ""}${spread}`;
-  return `${strokes}/${session.targetBattles}(${spreadStr})`;
+  return `${session.battlesWon}/${session.targetBattles}(${strokes})`;
 }
 
 function isSessionBattleCount(n: number): n is SessionBattleCount {

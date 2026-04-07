@@ -11,8 +11,14 @@ export const SHOOT_TRIGGER_CUBE_SIZE = 0.2;
 export const GOAL_Z_MIN = 70;
 export const GOAL_Z_MAX = 350;
 /** Random sideways offset for the green goal (grid units). */
-export const GOAL_X_MIN = -18;
-export const GOAL_X_MAX = 18;
+export const GOAL_X_MIN = -26;
+export const GOAL_X_MAX = 26;
+
+/**
+ * Side pads off the Manhattan lane (grid units from centerline at each sample cell).
+ * Paired with `appendFlankIslandsAlongLane` in `lib/game/islands.ts`.
+ */
+export const FLANK_ISLAND_OFFSET_X = 12;
 
 /** Horizontal aim: radians from +Z toward +X (left button increases yaw, right decreases). */
 export const AIM_YAW_STEP_RAD = THREE.MathUtils.degToRad(5);
@@ -121,9 +127,11 @@ export const MIN_PREDETERMINED_STRENGTH_PER_BASE_CLICK = Math.min(
   ...PREDETERMINED_VEHICLES.map((v) => v.strengthPerBaseClick)
 );
 
-/** Ground plane for the initial field: wider than yellow lane span, longer than spawn→goal. */
-export const FIELD_PLANE_HALF_WIDTH_X =
-  2 * (LANE_MARKER_SIDE_OFFSET_X / 2 + BLOCK_SIZE * 1.5);
+/** Ground plane for the initial field: covers goal sideways range + flank pads + margin. */
+export const FIELD_PLANE_HALF_WIDTH_X = Math.max(
+  (GOAL_X_MAX + FLANK_ISLAND_OFFSET_X + 5 * BLOCK_SIZE) / 2,
+  LANE_MARKER_SIDE_OFFSET_X / 2 + BLOCK_SIZE * 1.5
+);
 export const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 export const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
 export const FIELD_GROUND_MUTED_GREEN = "#52c066";

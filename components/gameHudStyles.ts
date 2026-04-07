@@ -381,6 +381,53 @@ export const progressTrackStrength: CSSProperties = {
   ...progressTrackShared,
 };
 
+/** Right-side vertical fire power meter (above Fire button). */
+export const FIRE_POWER_VERTICAL_TRACK_HEIGHT_PX = 132;
+export const FIRE_POWER_VERTICAL_TRACK_WIDTH_PX = 14;
+
+const progressTrackVerticalShared: CSSProperties = {
+  width: FIRE_POWER_VERTICAL_TRACK_WIDTH_PX,
+  maxWidth: FIRE_POWER_VERTICAL_TRACK_WIDTH_PX,
+  height: FIRE_POWER_VERTICAL_TRACK_HEIGHT_PX,
+  borderRadius: 999,
+  padding: 1,
+  boxSizing: "border-box",
+  background: "#ffffff",
+  boxShadow: "inset 0 1px 4px rgba(0,0,0,0.18)",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "flex-end",
+  overflow: "hidden",
+};
+
+export const progressTrackVerticalStrength: CSSProperties = {
+  ...progressTrackVerticalShared,
+};
+
+export function progressFillStyleVertical(
+  pct: number,
+  variant: "charge" | "cooldown" | "strength"
+): CSSProperties {
+  const fill =
+    variant === "charge"
+      ? "linear-gradient(180deg, #f472b6, #db2777)"
+      : variant === "cooldown"
+        ? "linear-gradient(180deg, #7dd3fc, #0072bc)"
+        : "linear-gradient(180deg, #fb923c, #ea580c)";
+  return {
+    width: "100%",
+    height: `${pct * 100}%`,
+    minHeight: pct > 0 ? 2 : 0,
+    borderRadius: 999,
+    background: fill,
+    flexShrink: 0,
+    transition:
+      variant === "charge" || variant === "strength"
+        ? "height 0.05s linear"
+        : "height 0.1s linear",
+  };
+}
+
 export function progressFillStyle(
   pct: number,
   variant: "charge" | "cooldown" | "strength"

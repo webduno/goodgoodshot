@@ -109,7 +109,7 @@ export function SessionStatsModal({
                   lineHeight: 1.45,
                 }}
               >
-                Total strokes / target battles (win spread: wins minus losses).
+                Wins / games in session (total strokes, including this hole).
               </div>
             </div>
 

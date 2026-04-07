@@ -1,4 +1,4 @@
-import { BLOCK_SIZE } from "@/lib/game/constants";
+import { BLOCK_SIZE, FLANK_ISLAND_OFFSET_X } from "@/lib/game/constants";
 import { manhattanPathLaneToGoal } from "@/lib/game/path";
 import type {
   IslandBushOffset,
@@ -24,7 +24,7 @@ export function snapIslandFootprintToBlockGrid(is: IslandRect): void {
   is.worldZ = Math.round(is.worldZ / step) * step;
 }
 
-const NUM_ISLANDS = 4;
+const NUM_ISLANDS = 5;
 
 /** Integer block count in [lo, hi] inclusive — gaps and offsets use whole blocks (Minecraft-style grid). */
 function randomBlockCountInclusive(rng: () => number, lo: number, hi: number): number {
@@ -39,8 +39,93 @@ const MIN_HALF_EXTENT_PER_SPLIT_PAD = 2.5 * BLOCK_SIZE;
 const MIN_DECORATION_FROM_COIN = 2.35 * BLOCK_SIZE;
 
 /**
- * Four disconnected platforms along the grid path from lane origin to goal (spawn → coins → goal),
- * with void between them. Spawn and goal are forced inside the first and last island.
+ * Extra small pads left/right of the lane on integer grid cells (same Manhattan path as the main course).
+ */
+function appendFlankIslandsAlongLane(
+  islands: IslandRect[],
+  cells: Vec3[],
+  rng: () => number,
+  spawnCenter: Vec3,
+  goalCenter: Vec3
+): void {
+  const n = cells.length;
+  if (n < 10) return;
+
+  const skipStart = Math.max(2, Math.floor(n * 0.08));
+  const skipEnd = Math.max(2, Math.floor(n * 0.08));
+  const lo = skipStart;
+  const hi = n - 1 - skipEnd;
+  if (lo >= hi) return;
+
+  const samples = 3;
+  const placed = new Set<string>();
+  const offset = FLANK_ISLAND_OFFSET_X * BLOCK_SIZE;
+
+  for (let s = 0; s < samples; s++) {
+    const t = (s + 1) / (samples + 1);
+    const idx = lo + Math.floor(t * (hi - lo));
+    const c = cells[idx]!;
+    const cx = c[0];
+    const cz = c[2];
+
+    for (const sign of [-1, 1] as const) {
+      const wx =
+        Math.round((cx + sign * offset) / BLOCK_SIZE) * BLOCK_SIZE;
+      const wz = Math.round(cz / BLOCK_SIZE) * BLOCK_SIZE;
+      const key = `${wx},${wz}`;
+      if (placed.has(key)) continue;
+      placed.add(key);
+
+      const halfFlank = Math.max(
+        2.5 * BLOCK_SIZE,
+        3.2 + rng() * 1.35
+      );
+
+      let overlaps = false;
+      for (const is of islands) {
+        if (
+          Math.abs(is.worldX - wx) < (is.halfX + halfFlank) * 0.92 &&
+          Math.abs(is.worldZ - wz) < (is.halfZ + halfFlank) * 0.92
+        ) {
+          overlaps = true;
+          break;
+        }
+      }
+      if (overlaps) continue;
+
+      if (
+        Math.hypot(wx - spawnCenter[0], wz - spawnCenter[2]) < 5 * BLOCK_SIZE ||
+        Math.hypot(wx - goalCenter[0], wz - goalCenter[2]) < 5 * BLOCK_SIZE
+      ) {
+        continue;
+      }
+
+      islands.push({
+        worldX: wx,
+        worldZ: wz,
+        halfX: halfFlank,
+        halfZ: halfFlank,
+        blockThickness: 0.62 + rng() * 0.38,
+        bushes: [],
+        trees: [],
+      });
+    }
+  }
+}
+
+/** Spawn → goal order so index 0 / last stay the tee and green pads for HUD + gap logic. */
+function sortIslandsSpawnToGoal(islands: IslandRect[]): void {
+  islands.sort((a, b) => {
+    const dz = a.worldZ - b.worldZ;
+    if (Math.abs(dz) > 0.25) return dz;
+    return a.worldX - b.worldX;
+  });
+}
+
+/**
+ * Disconnected platforms along the Manhattan grid path from lane origin to goal (spawn → coins → goal),
+ * plus optional flank pads ±`FLANK_ISLAND_OFFSET_X` from sampled path cells. Void between main segments.
+ * Spawn and goal are forced inside the first and last island after sorting by course progress.
  */
 export function computeIslandsForLane(
   laneOrigin: Vec3,
@@ -147,9 +232,12 @@ export function computeIslandsForLane(
     });
   }
 
+  const rng = mulberry32(hashSeed(laneOrigin, goalCenter));
+  appendFlankIslandsAlongLane(islands, cells, rng, spawnCenter, goalCenter);
+  sortIslandsSpawnToGoal(islands);
+
   enforceVoidGapsBetweenIslands(islands);
 
-  const rng = mulberry32(hashSeed(laneOrigin, goalCenter));
   applyIslandRandomness(islands, rng, spawnCenter, goalCenter);
   squarifyIslands(islands, rng);
   maybeSplitSideBySide(islands, rng);

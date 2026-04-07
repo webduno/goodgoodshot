@@ -13,6 +13,7 @@ import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 import { HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
 
 export function StatsHud({
+  holePar,
   sessionShots,
   chargeHud,
   shotInFlight,
@@ -28,6 +29,8 @@ export function StatsHud({
   sessionScoreDisplay,
   onScoreClick,
 }: {
+  /** Max strokes (inclusive) to count as a battle win when you hole out — same as lane bonus coin count. */
+  holePar: number;
   sessionShots: number;
   chargeHud: { remainingMs: number; clicks: number } | null;
   shotInFlight: boolean;
@@ -40,7 +43,7 @@ export function StatsHud({
   noWindActive: boolean;
   windHud: { x: number; z: number };
   vehicle: PlayerVehicleConfig;
-  /** e.g. `12/3(+1)` — strokes/targetBattles(win−loss spread). */
+  /** e.g. `2/9(45)` — wins / games in session (strokes, incl. current hole). */
   sessionScoreDisplay: string;
   onScoreClick: () => void;
 }) {
@@ -273,9 +276,14 @@ export function StatsHud({
           textTransform: "uppercase",
         }}
       >
-        Shot n°
+        Shot
       </div>
       <div
+        aria-label={
+          holePar > 0
+            ? `Shot ${sessionShots} of ${holePar} (strokes at or below par win the battle)`
+            : `Shot ${sessionShots}`
+        }
         style={{
           color: hudColors.value,
           fontWeight: 700,
@@ -284,7 +292,7 @@ export function StatsHud({
           marginBottom: 10,
         }}
       >
-        {sessionShots}
+        {holePar > 0 ? `${sessionShots}/${holePar}` : sessionShots}
       </div>
       <div
         style={{

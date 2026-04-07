@@ -11,7 +11,7 @@ import { StartGameModal } from "@/components/game/cube/modals/StartGameModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { AimPadHud } from "@/components/game/cube/hud/AimPadHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
-import { ShotHud } from "@/components/game/cube/hud/ShotHud";
+import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
 import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
@@ -135,6 +135,10 @@ export default function CubeScene() {
   ];
 
   const islands = game.islands;
+  const holePar = useMemo(
+    () => parCoinCountForIslands(islands, INITIAL_LANE_ORIGIN[1]),
+    [islands]
+  );
   const gameSpawnRef = useRef<Vec3>(game.spawnCenter);
   gameSpawnRef.current = game.spawnCenter;
   const spawnBeforeShotRef = useRef<Vec3>(game.spawnCenter);
@@ -798,6 +802,7 @@ export default function CubeScene() {
       />
       {!showStartGameModal && !showSessionEndModal && (
         <StatsHud
+          holePar={holePar}
           sessionShots={sessionShots}
           chargeHud={chargeHud}
           shotInFlight={shotInFlight}
@@ -920,7 +925,7 @@ export default function CubeScene() {
                   </span>
                 )}
             </button>
-            {stats.totalGoldCoins >= 1 &&
+            {/* {stats.totalGoldCoins >= 1 &&
               collectedCoinKeysRef.current.size > 0 &&
               !showPowerupMenu &&
               !powerupMenuLocked && (
@@ -949,7 +954,7 @@ export default function CubeScene() {
                 >
                   Spend coins here
                 </div>
-              )}
+              )} */}
             {powerupMenuOpen && (
               <div
                 id="powerup-precharge-panel"
@@ -1078,12 +1083,28 @@ export default function CubeScene() {
             <div
               style={{
                 display: "flex",
-                justifyContent: "center",
+                flexDirection: "column",
                 alignItems: "center",
-                pointerEvents: "auto",
+                justifyContent: "flex-end",
+                gap: 6,
                 flexShrink: 0,
+                pointerEvents: "none",
               }}
             >
+              <FirePowerVerticalHud
+                shotInFlight={shotInFlight}
+                chargeHud={chargeHud}
+                vehicle={playerVehicle}
+                powerupStackCount={powerupStackCount}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  pointerEvents: "auto",
+                }}
+              >
               <button
                 type="button"
                 aria-label="Fire"
@@ -1154,6 +1175,7 @@ export default function CubeScene() {
                   </span>
                 )}
               </button>
+              </div>
             </div>
           )}
         </div>

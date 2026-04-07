@@ -159,7 +159,7 @@ export default function CubeScene() {
   aimYawRef.current = aimYawRad;
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [shotInFlight, setShotInFlight] = useState(false);
-  const [followBallCamera, setFollowBallCamera] = useState(false);
+  const [followBallCamera, setFollowBallCamera] = useState(true);
   const ballFollowStateRef = useRef({
     pos: new THREE.Vector3(),
     valid: false,

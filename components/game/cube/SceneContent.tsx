@@ -679,12 +679,14 @@ export function SceneContent({
     <>
 
 
+{/* 
 <group
       position={[0, -50, -150]}
       scale={[99, 99, 99]}
     >
       <EarthTextured clickedHandler={onTerrainTexturedClick} />
     </group>
+    */}
 
 {/* 
     <group

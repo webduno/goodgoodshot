@@ -20,17 +20,6 @@ const BODY_R = 0.2 * SIZE;
 /** Local Y of body sphere center (feet at y=0 in group space). */
 const BODY_CENTER_Y = BODY_R;
 const ARM_R = 0.07 * SIZE;
-/** Classic MSN / Messenger icon blue — single solid color. */
-const MESSENGER_ICON_BLUE = "#0099ff";
-
-const MESSENGER_MATERIAL_PROPS = {
-  color: MESSENGER_ICON_BLUE,
-  transparent: true,
-  opacity: 0.8,
-  depthWrite: false,
-  roughness: 0.38,
-  metalness: 0.06,
-} as const;
 
 export function GoalMessengerCharacter({
   goalCenter,
@@ -38,15 +27,37 @@ export function GoalMessengerCharacter({
   alive,
   paused,
   onReachedVehicle,
-  enemyPosRef,
+  enemySimRef,
+  enemyIndex,
+  colorHex,
+  startOffsetXZ,
 }: {
   goalCenter: Vec3;
   spawnCenter: Vec3;
   alive: boolean;
   paused: boolean;
   onReachedVehicle: () => void;
-  enemyPosRef: MutableRefObject<{ x: number; y: number; z: number }>;
+  enemySimRef: MutableRefObject<{
+    positions: { x: number; y: number; z: number }[];
+    alive: boolean[];
+  }>;
+  enemyIndex: number;
+  colorHex: string;
+  /** Extra XZ offset from the default messenger anchor near the goal (spread for multiple enemies). */
+  startOffsetXZ: { x: number; z: number };
 }) {
+  const materialProps = useMemo(
+    () =>
+      ({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+        roughness: 0.38,
+        metalness: 0.06,
+      }) as const,
+    [colorHex]
+  );
   const groupRef = useRef<Group>(null);
   const armLRef = useRef<Mesh>(null);
   const armRRef = useRef<Mesh>(null);
@@ -55,10 +66,10 @@ export function GoalMessengerCharacter({
 
   const startXZ = useMemo(
     () => ({
-      x: goalCenter[0] + 0.35,
-      z: goalCenter[2] - 0.85,
+      x: goalCenter[0] + 0.35 + startOffsetXZ.x,
+      z: goalCenter[2] - 0.85 + startOffsetXZ.z,
     }),
-    [goalCenter]
+    [goalCenter, startOffsetXZ.x, startOffsetXZ.z]
   );
 
   const posRef = useRef({ x: startXZ.x, z: startXZ.z });
@@ -72,10 +83,12 @@ export function GoalMessengerCharacter({
   }, [startXZ.x, startXZ.z]);
 
   useLayoutEffect(() => {
-    enemyPosRef.current.x = startXZ.x;
-    enemyPosRef.current.z = startXZ.z;
-    enemyPosRef.current.y = TURF_TOP_Y + BODY_CENTER_Y;
-  }, [enemyPosRef, startXZ.x, startXZ.z]);
+    const slot = enemySimRef.current.positions[enemyIndex];
+    if (!slot) return;
+    slot.x = startXZ.x;
+    slot.z = startXZ.z;
+    slot.y = TURF_TOP_Y + BODY_CENTER_Y;
+  }, [enemySimRef, enemyIndex, startXZ.x, startXZ.z]);
 
   useFrame((_, delta) => {
     if (!alive) return;
@@ -108,8 +121,11 @@ export function GoalMessengerCharacter({
     x += nx * Math.min(step, len);
     z += nz * Math.min(step, len);
     posRef.current = { x, z };
-    enemyPosRef.current.x = x;
-    enemyPosRef.current.z = z;
+    const posSlot = enemySimRef.current.positions[enemyIndex];
+    if (posSlot) {
+      posSlot.x = x;
+      posSlot.z = z;
+    }
 
     if (messengerTouchesVehicle(x, z, spawnX, spawnZ)) {
       reachedRef.current = true;
@@ -124,7 +140,9 @@ export function GoalMessengerCharacter({
       groupRef.current.rotation.y = yaw;
       const bob = Math.sin(tRef.current * 10) * (0.018 * SIZE);
       groupRef.current.position.y = TURF_TOP_Y + bob;
-      enemyPosRef.current.y = TURF_TOP_Y + BODY_CENTER_Y + bob;
+      if (posSlot) {
+        posSlot.y = TURF_TOP_Y + BODY_CENTER_Y + bob;
+      }
     }
 
     const swing = Math.sin(tRef.current * 9) * 0.55;
@@ -141,11 +159,11 @@ export function GoalMessengerCharacter({
     <group ref={groupRef} position={[startXZ.x, TURF_TOP_Y, startXZ.z]}>
       <mesh position={[0, headY, 0]} castShadow>
         <sphereGeometry args={[HEAD_R, 14, 12]} />
-        <meshStandardMaterial {...MESSENGER_MATERIAL_PROPS} />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
       <mesh position={[0, bodyY, 0]} castShadow scale={[1, 1.15, 1]}>
         <sphereGeometry args={[BODY_R, 16, 14]} />
-        <meshStandardMaterial {...MESSENGER_MATERIAL_PROPS} />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
       <mesh
         ref={armLRef}
@@ -154,7 +172,7 @@ export function GoalMessengerCharacter({
         scale={[0.55, 1.15, 0.55]}
       >
         <sphereGeometry args={[ARM_R, 10, 8]} />
-        <meshStandardMaterial {...MESSENGER_MATERIAL_PROPS} />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
       <mesh
         ref={armRRef}
@@ -163,7 +181,7 @@ export function GoalMessengerCharacter({
         scale={[0.55, 1.15, 0.55]}
       >
         <sphereGeometry args={[ARM_R, 10, 8]} />
-        <meshStandardMaterial {...MESSENGER_MATERIAL_PROPS} />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
       <Text
         position={[0, headY + HEAD_R + 0.14, 0]}

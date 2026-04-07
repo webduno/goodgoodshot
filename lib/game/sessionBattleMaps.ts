@@ -1,5 +1,9 @@
 import { BIOME_IDS } from "@/lib/game/biomes";
-import { createInitialGameState, withDefaultBiome } from "@/lib/game/gameState";
+import {
+  createGoalEnemySpecsForBattle,
+  createInitialGameState,
+  withDefaultBiome,
+} from "@/lib/game/gameState";
 import type { BiomeId, GameState } from "@/lib/game/types";
 import type { PlaySession, SessionBattleCount } from "@/lib/game/playSession";
 
@@ -63,7 +67,12 @@ export function generateSessionBattleMaps(
   const out: GameState[] = [];
   for (let i = 0; i < targetBattles; i++) {
     const biome = resolveBiomeForBattle(choice);
-    out.push(createInitialGameState({ biome }));
+    out.push(
+      createInitialGameState({
+        biome,
+        goalEnemies: createGoalEnemySpecsForBattle(i),
+      })
+    );
   }
   return out;
 }

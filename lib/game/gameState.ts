@@ -15,12 +15,36 @@ import {
   type BiomeId,
   type GameAction,
   type GameState,
+  type GoalEnemySpec,
   type Vec3,
 } from "./types";
 import { randomIntInclusive, snapBlockCenterToGrid } from "./math";
 
-export function createInitialGameState(opts?: { biome?: BiomeId }): GameState {
+/** Blue, green, yellow, red — random picks per messenger in a battle. */
+const GOAL_ENEMY_COLOR_PALETTE = [
+  "#0099ff",
+  "#22c55e",
+  "#eab308",
+  "#ef4444",
+] as const;
+
+/** War battle index `i` (0-based) uses `i + 1` messengers with random palette colors. */
+export function createGoalEnemySpecsForBattle(battleIndex: number): readonly GoalEnemySpec[] {
+  const count = battleIndex + 1;
+  return Array.from({ length: count }, () => ({
+    colorHex:
+      GOAL_ENEMY_COLOR_PALETTE[
+        Math.floor(Math.random() * GOAL_ENEMY_COLOR_PALETTE.length)
+      ]!,
+  }));
+}
+
+export function createInitialGameState(opts?: {
+  biome?: BiomeId;
+  goalEnemies?: readonly GoalEnemySpec[];
+}): GameState {
   const biome: BiomeId = opts?.biome ?? "plain";
+  const goalEnemies = opts?.goalEnemies ?? [{ colorHex: "#0099ff" }];
   const goalWorldZ = randomIntInclusive(GOAL_Z_MIN, GOAL_Z_MAX);
   const goalWorldX = randomIntInclusive(GOAL_X_MIN, GOAL_X_MAX);
   const spawnX = 0;
@@ -45,13 +69,20 @@ export function createInitialGameState(opts?: { biome?: BiomeId }): GameState {
     islands,
     miniVillage,
     biome,
+    goalEnemies,
   };
 }
 
-/** Ensures `biome` exists when hydrating from JSON (older saves). */
+/** Ensures `biome` and `goalEnemies` exist when hydrating from JSON (older saves). */
 export function withDefaultBiome(state: GameState): GameState {
-  if (isValidBiomeId(state.biome)) return state;
-  return { ...state, biome: "plain" };
+  let next = state;
+  if (!isValidBiomeId(state.biome)) {
+    next = { ...next, biome: "plain" };
+  }
+  if (!Array.isArray(next.goalEnemies) || next.goalEnemies.length === 0) {
+    next = { ...next, goalEnemies: [{ colorHex: "#0099ff" }] };
+  }
+  return next;
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -128,5 +159,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     islands: nextIslands,
     miniVillage: nextMiniVillage,
     biome: state.biome,
+    goalEnemies: state.goalEnemies,
   };
 }

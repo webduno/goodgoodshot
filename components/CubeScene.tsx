@@ -904,6 +904,7 @@ export default function CubeScene() {
             onGuidelinePillClick={() => setShowGuidelineInfoModal(true)}
             ballFollowStateRef={ballFollowStateRef}
             onEnemyKillReward={onEnemyKillReward}
+            goalEnemies={game.goalEnemies}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}

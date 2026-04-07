@@ -11,6 +11,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -57,6 +58,7 @@ import type { IslandRect } from "@/lib/game/islands";
 import {
   INITIAL_LANE_ORIGIN,
   type BiomeId,
+  type GoalEnemySpec,
   type Projectile,
   type Vec3,
 } from "@/lib/game/types";
@@ -69,6 +71,17 @@ import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
 
 /** Interval between automatic +power steps while Fire / Space / rear trigger is held (charge window). */
 const CHARGE_HOLD_REPEAT_MS = 85;
+
+/** Spread multiple goal messengers along X so they do not overlap at spawn. */
+function goalEnemyStartOffset(
+  index: number,
+  total: number
+): { x: number; z: number } {
+  if (total <= 1) return { x: 0, z: 0 };
+  const step = 0.58;
+  const mid = (total - 1) / 2;
+  return { x: (index - mid) * step, z: 0 };
+}
 
 /** Local Y above spawn block center: clears default hull top (~0.5) and typical barrel. */
 const VEHICLE_POWERUP_LABEL_Y = 0.92;
@@ -280,11 +293,13 @@ export function SceneContent({
   onGuidelinePillClick,
   ballFollowStateRef,
   onEnemyKillReward,
+  goalEnemies,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
   islands: readonly IslandRect[];
   biome: BiomeId;
+  goalEnemies: readonly GoalEnemySpec[];
   /** HUD ring yaw (atan2(dx, −dy)); converted to world XZ for shot, prism, and hull snap. */
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
@@ -352,21 +367,39 @@ export function SceneContent({
   /** Counts simultaneous press sources (pointer + Space) so hold repeat stops only when all release. */
   const fireHeldPressCountRef = useRef(0);
 
-  const [messengerAlive, setMessengerAlive] = useState(true);
-  const messengerAliveRef = useRef(true);
-  const enemyPosRef = useRef({ x: 0, y: TURF_TOP_Y + 0.2, z: 0 });
+  const [enemyAliveMask, setEnemyAliveMask] = useState<boolean[]>(() =>
+    Array.from({ length: goalEnemies.length }, () => true)
+  );
+  const enemySimRef = useRef<{
+    positions: { x: number; y: number; z: number }[];
+    alive: boolean[];
+  }>({ positions: [], alive: [] });
 
-  useEffect(() => {
-    setMessengerAlive(true);
-    messengerAliveRef.current = true;
-  }, [goalCenter[0], goalCenter[2]]);
+  useLayoutEffect(() => {
+    const n = goalEnemies.length;
+    enemySimRef.current.positions = Array.from({ length: n }, () => ({
+      x: 0,
+      y: TURF_TOP_Y + 0.2,
+      z: 0,
+    }));
+    enemySimRef.current.alive = Array.from({ length: n }, () => true);
+    setEnemyAliveMask(Array.from({ length: n }, () => true));
+  }, [goalCenter[0], goalCenter[2], goalEnemies.length]);
 
-  const onEnemyKilledByBall = useCallback(() => {
-    if (!messengerAliveRef.current) return;
-    messengerAliveRef.current = false;
-    setMessengerAlive(false);
-    onEnemyKillReward();
-  }, [onEnemyKillReward]);
+  const onEnemyKilledByBall = useCallback(
+    (index: number) => {
+      if (!enemySimRef.current.alive[index]) return;
+      enemySimRef.current.alive[index] = false;
+      setEnemyAliveMask((prev) => {
+        if (!prev[index]) return prev;
+        const next = [...prev];
+        next[index] = false;
+        return next;
+      });
+      onEnemyKillReward();
+    },
+    [onEnemyKillReward]
+  );
 
   const onEnemyReachedVehicle = useCallback(() => {
     const p = projectileRef.current;
@@ -759,14 +792,20 @@ export function SceneContent({
         />
       </SpawnVisualGroup>
       <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />
-      <GoalMessengerCharacter
-        goalCenter={goalCenter}
-        spawnCenter={spawnCenter}
-        alive={messengerAlive}
-        paused={roundLocked}
-        onReachedVehicle={onEnemyReachedVehicle}
-        enemyPosRef={enemyPosRef}
-      />
+      {goalEnemies.map((spec, i) => (
+        <GoalMessengerCharacter
+          key={`messenger-${i}-${spec.colorHex}-${goalCenter[0]}-${goalCenter[2]}`}
+          goalCenter={goalCenter}
+          spawnCenter={spawnCenter}
+          alive={enemyAliveMask[i] === true}
+          paused={roundLocked}
+          onReachedVehicle={onEnemyReachedVehicle}
+          enemySimRef={enemySimRef}
+          enemyIndex={i}
+          colorHex={spec.colorHex}
+          startOffsetXZ={goalEnemyStartOffset(i, goalEnemies.length)}
+        />
+      ))}
       {yellowLaneMarkers.map((center, i) => {
         const ck = coinCellKey(center);
         if (collectedCoinKeysRef.current.has(ck)) return null;
@@ -786,8 +825,7 @@ export function SceneContent({
         coinCells={yellowLaneMarkers}
         collectedCoinKeysRef={collectedCoinKeysRef}
         onCoinCollected={onCoinCollected}
-        enemyAliveRef={messengerAliveRef}
-        enemyPosRef={enemyPosRef}
+        enemySimRef={enemySimRef}
         onEnemyKilledByBall={onEnemyKilledByBall}
       />
       {guidelinePoints.length >= 2 && (

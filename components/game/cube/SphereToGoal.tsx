@@ -35,8 +35,7 @@ export function SphereToGoal({
   coinCells,
   collectedCoinKeysRef,
   onCoinCollected,
-  enemyAliveRef,
-  enemyPosRef,
+  enemySimRef,
   onEnemyKilledByBall,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
@@ -56,9 +55,11 @@ export function SphereToGoal({
   coinCells: readonly Vec3[];
   collectedCoinKeysRef: MutableRefObject<Set<string>>;
   onCoinCollected: (key: string) => void;
-  enemyAliveRef: MutableRefObject<boolean>;
-  enemyPosRef: MutableRefObject<{ x: number; y: number; z: number }>;
-  onEnemyKilledByBall: () => void;
+  enemySimRef: MutableRefObject<{
+    positions: { x: number; y: number; z: number }[];
+    alive: boolean[];
+  }>;
+  onEnemyKilledByBall: (enemyIndex: number) => void;
 }) {
   const sx = spawnCenter[0];
   const spawnTopY = spawnTopYFromBlockCenterY(spawnCenter[1]);
@@ -81,16 +82,21 @@ export function SphereToGoal({
   };
 
   const tryEnemyHit = (px: number, py: number, pz: number) => {
-    if (!enemyAliveRef.current) return;
-    const e = enemyPosRef.current;
-    const dx = px - e.x;
-    const dy = py - e.y;
-    const dz = pz - e.z;
-    if (
-      Math.hypot(dx, dy, dz) <
-      SPHERE_RADIUS + GOAL_ENEMY_HIT_RADIUS
-    ) {
-      onEnemyKilledByBall();
+    const sim = enemySimRef.current;
+    const { positions, alive } = sim;
+    for (let i = 0; i < positions.length; i++) {
+      if (!alive[i]) continue;
+      const e = positions[i]!;
+      const dx = px - e.x;
+      const dy = py - e.y;
+      const dz = pz - e.z;
+      if (
+        Math.hypot(dx, dy, dz) <
+        SPHERE_RADIUS + GOAL_ENEMY_HIT_RADIUS
+      ) {
+        onEnemyKilledByBall(i);
+        return;
+      }
     }
   };
 

@@ -52,6 +52,11 @@ export type MiniVillageSpec = {
   houses: readonly MiniVillageHouse[];
 };
 
+/** One goal messenger (hazard); color is cosmetic. */
+export type GoalEnemySpec = {
+  colorHex: string;
+};
+
 /** Visual theme for fairway decorations (trees vs cactus, turf colors, etc.). */
 export type BiomeId = "plain" | "desert" | "forest" | "snow";
 
@@ -72,6 +77,11 @@ export type GameState = {
   miniVillage: MiniVillageSpec;
   /** Fairway / tee decoration set; preserved when the course rerolls on goal hit. */
   biome: BiomeId;
+  /**
+   * Goal messengers for this battle (war battle 1 → one enemy, battle 2 → two, …).
+   * Preserved when the hole rerolls within the same battle.
+   */
+  goalEnemies: readonly GoalEnemySpec[];
 };
 
 export type GameAction =

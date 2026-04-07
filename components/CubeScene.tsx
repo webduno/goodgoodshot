@@ -49,6 +49,7 @@ import {
 import { resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
+  burstMessengerKillConfetti,
   burstPowerupBuyConfetti,
   burstPowerupUseConfetti,
   burstShotGreyConfetti,
@@ -206,6 +207,9 @@ export default function CubeScene() {
   const [sessionEndBattlesLost, setSessionEndBattlesLost] = useState(0);
   const [finishBattleWon, setFinishBattleWon] = useState(true);
   const [finishPar, setFinishPar] = useState(0);
+  const [finishLossReason, setFinishLossReason] = useState<"par" | "enemy">(
+    "par"
+  );
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [retroTvEnabled, setRetroTvEnabled] = useState(false);
@@ -400,6 +404,14 @@ export default function CubeScene() {
     [recordGoldCoin]
   );
 
+  const onEnemyKillReward = useCallback(() => {
+    recordGoldCoin();
+    recordGoldCoin();
+    recordGoldCoin();
+    burstMessengerKillConfetti();
+    pushHudToast("Messenger down! +3 coins");
+  }, [recordGoldCoin, pushHudToast]);
+
   const getPowerupMultiplier = useCallback(
     () => Math.pow(2, powerupStackRef.current),
     []
@@ -540,27 +552,28 @@ export default function CubeScene() {
   }, []);
 
   const onProjectileEnd = useCallback(
-    (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => {
+    (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
       setShotInFlight(false);
       setWindHud({ x: windRef.current.x, z: windRef.current.z });
       maybeWindToast(windRef.current.x, windRef.current.z, false);
       if (outcome === "penalty") {
         waterPenaltiesRoundRef.current += 1;
-        pushHudToast("Water hazard");
+        pushHudToast("Void death");
         dispatch({
           type: "PROJECTILE_END",
           outcome: "penalty",
           revertSpawn: [...spawnBeforeShotRef.current] as Vec3,
         });
       } else {
-        if (outcome === "hit") {
+        if (outcome === "hit" || outcome === "enemy_loss") {
           const g = gameRef.current;
           const par = parCoinCountForIslands(
             g.islands,
             INITIAL_LANE_ORIGIN[1]
           );
           const shots = sessionShotsRef.current;
-          const battleWon = shots <= par;
+          const battleWon =
+            outcome === "hit" && shots <= par;
           recordHoleCompleted({
             vehicleId: playerVehicle.id,
             shots,
@@ -603,6 +616,7 @@ export default function CubeScene() {
           }
           setFinishBattleWon(battleWon);
           setFinishPar(par);
+          setFinishLossReason(outcome === "enemy_loss" ? "enemy" : "par");
         }
         dispatch({
           type: "PROJECTILE_END",
@@ -610,7 +624,7 @@ export default function CubeScene() {
           landing,
         });
       }
-      if (outcome === "hit") {
+      if (outcome === "hit" || outcome === "enemy_loss") {
         setShowFinishModal(true);
         return;
       }
@@ -881,6 +895,7 @@ export default function CubeScene() {
             }
             onGuidelinePillClick={() => setShowGuidelineInfoModal(true)}
             ballFollowStateRef={ballFollowStateRef}
+            onEnemyKillReward={onEnemyKillReward}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
@@ -1423,6 +1438,7 @@ export default function CubeScene() {
         sessionShots={sessionShots}
         par={finishPar}
         battleWon={finishBattleWon}
+        lossReason={finishLossReason}
       />
       <SessionEndModal
         open={showSessionEndModal}

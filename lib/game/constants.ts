@@ -179,7 +179,7 @@ export const POWERUP_SLOTS = [
  * Gameplay orbit camera offset from spawn (behind the tank along −Z; look toward +Z / sun).
  */
 export const CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
-  -1.38, 1.78, -4.45,
+  -1.38, 1.78, -6.45,
 ];
 /**
  * First-frame camera matches gameplay (wider start — no intro zoom-in). Tank hull faces +Z

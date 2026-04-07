@@ -168,6 +168,24 @@ const FINISH_BATTLE_COLORS = [
   "#22a6b3",
 ];
 
+/** Messenger-style kill reward (blue + white chips). */
+export function burstMessengerKillConfetti() {
+  const j = getConfetti();
+  if (!j) return;
+  void j.addConfetti({
+    confettiNumber: 120,
+    confettiColors: [
+      "#0084ff",
+      "#33b4ff",
+      "#66c7ff",
+      "#ffffff",
+      "#e8f4ff",
+      "#0066cc",
+    ],
+    confettiRadius: 4,
+  });
+}
+
 export function burstFinishBattleConfetti() {
   const j = getConfetti();
   if (!j) return;

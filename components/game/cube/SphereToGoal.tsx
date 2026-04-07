@@ -10,6 +10,7 @@ import {
   ROLL_STOP_SPEED,
   SPHERE_RADIUS,
 } from "@/lib/game/constants";
+import { GOAL_ENEMY_HIT_RADIUS } from "@/lib/game/goalEnemy";
 import {
   pointInVoidXZ,
   sphereIntersectsAabb,
@@ -34,6 +35,9 @@ export function SphereToGoal({
   coinCells,
   collectedCoinKeysRef,
   onCoinCollected,
+  enemyAliveRef,
+  enemyPosRef,
+  onEnemyKilledByBall,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   projectileRef: MutableRefObject<Projectile | null>;
@@ -44,11 +48,17 @@ export function SphereToGoal({
   gravityY: number;
   bounceRestitution: number;
   rollDeceleration: number;
-  onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
+  onProjectileEnd: (
+    outcome: "hit" | "miss" | "penalty" | "enemy_loss",
+    landing?: Vec3
+  ) => void;
   /** Lane bonus pickups (same cells as yellow markers); 1×1×1 hitbox, no physics. */
   coinCells: readonly Vec3[];
   collectedCoinKeysRef: MutableRefObject<Set<string>>;
   onCoinCollected: (key: string) => void;
+  enemyAliveRef: MutableRefObject<boolean>;
+  enemyPosRef: MutableRefObject<{ x: number; y: number; z: number }>;
+  onEnemyKilledByBall: () => void;
 }) {
   const sx = spawnCenter[0];
   const spawnTopY = spawnTopYFromBlockCenterY(spawnCenter[1]);
@@ -67,6 +77,20 @@ export function SphereToGoal({
       ) {
         onCoinCollected(key);
       }
+    }
+  };
+
+  const tryEnemyHit = (px: number, py: number, pz: number) => {
+    if (!enemyAliveRef.current) return;
+    const e = enemyPosRef.current;
+    const dx = px - e.x;
+    const dy = py - e.y;
+    const dz = pz - e.z;
+    if (
+      Math.hypot(dx, dy, dz) <
+      SPHERE_RADIUS + GOAL_ENEMY_HIT_RADIUS
+    ) {
+      onEnemyKilledByBall();
     }
   };
 
@@ -108,6 +132,7 @@ export function SphereToGoal({
       }
 
       tryCollectCoins(p.x, p.y, p.z);
+      tryEnemyHit(p.x, p.y, p.z);
 
       const hitGoal = sphereIntersectsGoalBox(
         p.x,
@@ -145,6 +170,7 @@ export function SphereToGoal({
     p.z += p.vz * dt;
 
     tryCollectCoins(p.x, p.y, p.z);
+    tryEnemyHit(p.x, p.y, p.z);
 
     const hitGoal = sphereIntersectsGoalBox(
       p.x,

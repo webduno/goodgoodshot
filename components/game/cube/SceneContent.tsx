@@ -13,12 +13,14 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type CSSProperties,
   type MutableRefObject,
 } from "react";
 import * as THREE from "three";
 
 import { Block } from "@/components/game/cube/meshes/Block";
+import { GoalMessengerCharacter } from "@/components/game/cube/meshes/GoalMessengerCharacter";
 import { AimYawPrism } from "@/components/game/cube/meshes/AimYawPrism";
 import { SpawnTeePad } from "@/components/game/cube/meshes/SpawnTeePad";
 import { TeeCornerTree } from "@/components/game/cube/meshes/TeeCornerTree";
@@ -39,6 +41,7 @@ import {
   FIELD_PLANE_Z_BEFORE_SPAWN,
   FIELD_PLANE_Z_PAST_GOAL,
   GOAL_Z_MAX,
+  TURF_TOP_Y,
   VEHICLE_CORNER_BLOCK_SIZE,
   VEHICLE_WHEEL_FLOOR_Y_EPS,
   VEHICLE_WHEEL_OUTWARD,
@@ -276,6 +279,7 @@ export function SceneContent({
   onTerrainCoordsClick,
   onGuidelinePillClick,
   ballFollowStateRef,
+  onEnemyKillReward,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -295,7 +299,10 @@ export function SceneContent({
     next: { remainingMs: number; clicks: number } | null
   ) => void;
   onShootStart: () => void;
-  onProjectileEnd: (outcome: "hit" | "miss" | "penalty", landing?: Vec3) => void;
+  onProjectileEnd: (
+    outcome: "hit" | "miss" | "penalty" | "enemy_loss",
+    landing?: Vec3
+  ) => void;
   getPowerupMultiplier: () => number;
   getNoBounceActive: () => boolean;
   /** Advances wind for this shot and returns horizontal acceleration (XZ) for the ball. */
@@ -330,6 +337,8 @@ export function SceneContent({
   /** Opens Guideline info (e.g. when the floating Guideline pill is tapped). */
   onGuidelinePillClick?: () => void;
   ballFollowStateRef: BallFollowStateRef;
+  /** +3 gold + confetti when the ball hits the goal messenger. */
+  onEnemyKillReward: () => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -342,6 +351,32 @@ export function SceneContent({
   const chargeHoldRepeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   /** Counts simultaneous press sources (pointer + Space) so hold repeat stops only when all release. */
   const fireHeldPressCountRef = useRef(0);
+
+  const [messengerAlive, setMessengerAlive] = useState(true);
+  const messengerAliveRef = useRef(true);
+  const enemyPosRef = useRef({ x: 0, y: TURF_TOP_Y + 0.2, z: 0 });
+
+  useEffect(() => {
+    setMessengerAlive(true);
+    messengerAliveRef.current = true;
+  }, [goalCenter[0], goalCenter[2]]);
+
+  const onEnemyKilledByBall = useCallback(() => {
+    if (!messengerAliveRef.current) return;
+    messengerAliveRef.current = false;
+    setMessengerAlive(false);
+    onEnemyKillReward();
+  }, [onEnemyKillReward]);
+
+  const onEnemyReachedVehicle = useCallback(() => {
+    const p = projectileRef.current;
+    if (p) {
+      projectileRef.current = null;
+      const mesh = meshRef.current;
+      if (mesh) mesh.visible = false;
+    }
+    onProjectileEnd("enemy_loss");
+  }, [onProjectileEnd]);
 
   useEffect(() => {
     return () => {
@@ -724,6 +759,14 @@ export function SceneContent({
         />
       </SpawnVisualGroup>
       <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />
+      <GoalMessengerCharacter
+        goalCenter={goalCenter}
+        spawnCenter={spawnCenter}
+        alive={messengerAlive}
+        paused={roundLocked}
+        onReachedVehicle={onEnemyReachedVehicle}
+        enemyPosRef={enemyPosRef}
+      />
       {yellowLaneMarkers.map((center, i) => {
         const ck = coinCellKey(center);
         if (collectedCoinKeysRef.current.has(ck)) return null;
@@ -743,6 +786,9 @@ export function SceneContent({
         coinCells={yellowLaneMarkers}
         collectedCoinKeysRef={collectedCoinKeysRef}
         onCoinCollected={onCoinCollected}
+        enemyAliveRef={messengerAliveRef}
+        enemyPosRef={enemyPosRef}
+        onEnemyKilledByBall={onEnemyKilledByBall}
       />
       {guidelinePoints.length >= 2 && (
         <ShotGuidelineArc points={guidelinePoints} />

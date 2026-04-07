@@ -69,7 +69,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   let nextIslands = state.islands;
   let nextMiniVillage = state.miniVillage;
 
-  if (action.outcome === "hit") {
+  if (action.outcome === "hit" || action.outcome === "enemy_loss") {
     next = snapBlockCenterToGrid([
       prev[0],
       prev[1],

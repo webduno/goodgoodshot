@@ -14,11 +14,14 @@ export function FinishGameModal({
   sessionShots,
   par,
   battleWon,
+  lossReason = "par",
 }: {
   open: boolean;
   sessionShots: number;
   par: number;
   battleWon: boolean;
+  /** When `battleWon` is false: over-par goal vs messenger reached the vehicle. */
+  lossReason?: "par" | "enemy";
 }) {
   useEffect(() => {
     if (!open || !battleWon) return;
@@ -56,7 +59,9 @@ export function FinishGameModal({
         >
           {battleWon
             ? "You reached the goal at or under par (strokes ≤ coins on this hole)."
-            : "You reached the goal, but over par (more strokes than coins)."}
+            : lossReason === "enemy"
+              ? "The messenger touched your vehicle — this battle is lost."
+              : "You reached the goal, but over par (more strokes than coins)."}
         </p>
         <p
           style={{

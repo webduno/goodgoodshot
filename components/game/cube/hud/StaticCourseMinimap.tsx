@@ -67,7 +67,16 @@ export function StaticCourseMinimap({
     const bw = bx1 - bx0;
     const bh = bz1 - bz0;
 
-    const rects = islands.map((is, i) => {
+    /** Painter’s order: farther along the lane (+Z toward goal) first, nearer last so overlaps read correctly. */
+    const ordered = islands
+      .map((is, i) => ({ is, i }))
+      .sort((a, b) => {
+        const dz = b.is.worldZ - a.is.worldZ;
+        if (Math.abs(dz) > 1e-6) return dz;
+        return b.is.worldX - a.is.worldX;
+      });
+
+    const rects = ordered.map(({ is, i }) => {
       const x0 = is.worldX - is.halfX;
       const x1 = is.worldX + is.halfX;
       const z0 = is.worldZ - is.halfZ;

@@ -92,7 +92,7 @@ export function TeleportOrbitRig({
   useLayoutEffect(() => {
     const controls = new OrbitControls(camera, gl.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
+    controls.dampingFactor = 0.22;
     controls.minDistance = 2.1;
     controls.maxDistance = 120;
     controls.enablePan = false;

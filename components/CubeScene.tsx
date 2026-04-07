@@ -1230,6 +1230,40 @@ export default function CubeScene() {
                 pointerEvents: "none",
               }}
             >
+              {guidelineAdjusting && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    pointerEvents: "auto",
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-label="Ready"
+                    onClick={() => setGuidelineReadyConfirmed(true)}
+                    disabled={
+                      shotInFlight ||
+                      showFinishModal ||
+                      showStartGameModal ||
+                      showSessionEndModal ||
+                      inCooldown
+                    }
+                    style={hudRoundFireButtonStyle(
+                      shotInFlight ||
+                        showFinishModal ||
+                        showStartGameModal ||
+                        showSessionEndModal ||
+                        inCooldown
+                        ? "disabled"
+                        : "guidelineReady"
+                    )}
+                  >
+                    Ready
+                  </button>
+                </div>
+              )}
               <div
                 style={{
                   display: "flex",
@@ -1254,6 +1288,7 @@ export default function CubeScene() {
                   />
                 )}
               </div>
+              {!guidelineAdjusting && (
               <div
                 style={{
                   display: "flex",
@@ -1262,31 +1297,6 @@ export default function CubeScene() {
                   pointerEvents: "auto",
                 }}
               >
-              {guidelineAdjusting ? (
-                <button
-                  type="button"
-                  aria-label="Ready"
-                  onClick={() => setGuidelineReadyConfirmed(true)}
-                  disabled={
-                    shotInFlight ||
-                    showFinishModal ||
-                    showStartGameModal ||
-                    showSessionEndModal ||
-                    inCooldown
-                  }
-                  style={hudRoundFireButtonStyle(
-                    shotInFlight ||
-                      showFinishModal ||
-                      showStartGameModal ||
-                      showSessionEndModal ||
-                      inCooldown
-                      ? "disabled"
-                      : "guidelineReady"
-                  )}
-                >
-                  Ready
-                </button>
-              ) : (
                 <button
                   type="button"
                   aria-label="Hold to shoot"
@@ -1369,8 +1379,8 @@ export default function CubeScene() {
                     </span>
                   )}
                 </button>
-              )}
               </div>
+              )}
             </div>
           )}
         </div>

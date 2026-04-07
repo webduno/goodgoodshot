@@ -1,5 +1,6 @@
 "use client";
 
+import { Text } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { MutableRefObject } from "react";
@@ -164,6 +165,18 @@ export function GoalMessengerCharacter({
         <sphereGeometry args={[ARM_R, 10, 8]} />
         <meshStandardMaterial {...MESSENGER_MATERIAL_PROPS} />
       </mesh>
+      <Text
+        position={[0, headY + HEAD_R + 0.14, 0]}
+        fontSize={0.24}
+        fontWeight={800}
+        color="#ff1a1a"
+        anchorX="center"
+        anchorY="bottom"
+        outlineWidth={0.035}
+        outlineColor="#1a0505"
+      >
+        ENEMY
+      </Text>
     </group>
   );
 }

@@ -10,7 +10,7 @@ import type { Vec3 } from "@/lib/game/types";
  */
 export function ShotGuidelineArc({
   points,
-  color = "#14b8a6",
+  color = "#e53935",
 }: {
   points: readonly Vec3[];
   color?: string;

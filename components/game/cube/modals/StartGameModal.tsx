@@ -874,7 +874,7 @@ export function StartGameModal({
                     One tap spends one charge and removes wind on the ball for
                     that shot (wind still updates for the next shot).
                   </PowerupLegendRow>
-                  <PowerupLegendRow slot="guideline" title="Guideline (teal)">
+                  <PowerupLegendRow slot="guideline" title="Guideline (red)">
                     One tap spends one charge: a dashed line follows your aim at
                     full strength bar (then your actual power while charging) to
                     the first landing or goal — no wind in the preview; strength

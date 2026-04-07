@@ -1,29 +1,22 @@
 "use client";
 
-import { useState } from "react";
-
 import { hudFont, hudMiniPanel } from "@/components/gameHudStyles";
-import type { BiomeId, IslandRect } from "@/lib/game/types";
+import type { IslandRect } from "@/lib/game/types";
 
-import { StaticCourseMinimap } from "./StaticCourseMinimap";
 import { WIND_HUD_CIRCLE_PX } from "./WindHud";
 
 /**
- * Circular map control (same size as `WindHud`) that opens the course minimap in a panel to the left.
+ * Circular map control (same size as `WindHud`) — opens the course map modal in `CubeScene`.
  */
 export function MinimapFlyoutHud({
   islands,
-  biome,
-  goalWorldX,
-  goalWorldZ,
+  mapModalOpen,
+  onOpenMap,
 }: {
   islands: readonly IslandRect[];
-  biome: BiomeId;
-  goalWorldX: number;
-  goalWorldZ: number;
+  mapModalOpen: boolean;
+  onOpenMap: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-
   if (islands.length === 0) return null;
 
   return (
@@ -35,30 +28,12 @@ export function MinimapFlyoutHud({
         justifyContent: "flex-end",
       }}
     >
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            right: "100%",
-            top: 0,
-            marginRight: 8,
-            zIndex: 1,
-            filter: "drop-shadow(0 4px 14px rgba(0, 55, 95, 0.2))",
-          }}
-        >
-          <StaticCourseMinimap
-            islands={islands}
-            biome={biome}
-            goalWorldX={goalWorldX}
-            goalWorldZ={goalWorldZ}
-          />
-        </div>
-      )}
       <button
         type="button"
-        aria-expanded={open}
-        aria-label={open ? "Close course map" : "Open course map"}
-        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="dialog"
+        aria-expanded={mapModalOpen}
+        aria-label="Open course map"
+        onClick={onOpenMap}
         style={{
           ...hudMiniPanel,
           ...hudFont,

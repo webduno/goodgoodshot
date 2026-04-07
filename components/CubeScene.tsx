@@ -2,6 +2,7 @@
 
 import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
+import { CourseMapModal } from "@/components/game/cube/modals/CourseMapModal";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
 import { GuidelineInfoModal } from "@/components/game/cube/modals/GuidelineInfoModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
@@ -216,6 +217,7 @@ export default function CubeScene() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSessionStatsModal, setShowSessionStatsModal] = useState(false);
   const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
+  const [showCourseMapModal, setShowCourseMapModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -224,6 +226,13 @@ export default function CubeScene() {
   useEffect(() => {
     setAimControlMode(loadAimControlMode());
   }, []);
+
+  useEffect(() => {
+    if (showFinishModal || showStartGameModal || showSessionEndModal) {
+      setShowCourseMapModal(false);
+    }
+  }, [showFinishModal, showStartGameModal, showSessionEndModal]);
+
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
   const [hudToastToken, setHudToastToken] = useState(0);
   const [hudToastMessage, setHudToastMessage] = useState("");
@@ -937,6 +946,8 @@ export default function CubeScene() {
               zIndex: 42,
               display: "flex",
               gap: 8,
+              /** Own compositing layer so mouse hit-testing stays above the WebGL canvas (desktop). */
+              transform: "translateZ(0)",
             }}
           >
             <button
@@ -973,14 +984,14 @@ export default function CubeScene() {
               alignItems: "flex-end",
               gap: 8,
               pointerEvents: "none",
+              transform: "translateZ(0)",
             }}
           >
             <div style={{ pointerEvents: "auto" }}>
               <MinimapFlyoutHud
                 islands={islands}
-                biome={game.biome}
-                goalWorldX={game.goalWorldX}
-                goalWorldZ={game.goalWorldZ}
+                mapModalOpen={showCourseMapModal}
+                onOpenMap={() => setShowCourseMapModal(true)}
               />
             </div>
             <WindHud windHud={windHud} />
@@ -1495,6 +1506,14 @@ export default function CubeScene() {
           clearPlaySession();
           window.location.reload();
         }}
+      />
+      <CourseMapModal
+        open={showCourseMapModal}
+        onClose={() => setShowCourseMapModal(false)}
+        islands={islands}
+        biome={game.biome}
+        goalWorldX={game.goalWorldX}
+        goalWorldZ={game.goalWorldZ}
       />
     </div>
   );

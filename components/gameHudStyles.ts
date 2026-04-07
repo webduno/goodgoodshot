@@ -430,7 +430,7 @@ export const modalCard: CSSProperties = {
   textAlign: "center",
 };
 
-/** Wider, scrollable, left-aligned (help). */
+/** Wider, scrollable, left-aligned (help / menu) — chunky “game panel” depth. */
 export const helpModalCard: CSSProperties = {
   ...hudFont,
   ...panelBlur,
@@ -438,10 +438,20 @@ export const helpModalCard: CSSProperties = {
   width: "min(94vw, 380px)",
   maxHeight: "min(78vh, 480px)",
   overflow: "auto",
-  padding: "14px 16px",
-  borderRadius: 18,
-  background: "rgba(230, 248, 255, 0.92)",
-  border: "1px solid rgba(255,255,255,0.85)",
-  boxShadow: `${edgeLight}, 0 16px 40px rgba(0, 82, 130, 0.22)`,
+  padding: "16px 16px 14px",
+  borderRadius: 22,
+  backgroundColor: "rgba(210, 238, 255, 0.94)",
+  backgroundImage: [
+    "radial-gradient(ellipse 110% 70% at 50% -8%, rgba(255,255,255,0.92) 0%, transparent 58%)",
+    "linear-gradient(168deg, rgba(255,255,255,0.98) 0%, rgba(200, 236, 255, 0.72) 42%, rgba(0, 150, 215, 0.22) 100%)",
+  ].join(", "),
+  border: "2px solid rgba(255,255,255,0.92)",
+  boxShadow: [
+    "inset 0 2px 0 rgba(255,255,255,0.72)",
+    "inset 0 -3px 0 rgba(0, 55, 95, 0.1)",
+    "0 0 0 1px rgba(0, 55, 95, 0.32)",
+    "0 8px 0 rgba(0, 45, 85, 0.14)",
+    "0 22px 48px rgba(0, 35, 75, 0.38)",
+  ].join(", "),
   textAlign: "left",
 };

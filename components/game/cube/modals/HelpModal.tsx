@@ -82,33 +82,76 @@ export function HelpModal({
       style={modalBackdrop}
       onClick={onClose}
     >
+      <style>{`
+        .help-menu details > summary {
+          list-style: none;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 0 0 8px;
+          padding: 10px 12px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          color: #002a42;
+          text-shadow: 0 1px 0 rgba(255,255,255,0.55);
+          user-select: none;
+          border: 2px solid rgba(0, 55, 95, 0.28);
+          background-image: linear-gradient(
+            180deg,
+            rgba(255,255,255,0.98) 0%,
+            rgba(185, 228, 255, 0.65) 55%,
+            rgba(120, 200, 245, 0.35) 100%
+          );
+          box-shadow:
+            inset 0 2px 0 rgba(255,255,255,0.75),
+            inset 0 -2px 0 rgba(0, 60, 100, 0.12),
+            0 3px 0 rgba(0, 45, 80, 0.16),
+            0 6px 14px rgba(0, 55, 100, 0.14);
+        }
+        .help-menu details > summary::-webkit-details-marker {
+          display: none;
+        }
+        .help-menu details > summary::before {
+          content: "▶";
+          flex-shrink: 0;
+          font-size: 10px;
+          line-height: 1;
+          color: #0072bc;
+          text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+          transition: transform 0.15s ease;
+        }
+        .help-menu details[open] > summary::before {
+          transform: rotate(90deg);
+        }
+        .help-menu details + details {
+          margin-top: 10px;
+        }
+      `}</style>
       <div
+        className="help-menu"
         style={helpModalCard}
         onClick={(e) => e.stopPropagation()}
       >
         <h2
           id="menu-title"
           style={{
-            margin: "0 0 10px",
-            fontSize: 16,
-            fontWeight: 700,
-            color: hudColors.value,
+            margin: "0 0 14px",
+            fontSize: 18,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: "#001a2e",
+            textShadow:
+              "0 1px 0 rgba(255,255,255,0.85), 0 3px 0 rgba(0, 80, 130, 0.12)",
           }}
         >
           Menu
         </h2>
         <details>
-          <summary
-            style={{
-              color: hudColors.value,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginBottom: 8,
-            }}
-          >
-            How to play
-          </summary>
+          <summary>How to play</summary>
           <ul
             style={{
               margin: 0,
@@ -209,22 +252,8 @@ export function HelpModal({
             </li>
           </ul>
         </details>
-        <details
-          style={{
-            marginTop: 14,
-          }}
-        >
-          <summary
-            style={{
-              color: hudColors.value,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginBottom: 8,
-            }}
-          >
-            Vehicles
-          </summary>
+        <details>
+          <summary>Vehicles</summary>
           <div
             style={{
               display: "flex",
@@ -278,22 +307,8 @@ export function HelpModal({
             that vehicle&apos;s shot stats.
           </p>
         </details>
-        <details
-          style={{
-            marginTop: 14,
-          }}
-        >
-          <summary
-            style={{
-              color: hudColors.value,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginBottom: 8,
-            }}
-          >
-            ▶ Game Config
-          </summary>
+        <details>
+          <summary>Game Config</summary>
           <div
             style={{
               display: "flex",
@@ -465,7 +480,16 @@ export function HelpModal({
           onClick={onClose}
           style={{
             ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
-            marginTop: 10,
+            marginTop: 12,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            padding: "8px 16px",
+            boxShadow: [
+              "inset 0 2px 0 rgba(255,255,255,0.55)",
+              "0 4px 0 rgba(0, 55, 110, 0.22)",
+              "0 10px 22px rgba(0, 60, 120, 0.28)",
+            ].join(", "),
           }}
         >
           Close

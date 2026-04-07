@@ -14,7 +14,7 @@ import { AimPadHud } from "@/components/game/cube/hud/AimPadHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
 import { GuidelinePreviewPowerSlider } from "@/components/game/cube/hud/GuidelinePreviewPowerSlider";
 import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
-import { StaticCourseMinimap } from "@/components/game/cube/hud/StaticCourseMinimap";
+import { MinimapFlyoutHud } from "@/components/game/cube/hud/MinimapFlyoutHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { WindHud } from "@/components/game/cube/hud/WindHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
@@ -79,7 +79,6 @@ import {
   loadActivePlaySession,
   loadPlaySession,
   savePlaySession,
-  formatSessionScoreHud,
   type PlaySession,
   type SessionBattleCount,
 } from "@/lib/game/playSession";
@@ -925,7 +924,6 @@ export default function CubeScene() {
           noBounceActive={noBounceActive}
           noWindActive={noWindActive}
           vehicle={playerVehicle}
-          sessionScoreDisplay={formatSessionScoreHud(playSession, sessionShots)}
           onScoreClick={() => setShowSessionStatsModal(true)}
         />
       )}
@@ -977,12 +975,14 @@ export default function CubeScene() {
               pointerEvents: "none",
             }}
           >
-            <StaticCourseMinimap
-              islands={islands}
-              biome={game.biome}
-              goalWorldX={game.goalWorldX}
-              goalWorldZ={game.goalWorldZ}
-            />
+            <div style={{ pointerEvents: "auto" }}>
+              <MinimapFlyoutHud
+                islands={islands}
+                biome={game.biome}
+                goalWorldX={game.goalWorldX}
+                goalWorldZ={game.goalWorldZ}
+              />
+            </div>
             <WindHud windHud={windHud} />
           </div>
         </>

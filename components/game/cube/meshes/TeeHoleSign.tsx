@@ -107,6 +107,26 @@ export function TeeHoleSign({ biome, goalLength, coinCount }: TeeHoleSignProps) 
         Goal length: {goalBlocks} blocks
       </Text>
       <Text
+        position={[0, -0.2, SIGN_DEPTH / 2 + 0.015]}
+        fontSize={0.105}
+        color="#2a2418"
+        anchorX="center"
+        anchorY="middle"
+      >
+        Coins available: {coinCount}
+      </Text>
+      <Text
+        position={[0, 0.24, -(SIGN_DEPTH / 2 + 0.015)]}
+        rotation={[0, Math.PI, 0]}
+        fontSize={0.175}
+        fontWeight={700}
+        color="#1a1610"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {biomeTitle}
+      </Text>
+      <Text
         position={[0, 0.02, -(SIGN_DEPTH / 2 + 0.015)]}
         rotation={[0, Math.PI, 0]}
         fontSize={0.125}
@@ -117,7 +137,8 @@ export function TeeHoleSign({ biome, goalLength, coinCount }: TeeHoleSignProps) 
         Goal length: {goalBlocks} blocks
       </Text>
       <Text
-        position={[0, -0.2, SIGN_DEPTH / 2 + 0.015]}
+        position={[0, -0.2, -(SIGN_DEPTH / 2 + 0.015)]}
+        rotation={[0, Math.PI, 0]}
         fontSize={0.105}
         color="#2a2418"
         anchorX="center"

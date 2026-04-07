@@ -24,7 +24,6 @@ export function StatsHud({
   noBounceActive,
   noWindActive,
   vehicle,
-  sessionScoreDisplay,
   onScoreClick,
 }: {
   /** Max strokes (inclusive) to count as a battle win when you hole out — same as lane bonus coin count. */
@@ -40,8 +39,6 @@ export function StatsHud({
   noBounceActive: boolean;
   noWindActive: boolean;
   vehicle: PlayerVehicleConfig;
-  /** e.g. `2/9(45)` — wins / games in session (strokes, incl. current hole). */
-  sessionScoreDisplay: string;
   onScoreClick: () => void;
 }) {
   const [vehicleOpen, setVehicleOpen] = useState(false);
@@ -207,7 +204,11 @@ export function StatsHud({
         onClick={onScoreClick}
         title="View war details"
         aria-haspopup="dialog"
-        aria-label={`Score ${sessionScoreDisplay}. Open war details.`}
+        aria-label={
+          holePar > 0
+            ? `Shot ${sessionShots} of ${holePar} (strokes at or below par win the battle). Open war details.`
+            : `Shot ${sessionShots}. Open war details.`
+        }
         style={{
           pointerEvents: "auto",
           margin: 0,
@@ -217,7 +218,8 @@ export function StatsHud({
           lineHeight: 1.4,
           cursor: "pointer",
           textAlign: "left",
-          width: "100%",
+          width: "fit-content",
+          maxWidth: "100%",
           boxSizing: "border-box",
         }}
       >
@@ -231,64 +233,25 @@ export function StatsHud({
             textTransform: "uppercase",
           }}
         >
-          Score
+          Shot
         </div>
         <div
           style={{
             color: hudColors.value,
             fontWeight: 700,
-            fontSize: 12,
-            lineHeight: 1.2,
+            fontSize: 14,
             fontVariantNumeric: "tabular-nums",
-            whiteSpace: "nowrap",
           }}
         >
-          {sessionScoreDisplay}
+          {holePar > 0 ? `${sessionShots}/${holePar}` : sessionShots}
         </div>
+
+        {shotInFlight && (
+          <div style={{ ...metricsDivider, color: hudColors.value, fontSize: 10 }}>
+            Shot in flight…
+          </div>
+        )}
       </button>
-
-      <div
-        style={{
-          padding: "6px 8px",
-          ...hudMiniPanel,
-          fontSize: 10,
-          lineHeight: 1.4,
-        }}
-      >
-      <div
-        style={{
-          color: hudColors.muted,
-          marginBottom: 2,
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-        }}
-      >
-        Shot
-      </div>
-      <div
-        aria-label={
-          holePar > 0
-            ? `Shot ${sessionShots} of ${holePar} (strokes at or below par win the battle)`
-            : `Shot ${sessionShots}`
-        }
-        style={{
-          color: hudColors.value,
-          fontWeight: 700,
-          fontSize: 14,
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
-        {holePar > 0 ? `${sessionShots}/${holePar}` : sessionShots}
-      </div>
-
-      {shotInFlight && (
-        <div style={{ ...metricsDivider, color: hudColors.value, fontSize: 10 }}>
-          Shot in flight…
-        </div>
-      )}
-      </div>
 
       {(charging && !shotInFlight && chargeHud) ||
       (inCooldown && !shotInFlight && !charging) ? (

@@ -3,7 +3,8 @@
 import { hudColors, hudFont, hudMiniPanel } from "@/components/gameHudStyles";
 import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 
-const CIRCLE = 56;
+/** Shared with map toggle so the wind gauge and map button match. */
+export const WIND_HUD_CIRCLE_PX = 56;
 
 export function WindHud({ windHud }: { windHud: { x: number; z: number } }) {
   const windMag = Math.hypot(windHud.x, windHud.z);
@@ -22,8 +23,8 @@ export function WindHud({ windHud }: { windHud: { x: number; z: number } }) {
       style={{
         ...hudMiniPanel,
         ...hudFont,
-        width: CIRCLE,
-        height: CIRCLE,
+        width: WIND_HUD_CIRCLE_PX,
+        height: WIND_HUD_CIRCLE_PX,
         borderRadius: "50%",
         padding: 4,
         boxSizing: "border-box",

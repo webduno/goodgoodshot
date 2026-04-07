@@ -14,14 +14,14 @@ import {
 } from "react";
 
 /** Outer widget; yaw is read from pointer angle around center (world yaw, not vehicle side). */
-const PAD_SIZE_PX = 152;
-const DOT_SIZE_PX = 14;
+const PAD_SIZE_PX = 118;
+const DOT_SIZE_PX = 11;
 const TRACK_INSET_PX = 4;
 const TRACK_RADIUS_PX = PAD_SIZE_PX / 2 - DOT_SIZE_PX / 2 - TRACK_INSET_PX;
 /** Ignore tiny jitter at the hub (no yaw change). */
-const YAW_DEAD_ZONE_PX = 10;
+const YAW_DEAD_ZONE_PX = 8;
 /** Inner reference ring (top-down compass, +Z = 12 o’clock). */
-const SUB_CIRCLE_RADIUS_PX = 34;
+const SUB_CIRCLE_RADIUS_PX = 26;
 const PAD_CENTER_PX = PAD_SIZE_PX / 2;
 
 const SIDE_BTN_PX = 30;
@@ -132,7 +132,7 @@ export function AimPadHud({
         minHeight: PAD_SIZE_PX,
       }}
     >
-        <button
+        {/* <button
           type="button"
           aria-label="Turn aim 90 degrees left (same as ⇐)"
           title="Turn 90° left"
@@ -171,7 +171,7 @@ export function AimPadHud({
           }}
         >
           ⇒
-        </button>
+        </button> */}
         <div
           ref={containerRef}
           role="application"

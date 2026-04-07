@@ -163,7 +163,7 @@ export function AimPadHud({
           position: "absolute",
           left: 0,
           top: "50%",
-          transform: "translate(-50%, -50%)",
+          transform: "translate(calc(-50% - 6px), -50%)",
         }}
       >
         ⇐
@@ -183,7 +183,7 @@ export function AimPadHud({
           position: "absolute",
           right: 0,
           top: "50%",
-          transform: "translate(50%, -50%)",
+          transform: "translate(calc(50% + 6px), -50%)",
         }}
       >
         ⇒

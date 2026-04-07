@@ -35,6 +35,13 @@ function implementedAccent(
   return undefined;
 }
 
+/** Two lines for "No bounce" / "No wind" so labels fit the narrow flyout. */
+function powerupNameLines(name: string): [string, string | undefined] {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 1) return [name, undefined];
+  return [parts[0]!, parts.slice(1).join(" ")];
+}
+
 export function PowerupSlotRow({
   strengthCharges,
   noBounceCharges,
@@ -58,13 +65,13 @@ export function PowerupSlotRow({
 }) {
   const buyChipStyle = {
     width: "100%",
-    padding: "3px 2px",
-    borderRadius: 8,
+    padding: "2px 3px",
+    borderRadius: 6,
     border: "1px solid rgba(255,255,255,0.85)",
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: 700,
     lineHeight: 1,
-    letterSpacing: "0.02em",
+    letterSpacing: "0.04em",
     textTransform: "uppercase" as const,
     cursor: canAffordBuy ? ("pointer" as const) : ("not-allowed" as const),
     opacity: canAffordBuy ? 1 : 0.48,
@@ -78,6 +85,7 @@ export function PowerupSlotRow({
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         alignItems: "stretch",
         gap: 4,
         width: "100%",
@@ -111,15 +119,16 @@ export function PowerupSlotRow({
             : slot.id === "noBounce"
               ? `${slot.name}: one tap · ${noBounceCharges} charge${noBounceCharges === 1 ? "" : "s"}`
               : `${slot.name}: one tap · ${noWindCharges} charge${noWindCharges === 1 ? "" : "s"}`;
+        const [nameLine1, nameLine2] = powerupNameLines(slot.name);
         return (
           <div
             key={slot.id}
             style={{
-              flex: "1 1 0",
+              width: "100%",
               minWidth: 0,
               display: "flex",
               flexDirection: "column",
-              gap: 4,
+              gap: 2,
             }}
           >
             <button
@@ -155,15 +164,40 @@ export function PowerupSlotRow({
                   variant: slotReady ? "ready" : "depleted",
                   accentSlot: implementedAccent(slot.id),
                 }),
-                flex: "1 1 auto",
-                minHeight: 40,
+                flex: "0 0 auto",
+                alignSelf: "stretch",
+                width: "100%",
+                minHeight: 0,
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                padding: "4px 3px",
               }}
             >
-              <PowerupHudIcon slotId={slot.id} color="currentColor" />
+              <PowerupHudIcon slotId={slot.id} color="currentColor" size={12} />
+              <span
+                style={{
+                  textAlign: "center",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  lineHeight: 1.1,
+                  maxWidth: "100%",
+                }}
+              >
+                {nameLine1}
+                {nameLine2 != null ? (
+                  <>
+                    <br />
+                    {nameLine2}
+                  </>
+                ) : null}
+              </span>
               <span
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 11,
+                  fontSize: 10,
+                  fontWeight: 700,
                   lineHeight: 1,
                 }}
               >

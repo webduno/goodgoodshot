@@ -174,7 +174,14 @@ export function goldChipButtonStyle(): CSSProperties {
   };
 }
 
-const HUD_ROUND_ACTION_PX = 68;
+/** Round bottom-dock actions (Power-ups, Fire). */
+export const HUD_ROUND_ACTION_PX = 68;
+
+/**
+ * Power-up flyout panel: must stay narrower than `HUD_ROUND_ACTION_PX` so it
+ * sits visually inside the toggle’s footprint.
+ */
+export const HUD_POWERUP_MENU_MAX_WIDTH_PX = HUD_ROUND_ACTION_PX - 6;
 
 /** Circular blue glass — bottom-dock Power-ups. */
 export function hudRoundPowerupButtonStyle(disabled: boolean): CSSProperties {

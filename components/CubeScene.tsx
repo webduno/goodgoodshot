@@ -29,8 +29,10 @@ import {
   goldChipButtonStyle,
   goldIconButtonStyle,
   hudBottomPanel,
+  hudColors,
   hudFont,
   hudMiniPanel,
+  HUD_POWERUP_MENU_MAX_WIDTH_PX,
   hudRoundFireButtonStyle,
   hudRoundPowerupButtonStyle,
 } from "@/components/gameHudStyles";
@@ -854,7 +856,7 @@ export default function CubeScene() {
             flexDirection: "row",
             alignItems: "flex-end",
             justifyContent: "center",
-            gap: 4,
+            gap: 12,
             padding: "0 6px 8px",
             boxSizing: "border-box",
             zIndex: 41,
@@ -913,6 +915,36 @@ export default function CubeScene() {
                   </span>
                 )}
             </button>
+            {stats.totalGoldCoins >= 1 &&
+              collectedCoinKeysRef.current.size > 0 &&
+              !showPowerupMenu &&
+              !powerupMenuLocked && (
+                <div
+                  aria-hidden
+                  style={{
+                    ...hudMiniPanel,
+                    ...hudFont,
+                    position: "absolute",
+                    left: "50%",
+                    bottom: "100%",
+                    transform: "translateX(calc(-50% - 22px))",
+                    marginBottom: 6,
+                    zIndex: 51,
+                    padding: "4px 9px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    color: hudColors.value,
+                    whiteSpace: "nowrap",
+                    pointerEvents: "none",
+                    textAlign: "center",
+                    boxShadow:
+                      "inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 10px rgba(0, 82, 130, 0.22)",
+                  }}
+                >
+                  Spend coins here
+                </div>
+              )}
             {powerupMenuOpen && (
               <div
                 id="powerup-precharge-panel"
@@ -927,9 +959,10 @@ export default function CubeScene() {
                   transform: "translateX(-50%)",
                   marginBottom: 8,
                   zIndex: 50,
-                  padding: "8px 10px",
-                  minWidth: "min(92vw, 260px)",
-                  maxWidth: "min(92vw, 280px)",
+                  padding: "5px 4px",
+                  width: `min(92vw, ${HUD_POWERUP_MENU_MAX_WIDTH_PX}px)`,
+                  maxWidth: `min(92vw, ${HUD_POWERUP_MENU_MAX_WIDTH_PX}px)`,
+                  boxSizing: "border-box",
                   pointerEvents: "auto",
                   boxShadow:
                     "inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 10px rgba(0, 82, 130, 0.22), 0 -8px 28px rgba(0, 55, 95, 0.18)",

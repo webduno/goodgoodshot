@@ -151,6 +151,14 @@ export function launchStrengthFromClicks(
   return v.strengthPerBaseClick * (1 + v.extraClickStrengthFraction * (n - 1));
 }
 
+/**
+ * Click count where the vertical strength bar reads as full (no overflow segment).
+ * Same formula as `strengthBarRefBounds` in `FirePowerVerticalHud` / `ShotHud`.
+ */
+export function maxClicksForStrengthBarRef(v: PlayerVehicleConfig): number {
+  return Math.max(2, Math.round(v.secondsBeforeShotTrigger * 6) + 1);
+}
+
 export function vehicleChargeMs(v: PlayerVehicleConfig): number {
   return v.secondsBeforeShotTrigger * 1000;
 }

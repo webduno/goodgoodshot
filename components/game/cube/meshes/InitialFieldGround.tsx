@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  FIELD_GROUND_DESERT_SAND,
-  FIELD_GROUND_MUTED_GREEN,
-  TURF_TOP_Y,
-} from "@/lib/game/constants";
+import { islandColorsForBiome } from "@/lib/game/biomes";
+import { FIELD_ISLAND_FOUNDATION_SNOW_MESH, TURF_TOP_Y } from "@/lib/game/constants";
 import type { IslandRect } from "@/lib/game/islands";
 import type { BiomeId } from "@/lib/game/types";
-
-/** Muted stone under the turf slab — visual only (physics uses island rects). */
-const ISLAND_FOUNDATION_GREY = "#6b6f76";
 /**
  * Grey top extends slightly into the grass mesh so there is no visible air gap
  * (same center XZ as the island).
@@ -26,8 +20,10 @@ export function InitialFieldGround({
   islands: readonly IslandRect[];
   biome: BiomeId;
 }) {
-  const turfColor =
-    biome === "desert" ? FIELD_GROUND_DESERT_SAND : FIELD_GROUND_MUTED_GREEN;
+  const { turf: turfColor, foundation: foundationColor } =
+    islandColorsForBiome(biome);
+  const foundationMeshColor =
+    biome === "snow" ? FIELD_ISLAND_FOUNDATION_SNOW_MESH : foundationColor;
 
   return (
     <group>
@@ -78,9 +74,9 @@ export function InitialFieldGround({
                 ]}
               />
               <meshStandardMaterial
-                color={ISLAND_FOUNDATION_GREY}
-                roughness={0.94}
-                metalness={0.06}
+                color={foundationMeshColor}
+                roughness={biome === "snow" ? 0.88 : 0.94}
+                metalness={biome === "snow" ? 0.04 : 0.06}
               />
             </mesh>
           </group>

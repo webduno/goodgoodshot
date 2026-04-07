@@ -1,3 +1,4 @@
+import { BIOME_IDS } from "@/lib/game/biomes";
 import { createInitialGameState, withDefaultBiome } from "@/lib/game/gameState";
 import type { BiomeId, GameState } from "@/lib/game/types";
 import type { PlaySession, SessionBattleCount } from "@/lib/game/playSession";
@@ -44,7 +45,7 @@ function normalizePayload(parsed: unknown): SessionBattleMapsPayload | null {
 }
 
 function pickRandomBiome(): BiomeId {
-  return Math.random() < 0.5 ? "plain" : "desert";
+  return BIOME_IDS[Math.floor(Math.random() * BIOME_IDS.length)]!;
 }
 
 /**

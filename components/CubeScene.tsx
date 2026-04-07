@@ -12,6 +12,7 @@ import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { AimPadHud } from "@/components/game/cube/hud/AimPadHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
 import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
+import { StaticCourseMinimap } from "@/components/game/cube/hud/StaticCourseMinimap";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
 import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
@@ -210,14 +211,14 @@ export default function CubeScene() {
   const [hudToastToken, setHudToastToken] = useState(0);
   const [hudToastMessage, setHudToastMessage] = useState("");
   const [hudToastAccent, setHudToastAccent] = useState<
-    "strength" | "noBounce" | "nowind" | undefined
+    "strength" | "noBounce" | "nowind" | "guideline" | undefined
   >(undefined);
   const fireHeldRef = useRef<((held: boolean) => void) | null>(null);
 
   const pushHudToast = useCallback(
     (
       message: string,
-      accent?: "strength" | "noBounce" | "nowind"
+      accent?: "strength" | "noBounce" | "nowind" | "guideline"
     ) => {
       setHudToastMessage(message);
       setHudToastAccent(accent);
@@ -307,16 +308,22 @@ export default function CubeScene() {
   const strengthChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const noBounceChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const noWindChargesRef = useRef(INITIAL_POWERUP_CHARGES);
+  const guidelineChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
   const [noWindActive, setNoWindActive] = useState(false);
+  const [guidelineActiveNextShot, setGuidelineActiveNextShot] = useState(false);
   const [windHud, setWindHud] = useState({ x: 0, z: 0 });
   const [strengthCharges, setStrengthCharges] = useState(INITIAL_POWERUP_CHARGES);
   const [noBounceCharges, setNoBounceCharges] = useState(INITIAL_POWERUP_CHARGES);
   const [noWindCharges, setNoWindCharges] = useState(INITIAL_POWERUP_CHARGES);
+  const [guidelineCharges, setGuidelineCharges] = useState(
+    INITIAL_POWERUP_CHARGES
+  );
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
   noWindChargesRef.current = noWindCharges;
+  guidelineChargesRef.current = guidelineCharges;
   const inCooldown = cooldownUntil !== null;
 
   useEffect(() => {
@@ -359,6 +366,10 @@ export default function CubeScene() {
     setNoBounceActive(false);
     noWindRef.current = false;
     setNoWindActive(false);
+  }, []);
+
+  const onGuidelineConsumedForShot = useCallback(() => {
+    setGuidelineActiveNextShot((prev) => (prev ? false : prev));
   }, []);
 
   const prepareShotWind = useCallback(() => {
@@ -406,9 +417,19 @@ export default function CubeScene() {
         setNoWindCharges((c) => (c <= 0 ? c : c - 1));
         pushHudToast(`"No wind" used`, "nowind");
         burstPowerupUseConfetti("nowind");
+        return;
+      }
+
+      if (slotId === "guideline") {
+        if (guidelineActiveNextShot) return;
+        if (guidelineChargesRef.current <= 0) return;
+        setGuidelineCharges((c) => (c <= 0 ? c : c - 1));
+        setGuidelineActiveNextShot(true);
+        pushHudToast(`"Guideline" used`, "guideline");
+        burstPowerupUseConfetti("guideline");
       }
     },
-    [pushHudToast, shotInFlight, showFinishModal, showSessionEndModal]
+    [guidelineActiveNextShot, pushHudToast, shotInFlight, showFinishModal]
   );
 
   const buyPowerupCharge = useCallback(
@@ -416,7 +437,8 @@ export default function CubeScene() {
       if (
         slotId !== "strength" &&
         slotId !== "noBounce" &&
-        slotId !== "nowind"
+        slotId !== "nowind" &&
+        slotId !== "guideline"
       ) {
         return;
       }
@@ -430,9 +452,12 @@ export default function CubeScene() {
       } else if (slotId === "noBounce") {
         setNoBounceCharges((c) => c + 1);
         burstPowerupBuyConfetti("noBounce");
-      } else {
+      } else if (slotId === "nowind") {
         setNoWindCharges((c) => c + 1);
         burstPowerupBuyConfetti("nowind");
+      } else {
+        setGuidelineCharges((c) => c + 1);
+        burstPowerupBuyConfetti("guideline");
       }
     },
     [spendGoldCoin, pushHudToast]
@@ -619,7 +644,9 @@ export default function CubeScene() {
             ? ("noBounce" as const)
             : k === "3" || e.code === "Numpad3"
               ? ("nowind" as const)
-              : null;
+              : k === "4" || e.code === "Numpad4"
+                ? ("guideline" as const)
+                : null;
       if (powerupFromKey !== null) {
         e.preventDefault();
         activatePowerup(powerupFromKey);
@@ -776,6 +803,9 @@ export default function CubeScene() {
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
+            guidelineActiveNextShot={guidelineActiveNextShot}
+            onGuidelineConsumedForShot={onGuidelineConsumedForShot}
+            chargeHudForGuideline={chargeHud}
             biome={game.biome}
             onTerrainCoordsClick={(coords) =>
             {
@@ -820,39 +850,42 @@ export default function CubeScene() {
         />
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            zIndex: 42,
-            display: "flex",
-            gap: 8,
-          }}
-        >
-          <button
-            type="button"
-            aria-label="Open menu"
-            onClick={() => {
-              setShowProfileModal(false);
-              setShowHelpModal(true);
+        <>
+          <div
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              zIndex: 42,
+              display: "flex",
+              gap: 8,
             }}
-            style={goldChipButtonStyle()}
           >
-            Menu
-          </button>
-          <button
-            type="button"
-            aria-label="Open profile"
-            onClick={() => {
-              setShowHelpModal(false);
-              setShowProfileModal(true);
-            }}
-            style={goldChipButtonStyle()}
-          >
-            Profile
-          </button>
-        </div>
+            <button
+              type="button"
+              aria-label="Open menu"
+              onClick={() => {
+                setShowProfileModal(false);
+                setShowHelpModal(true);
+              }}
+              style={goldChipButtonStyle()}
+            >
+              Menu
+            </button>
+            <button
+              type="button"
+              aria-label="Open profile"
+              onClick={() => {
+                setShowHelpModal(false);
+                setShowProfileModal(true);
+              }}
+              style={goldChipButtonStyle()}
+            >
+              Profile
+            </button>
+          </div>
+          <StaticCourseMinimap islands={islands} biome={game.biome} />
+        </>
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
         <>
@@ -982,11 +1015,15 @@ export default function CubeScene() {
                   strengthCharges={strengthCharges}
                   noBounceCharges={noBounceCharges}
                   noWindCharges={noWindCharges}
+                  guidelineCharges={guidelineCharges}
                   canUseStrength={strengthCharges > 0}
                   canUseNoBounce={
                     noBounceCharges > 0 && !noBounceActive
                   }
                   canUseNoWind={noWindCharges > 0 && !noWindActive}
+                  canUseGuideline={
+                    guidelineCharges > 0 && !guidelineActiveNextShot
+                  }
                   canAffordBuy={stats.totalGoldCoins >= 1}
                   onPowerup={activatePowerup}
                   onBuyPowerupCharge={buyPowerupCharge}
@@ -1279,6 +1316,11 @@ export default function CubeScene() {
         onClose={() => setShowSessionStatsModal(false)}
         session={playSession}
         sessionShots={sessionShots}
+        onEndWar={() => {
+          clearSessionBattleMaps();
+          clearPlaySession();
+          window.location.reload();
+        }}
       />
     </div>
   );

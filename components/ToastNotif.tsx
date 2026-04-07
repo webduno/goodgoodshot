@@ -25,7 +25,7 @@ type ToastNotifProps = {
   /** Distance from top of container (default matches primary HUD toasts). */
   top?: number;
   /** When set, bubble matches that power-up slot color (HUD accents). */
-  accent?: "strength" | "noBounce" | "nowind";
+  accent?: "strength" | "noBounce" | "nowind" | "guideline";
 };
 
 export function ToastNotif({

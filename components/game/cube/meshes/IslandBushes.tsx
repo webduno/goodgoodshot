@@ -1,10 +1,12 @@
 "use client";
 
+import { biomeUsesDeadBush } from "@/lib/game/biomes";
 import type { IslandRect } from "@/lib/game/islands";
 import type { BiomeId } from "@/lib/game/types";
 
 import { Bush } from "./Bush";
 import { DeadBush } from "./DeadBush";
+import { IceSpikeBush } from "./IceSpikeBush";
 
 export function IslandBushes({
   islands,
@@ -20,7 +22,17 @@ export function IslandBushes({
           const seed = ii * 1000 + bi * 17 + Math.round(b.ox * 1e3);
           const wx = is.worldX + b.ox;
           const wz = is.worldZ + b.oz;
-          if (biome === "desert") {
+          if (biome === "snow") {
+            return (
+              <IceSpikeBush
+                key={`island-${ii}-bush-${bi}-${b.ox}-${b.oz}`}
+                worldX={wx}
+                worldZ={wz}
+                seed={seed}
+              />
+            );
+          }
+          if (biomeUsesDeadBush(biome)) {
             return (
               <DeadBush
                 key={`island-${ii}-bush-${bi}-${b.ox}-${b.oz}`}

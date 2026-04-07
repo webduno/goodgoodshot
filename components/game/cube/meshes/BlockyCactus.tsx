@@ -7,8 +7,8 @@ const STEM_W = 0.48;
 const STEM_H = 1.15;
 const PAD = 0.62;
 
-const STEM_COLORS = ["#c45c28", "#d47032", "#b84e20"] as const;
-const PAD_COLORS = ["#e8883a", "#f29a48", "#dc7a30", "#eea055"] as const;
+const STEM_COLORS = ["#3d6b4a", "#35624a", "#447a55"] as const;
+const PAD_COLORS = ["#5a9a6a", "#4f8f62", "#62a878", "#56976a"] as const;
 
 type PadSpec = {
   pos: readonly [number, number, number];
@@ -22,7 +22,7 @@ const PADS: readonly PadSpec[] = [
 ];
 
 /**
- * Blocky desert cactus (orange cubes): stem + offset pads — mirrors `BlockyTree` layout role.
+ * Blocky desert cactus (green cubes): stem + offset pads — mirrors `BlockyTree` layout role.
  */
 export function BlockyCactus({
   groundY,

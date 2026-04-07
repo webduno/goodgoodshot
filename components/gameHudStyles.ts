@@ -158,6 +158,29 @@ export function goldPillButtonStyle(opts: {
   };
 }
 
+/** Destructive pill (e.g. end session) — glossy red, white label. */
+export function dangerPillButtonStyle(opts: {
+  disabled?: boolean;
+  fullWidth?: boolean;
+}): CSSProperties {
+  const { disabled = false, fullWidth } = opts;
+  return {
+    ...hudFont,
+    ...(disabled ? textOnGlossButtonDisabled : textOnGlossButton),
+    width: fullWidth ? "100%" : "auto",
+    minWidth: fullWidth ? undefined : 120,
+    padding: "6px 14px",
+    borderRadius: 9999,
+    border: disabled ? "1px solid #9ca8b4" : "1px solid rgba(255,255,255,0.85)",
+    backgroundImage: disabled ? glassDisabled : glassFaceRed,
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.72 : 1,
+    boxShadow: `${edgeLight}, ${dropSmRed}`,
+  };
+}
+
 /** Small top-bar control (e.g. Help). */
 export function goldChipButtonStyle(): CSSProperties {
   return {
@@ -260,7 +283,7 @@ export function hudRoundFireButtonStyle(
 
 /** Distinct glass tints for power-up slots (HUD + toasts). */
 export const POWERUP_SLOT_ACCENT: Record<
-  "strength" | "noBounce" | "nowind",
+  "strength" | "noBounce" | "nowind" | "guideline",
   { ready: string; depleted: string; shadow: string }
 > = {
   strength: {
@@ -284,11 +307,18 @@ export const POWERUP_SLOT_ACCENT: Record<
       "linear-gradient(165deg, #e8ecee 0%, #b8c5ca 100%)",
     shadow: `${edgeLight}, 0 3px 10px rgba(8, 145, 178, 0.32)`,
   },
+  guideline: {
+    ready:
+      "linear-gradient(165deg, #ffffff 0%, #f0fdfa 12%, #99f6e4 40%, #2dd4bf 65%, #0d9488 100%)",
+    depleted:
+      "linear-gradient(165deg, #e8ecea 0%, #b8c4c0 100%)",
+    shadow: `${edgeLight}, 0 3px 10px rgba(13, 148, 136, 0.32)`,
+  },
 };
 
 /** Toast bubble styling matching the corresponding power-up slot. */
 export function powerupToastAccentStyle(
-  slot: "strength" | "noBounce" | "nowind"
+  slot: "strength" | "noBounce" | "nowind" | "guideline"
 ): Pick<
   CSSProperties,
   "color" | "textShadow" | "background" | "border" | "boxShadow"
@@ -299,9 +329,17 @@ export function powerupToastAccentStyle(
       ? "rgba(234, 88, 12, 0.28)"
       : slot === "noBounce"
         ? "rgba(124, 58, 237, 0.28)"
-        : "rgba(8, 145, 178, 0.28)";
+        : slot === "nowind"
+          ? "rgba(8, 145, 178, 0.28)"
+          : "rgba(13, 148, 136, 0.28)";
   const text =
-    slot === "strength" ? "#7c2d12" : slot === "noBounce" ? "#4c1d95" : "#0c4a5e";
+    slot === "strength"
+      ? "#7c2d12"
+      : slot === "noBounce"
+        ? "#4c1d95"
+        : slot === "nowind"
+          ? "#0c4a5e"
+          : "#134e4a";
   return {
     color: text,
     textShadow: "0 1px 0 rgba(255,255,255,0.45)",
@@ -315,7 +353,7 @@ export function powerupToastAccentStyle(
 export function powerupSlotStyle(opts: {
   variant: "ready" | "depleted" | "locked";
   /** When set, ready/depleted use a distinct tint. */
-  accentSlot?: "strength" | "noBounce" | "nowind";
+  accentSlot?: "strength" | "noBounce" | "nowind" | "guideline";
 }): CSSProperties {
   const { variant, accentSlot } = opts;
   const locked = variant === "locked";

@@ -37,7 +37,7 @@ const NEAR_BLACK: readonly [number, number, number] = [28, 28, 32];
  * (`POWERUP_SLOT_ACCENT` in `gameHudStyles`).
  */
 const POWERUP_BUY_COLORS: Record<
-  "strength" | "noBounce" | "nowind",
+  "strength" | "noBounce" | "nowind" | "guideline",
   string[]
 > = {
   strength: [
@@ -64,10 +64,18 @@ const POWERUP_BUY_COLORS: Record<
     "#a5f3fc",
     "#0e7490",
   ],
+  guideline: [
+    "#0d9488",
+    "#14b8a6",
+    "#2dd4bf",
+    "#5eead4",
+    "#99f6e4",
+    "#115e59",
+  ],
 };
 
 export function burstPowerupBuyConfetti(
-  slot: "strength" | "noBounce" | "nowind"
+  slot: "strength" | "noBounce" | "nowind" | "guideline"
 ) {
   const j = getConfetti();
   if (!j) return;
@@ -80,7 +88,7 @@ export function burstPowerupBuyConfetti(
 
 /** Small burst when a power-up is activated (lighter than buying a charge). */
 export function burstPowerupUseConfetti(
-  slot: "strength" | "noBounce" | "nowind"
+  slot: "strength" | "noBounce" | "nowind" | "guideline"
 ) {
   const j = getConfetti();
   if (!j) return;

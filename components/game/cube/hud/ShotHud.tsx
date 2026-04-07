@@ -2,6 +2,7 @@
 
 import {
   launchStrengthFromClicks,
+  maxClicksForStrengthBarRef,
   vehicleChargeMs,
   vehicleShotCooldownMs,
   type PlayerVehicleConfig,
@@ -17,10 +18,7 @@ import {
 } from "@/components/gameHudStyles";
 
 function strengthBarRefBounds(v: PlayerVehicleConfig) {
-  const maxClicksRef = Math.max(
-    2,
-    Math.round(v.secondsBeforeShotTrigger * 6) + 1
-  );
+  const maxClicksRef = maxClicksForStrengthBarRef(v);
   const sMin = launchStrengthFromClicks(1, v);
   const sMaxRef = launchStrengthFromClicks(maxClicksRef, v);
   return { maxClicksRef, sMin, sMaxRef };
@@ -135,6 +133,9 @@ export function FirePowerVerticalHud({
     color: hudColors.accent,
     fontVariantNumeric: "tabular-nums" as const,
     textAlign: "center" as const,
+    backgroundColor: "#fff",
+    padding: "3px 6px",
+    borderRadius: 3,
     WebkitTextStroke: "0.55px rgba(255,255,255,0.95)",
     paintOrder: "stroke fill" as const,
     textShadow: [
@@ -176,6 +177,9 @@ export function FirePowerVerticalHud({
           textAlign: "center",
           lineHeight: 1.15,
           maxWidth: 56,
+          backgroundColor: "#fff",
+          padding: "3px 6px",
+          borderRadius: 3,
         }}
       >
         Fire

@@ -1,11 +1,13 @@
 "use client";
 
+import { biomeUsesCactus } from "@/lib/game/biomes";
 import { TURF_TOP_Y } from "@/lib/game/constants";
 import type { IslandRect } from "@/lib/game/islands";
 import type { BiomeId } from "@/lib/game/types";
 
 import { BlockyCactus } from "./BlockyCactus";
 import { BlockyTree } from "./BlockyTree";
+import { SnowPineTree } from "./SnowPineTree";
 
 /** Fairway trees: thinner on X/Z only (tee tree scales separately in `TeeCornerTree`). */
 const ISLAND_TREE_XZ_SCALE = 0.68;
@@ -17,7 +19,12 @@ export function IslandTrees({
   islands: readonly IslandRect[];
   biome: BiomeId;
 }) {
-  const TreeMesh = biome === "desert" ? BlockyCactus : BlockyTree;
+  const TreeMesh =
+    biome === "snow"
+      ? SnowPineTree
+      : biomeUsesCactus(biome)
+        ? BlockyCactus
+        : BlockyTree;
   return (
     <>
       {islands.flatMap((is, ii) =>

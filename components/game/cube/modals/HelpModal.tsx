@@ -188,8 +188,9 @@ export function HelpModal({
               button on the left when you are not charging to open the slot panel
               and pick boosts before your first click. Six slots (left to right):{" "}
               <strong style={{ color: hudColors.value }}>Strength</strong>,{" "}
-              <strong style={{ color: hudColors.value }}>No bounce</strong>, and{" "}
-              <strong style={{ color: hudColors.value }}>No wind</strong> are
+              <strong style={{ color: hudColors.value }}>No bounce</strong>,{" "}
+              <strong style={{ color: hudColors.value }}>No wind</strong>, and{" "}
+              <strong style={{ color: hudColors.value }}>Guideline</strong> are
               available; the rest are coming later.
               <ul
                 style={{
@@ -225,6 +226,14 @@ export function HelpModal({
                   the ball horizontally; it changes every shot and is shown in the
                   stats panel (arrow: direction the wind comes from, meteorological
                   convention).
+                </li>
+                <li style={{ marginBottom: 6 }}>
+                  <strong style={{ color: hudColors.value }}>Guideline</strong>{" "}
+                  — Separate charges (same starting count). One tap before the shot
+                  shows a dashed preview at your aim (full fire-power bar, not
+                  overflow); when you start charging it follows your actual power.
+                  First flight only to the ground or goal; strength stacks apply;
+                  wind is ignored in the preview.
                 </li>
                 <li style={{ marginBottom: 6, opacity: 0.85 }}>
                   <strong style={{ color: hudColors.value }}>Time</strong> (clock

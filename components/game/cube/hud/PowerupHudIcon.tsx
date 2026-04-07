@@ -66,6 +66,25 @@ export function PowerupHudIcon({
           />
         </svg>
       );
+    case "guideline":
+      return (
+        <svg {...box} fill="none">
+          <path
+            stroke="currentColor"
+            strokeWidth="1.85"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M4 18c4-8 8-12 16-14"
+          />
+          <circle
+            cx="5"
+            cy="17"
+            r="2.25"
+            fill="currentColor"
+            opacity={0.35}
+          />
+        </svg>
+      );
     case "time":
       return (
         <svg {...box}>

@@ -52,8 +52,8 @@ export type MiniVillageSpec = {
   houses: readonly MiniVillageHouse[];
 };
 
-/** Visual theme for fairway decorations (trees vs cactus, etc.). */
-export type BiomeId = "plain" | "desert";
+/** Visual theme for fairway decorations (trees vs cactus, turf colors, etc.). */
+export type BiomeId = "plain" | "desert" | "forest" | "snow";
 
 export type GameState = {
   spawnCenter: Vec3;

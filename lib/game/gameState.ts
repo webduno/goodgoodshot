@@ -9,6 +9,7 @@ import {
   ensureSpawnAndGoalOnIslandsImmutable,
 } from "./islands";
 import { pickPondsLayout } from "./pondLayout";
+import { isValidBiomeId } from "./biomes";
 import {
   INITIAL_LANE_ORIGIN,
   type BiomeId,
@@ -49,7 +50,7 @@ export function createInitialGameState(opts?: { biome?: BiomeId }): GameState {
 
 /** Ensures `biome` exists when hydrating from JSON (older saves). */
 export function withDefaultBiome(state: GameState): GameState {
-  if (state.biome === "desert" || state.biome === "plain") return state;
+  if (isValidBiomeId(state.biome)) return state;
   return { ...state, biome: "plain" };
 }
 

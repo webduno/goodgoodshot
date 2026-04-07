@@ -12,7 +12,8 @@ function implementedCharges(
   slotId: PowerupSlotId,
   strengthCharges: number,
   noBounceCharges: number,
-  noWindCharges: number
+  noWindCharges: number,
+  guidelineCharges: number
 ): number {
   switch (slotId) {
     case "strength":
@@ -21,6 +22,8 @@ function implementedCharges(
       return noBounceCharges;
     case "nowind":
       return noWindCharges;
+    case "guideline":
+      return guidelineCharges;
     default:
       return 0;
   }
@@ -28,8 +31,13 @@ function implementedCharges(
 
 function implementedAccent(
   slotId: PowerupSlotId
-): "strength" | "noBounce" | "nowind" | undefined {
-  if (slotId === "strength" || slotId === "noBounce" || slotId === "nowind") {
+): "strength" | "noBounce" | "nowind" | "guideline" | undefined {
+  if (
+    slotId === "strength" ||
+    slotId === "noBounce" ||
+    slotId === "nowind" ||
+    slotId === "guideline"
+  ) {
     return slotId;
   }
   return undefined;
@@ -46,9 +54,11 @@ export function PowerupSlotRow({
   strengthCharges,
   noBounceCharges,
   noWindCharges,
+  guidelineCharges,
   canUseStrength,
   canUseNoBounce,
   canUseNoWind,
+  canUseGuideline,
   canAffordBuy,
   onPowerup,
   onBuyPowerupCharge,
@@ -56,9 +66,11 @@ export function PowerupSlotRow({
   strengthCharges: number;
   noBounceCharges: number;
   noWindCharges: number;
+  guidelineCharges: number;
   canUseStrength: boolean;
   canUseNoBounce: boolean;
   canUseNoWind: boolean;
+  canUseGuideline: boolean;
   canAffordBuy: boolean;
   onPowerup: (slotId: PowerupSlotId) => void;
   onBuyPowerupCharge: (slotId: PowerupSlotId) => void;
@@ -99,26 +111,33 @@ export function PowerupSlotRow({
           slot.id,
           strengthCharges,
           noBounceCharges,
-          noWindCharges
+          noWindCharges,
+          guidelineCharges
         );
         const slotReady =
           slot.id === "strength"
             ? canUseStrength
             : slot.id === "noBounce"
               ? canUseNoBounce
-              : canUseNoWind;
+              : slot.id === "nowind"
+                ? canUseNoWind
+                : canUseGuideline;
         const ariaDetail =
           slot.id === "strength"
             ? `multiply launch strength by 2 for this shot (${strengthCharges} strength charges left)`
             : slot.id === "noBounce"
               ? `no bounce and no roll after landing for this shot (${noBounceCharges} no-bounce charges left)`
-              : `ignore wind on the ball for this shot (${noWindCharges} no-wind charges left)`;
+              : slot.id === "nowind"
+                ? `ignore wind on the ball for this shot (${noWindCharges} no-wind charges left)`
+                : `show a no-wind trajectory at full fire bar before you shoot, then actual power while charging (${guidelineCharges} guideline charges left)`;
         const buttonTitle =
           slot.id === "strength"
             ? `${slot.name}: ×2 per tap · ${strengthCharges} charge${strengthCharges === 1 ? "" : "s"}`
             : slot.id === "noBounce"
               ? `${slot.name}: one tap · ${noBounceCharges} charge${noBounceCharges === 1 ? "" : "s"}`
-              : `${slot.name}: one tap · ${noWindCharges} charge${noWindCharges === 1 ? "" : "s"}`;
+              : slot.id === "nowind"
+                ? `${slot.name}: one tap · ${noWindCharges} charge${noWindCharges === 1 ? "" : "s"}`
+                : `${slot.name}: one tap · ${guidelineCharges} charge${guidelineCharges === 1 ? "" : "s"}`;
         const [nameLine1, nameLine2] = powerupNameLines(slot.name);
         return (
           <div

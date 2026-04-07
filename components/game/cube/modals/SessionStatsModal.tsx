@@ -1,8 +1,9 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import {
+  dangerPillButtonStyle,
   goldPillButtonStyle,
   helpModalCard,
   hudColors,
@@ -53,21 +54,51 @@ export function SessionStatsModal({
   onClose,
   session,
   sessionShots,
+  onEndWar,
 }: {
   open: boolean;
   onClose: () => void;
   session: PlaySession | null;
   sessionShots: number;
+  /** Clears war progress (session + map queue); parent typically reloads. */
+  onEndWar: () => void;
 }) {
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) setConfirmEndOpen(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (confirmEndOpen) {
+        setConfirmEndOpen(false);
+      } else {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, confirmEndOpen, onClose]);
+
   if (!open) return null;
 
   const hudLine = formatSessionScoreHud(session, sessionShots);
+  const roundsDone = session
+    ? session.battlesWon + session.battlesLost
+    : 0;
+  const canEndWar =
+    session !== null && roundsDone < session.targetBattles;
 
   return (
+    <>
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="war-stats-title"
+      aria-hidden={confirmEndOpen}
       style={modalBackdrop}
       onClick={onClose}
     >
@@ -169,14 +200,92 @@ export function SessionStatsModal({
           </>
         )}
 
-        <button
-          type="button"
-          onClick={onClose}
-          style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
         >
-          Close
-        </button>
+          {canEndWar && (
+            <button
+              type="button"
+              onClick={() => setConfirmEndOpen(true)}
+              style={dangerPillButtonStyle({ fullWidth: true })}
+            >
+              End war
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
+
+    {confirmEndOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="end-war-confirm-title"
+        style={{ ...modalBackdrop, zIndex: 60 }}
+        onClick={() => setConfirmEndOpen(false)}
+      >
+        <div style={helpModalCard} onClick={(e) => e.stopPropagation()}>
+          <h2
+            id="end-war-confirm-title"
+            style={{
+              margin: "0 0 10px",
+              fontSize: 15,
+              fontWeight: 700,
+              color: hudColors.value,
+            }}
+          >
+            End this war?
+          </h2>
+          <p
+            style={{
+              margin: "0 0 14px",
+              fontSize: 12.5,
+              lineHeight: 1.5,
+              color: hudColors.label,
+            }}
+          >
+            Your war progress will be cleared. This cannot be undone.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmEndOpen(false);
+                onEndWar();
+                onClose();
+              }}
+              style={dangerPillButtonStyle({ fullWidth: true })}
+            >
+              Yes, end war
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmEndOpen(false)}
+              style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

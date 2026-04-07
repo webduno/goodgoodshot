@@ -4,6 +4,7 @@ import { Text } from "@react-three/drei";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 
+import { biomeDisplayName } from "@/lib/game/biomes";
 import {
   TEE_PAD_CENTER_Y,
   TEE_PAD_HALF_X,
@@ -11,10 +12,11 @@ import {
   TEE_PAD_HALF_Z,
   TEE_PAD_EXTEND_BACK_Z,
 } from "@/lib/game/constants";
+import type { BiomeId } from "@/lib/game/types";
 
-/** Compact board; still fits “Goal length: NNN blocks” on one line at `fontSize`. */
+/** Compact board; fits biome title + “Goal length: NNN blocks” + coins line. */
 const SIGN_WIDTH = 2.95;
-const SIGN_HEIGHT = 0.62;
+const SIGN_HEIGHT = 0.78;
 const SIGN_DEPTH = 0.22;
 /** Pole from tee pad top up to the sign panel. */
 const STICK_HEIGHT = 1.05;
@@ -25,12 +27,13 @@ const PAD_HALF_HEIGHT_Y = TEE_PAD_HALF_Y * 3;
 const PAD_TOP_Y = PAD_MESH_CENTER_Y + PAD_HALF_HEIGHT_Y;
 
 type TeeHoleSignProps = {
+  biome: BiomeId;
   goalLength: number;
   coinCount: number;
 };
 
-/** Beige sign at the back-right of the tee with hole length and coin count for this level. */
-export function TeeHoleSign({ goalLength, coinCount }: TeeHoleSignProps) {
+/** Beige sign at the back-right of the tee with biome, hole length, and coin count for this level. */
+export function TeeHoleSign({ biome, goalLength, coinCount }: TeeHoleSignProps) {
   const signMeshRef = useRef<THREE.Mesh>(null);
   const stickMeshRef = useRef<THREE.Mesh>(null);
 
@@ -50,6 +53,7 @@ export function TeeHoleSign({ goalLength, coinCount }: TeeHoleSignProps) {
   /** Sign center Y: raised on a stick from the pad top. */
   const signCenterY = PAD_TOP_Y + STICK_HEIGHT + SIGN_HEIGHT / 2;
   const goalBlocks = Math.round(goalLength);
+  const biomeTitle = biomeDisplayName(biome);
 
   /** Stick top meets sign bottom; stick bottom on pad top (`PAD_TOP_Y`). */
   const stickCenterLocalY = -(SIGN_HEIGHT / 2 + STICK_HEIGHT / 2);
@@ -84,8 +88,18 @@ export function TeeHoleSign({ goalLength, coinCount }: TeeHoleSignProps) {
         />
       </mesh>
       <Text
-        position={[0, 0.08, SIGN_DEPTH / 2 + 0.015]}
-        fontSize={0.135}
+        position={[0, 0.24, SIGN_DEPTH / 2 + 0.015]}
+        fontSize={0.175}
+        fontWeight={700}
+        color="#1a1610"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {biomeTitle}
+      </Text>
+      <Text
+        position={[0, 0.02, SIGN_DEPTH / 2 + 0.015]}
+        fontSize={0.125}
         color="#2a2418"
         anchorX="center"
         anchorY="middle"
@@ -93,8 +107,8 @@ export function TeeHoleSign({ goalLength, coinCount }: TeeHoleSignProps) {
         Goal length: {goalBlocks} blocks
       </Text>
       <Text
-        position={[0, -0.13, SIGN_DEPTH / 2 + 0.015]}
-        fontSize={0.115}
+        position={[0, -0.2, SIGN_DEPTH / 2 + 0.015]}
+        fontSize={0.105}
         color="#2a2418"
         anchorX="center"
         anchorY="middle"

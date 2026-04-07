@@ -1,6 +1,7 @@
 "use client";
 import {
   launchStrengthFromClicks,
+  maxClicksForStrengthBarRef,
   rgbTupleToCss,
   vehicleChargeMs,
   type PlayerVehicleConfig,
@@ -59,6 +60,8 @@ import { TerrainTextured } from "../TerrainTextured";
 import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
 import { POWERUP_SLOT_ACCENT } from "@/components/gameHudStyles";
 import { EarthTextured } from "../EarthTextured";
+import { ShotGuidelineArc } from "@/components/game/cube/ShotGuidelineArc";
+import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
 
 /** Interval between automatic +power steps while Fire / Space / rear trigger is held (charge window). */
 const CHARGE_HOLD_REPEAT_MS = 85;
@@ -72,14 +75,18 @@ const VEHICLE_POWERUP_LABEL_Y = 0.92;
  */
 const VEHICLE_HTML_Z_INDEX_RANGE: [number, number] = [35, 0];
 
-function pillStyle(slot: "strength" | "noBounce" | "nowind"): CSSProperties {
+function pillStyle(
+  slot: "strength" | "noBounce" | "nowind" | "guideline"
+): CSSProperties {
   const a = POWERUP_SLOT_ACCENT[slot];
   const text =
     slot === "strength"
       ? "#7c2d12"
       : slot === "noBounce"
         ? "#4c1d95"
-        : "#0c4a5e";
+        : slot === "nowind"
+          ? "#0c4a5e"
+          : "#134e4a";
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -102,13 +109,18 @@ function VehicleNextShotPowerupLabel({
   powerupStackCount,
   noBounceActive,
   noWindActive,
+  guidelineActiveNextShot,
 }: {
   powerupStackCount: number;
   noBounceActive: boolean;
   noWindActive: boolean;
+  guidelineActiveNextShot: boolean;
 }) {
   const hasAny =
-    powerupStackCount > 0 || noBounceActive || noWindActive;
+    powerupStackCount > 0 ||
+    noBounceActive ||
+    noWindActive ||
+    guidelineActiveNextShot;
   if (!hasAny) return null;
 
   const strengthMult = Math.pow(2, powerupStackCount);
@@ -166,6 +178,12 @@ function VehicleNextShotPowerupLabel({
               No wind
             </span>
           )}
+          {guidelineActiveNextShot && (
+            <span style={pillStyle("guideline")}>
+              <PowerupHudIcon slotId="guideline" color="currentColor" size={11} />
+              Guideline
+            </span>
+          )}
         </div>
       </div>
     </Html>
@@ -186,9 +204,11 @@ function LaneCoin({ position }: { position: Vec3 }) {
           <mesh castShadow receiveShadow>
             <cylinderGeometry args={[0.42, 0.42, 0.07, 12]} />
             <meshStandardMaterial
-              color="#e8c547"
-              roughness={0.28}
-              metalness={0.88}
+              color="#f5dc6a"
+              emissive="#c9a030"
+              emissiveIntensity={0.22}
+              roughness={0.32}
+              metalness={0.82}
             />
           </mesh>
         </group>
@@ -223,6 +243,9 @@ export function SceneContent({
   powerupStackCount,
   noBounceActive,
   noWindActive,
+  guidelineActiveNextShot,
+  onGuidelineConsumedForShot,
+  chargeHudForGuideline,
   biome,
   onTerrainCoordsClick,
   ballFollowStateRef,
@@ -262,6 +285,15 @@ export function SceneContent({
   powerupStackCount: number;
   noBounceActive: boolean;
   noWindActive: boolean;
+  /** True after activating Guideline until that shot is fired. */
+  guidelineActiveNextShot: boolean;
+  /** Clears guideline state when the ball is launched (next shot only). */
+  onGuidelineConsumedForShot: () => void;
+  /**
+   * While charging: live clicks. When null but guideline is armed: idle preview uses
+   * full strength bar only (not overflow / not a separate “max”).
+   */
+  chargeHudForGuideline: { clicks: number } | null;
   /** Earth / terrain mesh pick: parent can show HUD toast (e.g. coordinates). */
   onTerrainCoordsClick?: (coords: { lat: number; lng: number }) => void;
   ballFollowStateRef: BallFollowStateRef;
@@ -291,8 +323,40 @@ export function SceneContent({
     [aimYawRad]
   );
 
+  const guidelinePoints = useMemo(() => {
+    if (!guidelineActiveNextShot || shotInFlight) {
+      return [];
+    }
+    const charging = chargeHudForGuideline !== null;
+    const clicks = charging
+      ? chargeHudForGuideline.clicks
+      : maxClicksForStrengthBarRef(vehicle);
+    const force =
+      launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
+    return sampleFirstSegmentGuideline(
+      spawnCenter,
+      goalCenter,
+      vehicle.gravityY,
+      worldAimYawRad,
+      aimPitchOffsetRad,
+      vehicle.launchAngleRad,
+      force
+    );
+  }, [
+    aimPitchOffsetRad,
+    chargeHudForGuideline,
+    getPowerupMultiplier,
+    goalCenter,
+    guidelineActiveNextShot,
+    shotInFlight,
+    spawnCenter,
+    vehicle,
+    worldAimYawRad,
+  ]);
+
   const fireProjectile = useCallback(
     (clicks: number) => {
+      onGuidelineConsumedForShot();
       const w = prepareShotWind();
       shotWindAccelRef.current = { x: w.ax, z: w.az };
       const force =
@@ -328,6 +392,7 @@ export function SceneContent({
       worldAimYawRad,
       getNoBounceActive,
       getPowerupMultiplier,
+      onGuidelineConsumedForShot,
       onShootStart,
       prepareShotWind,
       resetPowerupStack,
@@ -543,6 +608,7 @@ export function SceneContent({
       <SpawnTeePad />
       <TeeCornerTree biome={biome} />
       <TeeHoleSign
+        biome={biome}
         goalLength={goalLength}
         coinCount={yellowLaneMarkers.length}
       />
@@ -579,6 +645,7 @@ export function SceneContent({
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
+            guidelineActiveNextShot={guidelineActiveNextShot}
           />
         </group>
         <AimYawPrism
@@ -610,6 +677,9 @@ export function SceneContent({
         collectedCoinKeysRef={collectedCoinKeysRef}
         onCoinCollected={onCoinCollected}
       />
+      {guidelinePoints.length >= 2 && (
+        <ShotGuidelineArc points={guidelinePoints} />
+      )}
     </>
   );
 }

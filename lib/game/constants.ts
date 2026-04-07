@@ -134,9 +134,28 @@ export const FIELD_PLANE_HALF_WIDTH_X = Math.max(
 );
 export const FIELD_PLANE_Z_BEFORE_SPAWN = 4 * BLOCK_SIZE;
 export const FIELD_PLANE_Z_PAST_GOAL = 12 * BLOCK_SIZE;
-export const FIELD_GROUND_MUTED_GREEN = "#52c066";
+export const FIELD_GROUND_MUTED_GREEN = "#7ede92";
 /** Island turf top for desert biome (fairway slabs). */
 export const FIELD_GROUND_DESERT_SAND = "#d4a574";
+/** Inverted pyramid under desert fairway — warm sandstone, distinct from sand top. */
+export const FIELD_ISLAND_FOUNDATION_DESERT = "#b8956a";
+/** Minimap underside strip only — darker than `FIELD_ISLAND_FOUNDATION_DESERT` so it reads vs sand turf. */
+export const FIELD_MINIMAP_DESERT_FOUNDATION = "#8a5c3a";
+/** Inverted pyramid under plain fairway — neutral grey stone. */
+export const FIELD_ISLAND_FOUNDATION_PLAIN = "#6b6f76";
+/** Dark pine fairway (forest biome). */
+export const FIELD_GROUND_FOREST = "#2d6b3f";
+/** Forest island foundation — rich soil. */
+export const FIELD_ISLAND_FOUNDATION_FOREST = "#5c4033";
+/** Packed snow / frost fairway (snow biome). */
+export const FIELD_GROUND_SNOW = "#e8f2fa";
+/** Snow biome foundation — cold rock / ice (minimap / shared `islandColorsForBiome`). */
+export const FIELD_ISLAND_FOUNDATION_SNOW = "#7a95a8";
+/**
+ * Snow inverted-pyramid mesh only — lighter than `FIELD_ISLAND_FOUNDATION_SNOW` so directional
+ * light + shadow on steep faces does not read near-black.
+ */
+export const FIELD_ISLAND_FOUNDATION_SNOW_MESH = "#aabdcb";
 
 /** Starting charges per power-up type (Strength, No bounce, No wind each have their own pool). */
 export const INITIAL_POWERUP_CHARGES = 2;
@@ -146,6 +165,11 @@ export const POWERUP_SLOTS = [
   { id: "strength", name: "Strength", implemented: true },
   { id: "noBounce", name: "No bounce", implemented: true },
   { id: "nowind", name: "No wind", implemented: true },
+  {
+    id: "guideline",
+    name: "Guideline",
+    implemented: true,
+  },
   { id: "time", name: "Time", implemented: false },
   { id: "magnet", name: "Magnet", implemented: false },
   { id: "lucky", name: "Lucky", implemented: false },

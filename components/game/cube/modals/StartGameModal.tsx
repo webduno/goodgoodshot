@@ -197,7 +197,7 @@ function PowerupLegendRow({
   title,
   children,
 }: {
-  slot: "strength" | "noBounce" | "nowind";
+  slot: keyof typeof POWERUP_SLOT_ACCENT;
   title: string;
   children: ReactNode;
 }) {
@@ -597,9 +597,9 @@ export function StartGameModal({
                       color: hudColors.label,
                     }}
                   >
-                    Choose fairway style for this war. Random picks plain or
-                    desert independently for each battle; a fixed choice uses
-                    that biome for every battle.
+                    Choose fairway style for this war. Random picks among plain,
+                    desert, forest, and snow independently for each battle; a
+                    fixed choice uses that biome for every battle.
                   </p>
                   <div
                     style={{
@@ -613,6 +613,8 @@ export function StartGameModal({
                         { id: "random" as const, label: "Random (each battle)" },
                         { id: "plain" as const, label: "Plain" },
                         { id: "desert" as const, label: "Desert" },
+                        { id: "forest" as const, label: "Forest" },
+                        { id: "snow" as const, label: "Snow" },
                       ] as const
                     ).map((opt) => {
                       const selected = biomeChoice === opt.id;
@@ -818,6 +820,12 @@ export function StartGameModal({
                   <PowerupLegendRow slot="nowind" title="No wind (cyan)">
                     One tap spends one charge and removes wind on the ball for
                     that shot (wind still updates for the next shot).
+                  </PowerupLegendRow>
+                  <PowerupLegendRow slot="guideline" title="Guideline (teal)">
+                    One tap spends one charge: a dashed line follows your aim at
+                    full fire-power bar (then your actual power while charging) to
+                    the first landing or goal — no wind in the preview; strength
+                    stacks apply.
                   </PowerupLegendRow>
                 </div>
               )}

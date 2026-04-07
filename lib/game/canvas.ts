@@ -37,7 +37,7 @@ function createSkyGradientTexture(): THREE.CanvasTexture | THREE.Color {
 export function onCanvasCreated({ camera, gl, scene }: RootState) {
   const sky = createSkyGradientTexture();
   scene.background = sky;
-  scene.fog = new THREE.Fog(FOG_SKY, FOG_NEAR, FOG_FAR);
+  // scene.fog = new THREE.Fog(FOG_SKY, FOG_NEAR, FOG_FAR);
   gl.setClearColor(new THREE.Color("#d4f1ff"), 1);
 
   if (camera instanceof THREE.PerspectiveCamera) {

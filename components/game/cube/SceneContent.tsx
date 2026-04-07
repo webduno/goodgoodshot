@@ -279,6 +279,7 @@ export function SceneContent({
   coinRenderTick,
   onCoinCollected,
   onBindFireHeld,
+  onBindGuidelineShoot,
   isCharging,
   powerupStackCount,
   noBounceActive,
@@ -330,6 +331,8 @@ export function SceneContent({
   onCoinCollected: (key: string) => void;
   /** Press/release for fire + hold-to-add-power (Fire button, Space, rear red cube). */
   onBindFireHeld: (handler: ((held: boolean) => void) | null) => void;
+  /** Guideline mode: fire immediately at the slider click count (Shoot / Space). */
+  onBindGuidelineShoot?: (handler: (() => void) | null) => void;
   /** Queued strength stacks (2^count multiplier) for the next shot. */
   powerupStackCount: number;
   noBounceActive: boolean;
@@ -339,11 +342,11 @@ export function SceneContent({
   /** Clears guideline state when the ball is launched (next shot only). */
   onGuidelineConsumedForShot: () => void;
   /**
-   * While charging: live clicks. When null but guideline is armed: idle preview uses
-   * `guidelinePreviewClicks` (slider value, kept after Ready until the shot).
+   * While charging: live clicks. When null but guideline is armed: preview uses
+   * `guidelinePreviewClicks` (slider value until Shoot fires).
    */
   chargeHudForGuideline: { clicks: number } | null;
-  /** Idle guideline preview: click count (1 … ref bar max); same value after Ready until charging. */
+  /** Guideline preview / Shoot: click count (1 … ref bar max). */
   guidelinePreviewClicks: number;
   /** True while adjusting guideline: shoot controls do not start a charge. */
   guidelineFireBlocked: boolean;
@@ -502,6 +505,26 @@ export function SceneContent({
       vehicle,
     ]
   );
+
+  const tryFireGuidelineDirect = useCallback(() => {
+    if (roundLocked) return;
+    if (cooldownUntil !== null && Date.now() < cooldownUntil) return;
+    if (projectileRef.current) return;
+    if (!guidelineFireBlocked) return;
+    if (chargingRef.current) return;
+    fireProjectile(guidelinePreviewClicks);
+  }, [
+    roundLocked,
+    cooldownUntil,
+    guidelineFireBlocked,
+    guidelinePreviewClicks,
+    fireProjectile,
+  ]);
+
+  useEffect(() => {
+    onBindGuidelineShoot?.(tryFireGuidelineDirect);
+    return () => onBindGuidelineShoot?.(null);
+  }, [onBindGuidelineShoot, tryFireGuidelineDirect]);
 
   const beginChargeWindow = useCallback(() => {
     const chargeMs = vehicleChargeMs(vehicle);

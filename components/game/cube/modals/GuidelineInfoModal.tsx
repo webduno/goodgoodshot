@@ -58,9 +58,9 @@ export function GuidelineInfoModal({
             color: hudColors.label,
           }}
         >
-          One charge draws a dashed path along your aim at full strength (then
-          your actual power while charging) to the first landing or goal. The
-          preview ignores wind; strength stacks still apply.
+          One charge draws a dashed path along your aim to the first landing or
+          goal. Use the Guide Power slider to set strength (same as the shot),
+          then tap Shoot. The preview ignores wind; strength stacks still apply.
         </p>
         <p
           style={{

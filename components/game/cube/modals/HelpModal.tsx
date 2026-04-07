@@ -33,6 +33,7 @@ import {
 export function HelpModal({
   open,
   onClose,
+  onOpenProfile,
   vehicle,
   retroTvEnabled,
   onRetroTvChange,
@@ -41,6 +42,7 @@ export function HelpModal({
 }: {
   open: boolean;
   onClose: () => void;
+  onOpenProfile: () => void;
   vehicle: PlayerVehicleConfig;
   retroTvEnabled: boolean;
   onRetroTvChange: (next: boolean) => void;
@@ -142,21 +144,40 @@ export function HelpModal({
         style={helpModalCard}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2
-          id="menu-title"
+        <div
           style={{
-            margin: "0 0 14px",
-            fontSize: 18,
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: "#001a2e",
-            textShadow:
-              "0 1px 0 rgba(255,255,255,0.85), 0 3px 0 rgba(0, 80, 130, 0.12)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 14,
+            flexWrap: "wrap",
           }}
         >
-          Menu
-        </h2>
+          <h2
+            id="menu-title"
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 800,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "#001a2e",
+              textShadow:
+                "0 1px 0 rgba(255,255,255,0.85), 0 3px 0 rgba(0, 80, 130, 0.12)",
+            }}
+          >
+            Menu
+          </h2>
+          <button
+            type="button"
+            aria-label="Open profile"
+            onClick={onOpenProfile}
+            style={goldChipButtonStyle()}
+          >
+            Profile
+          </button>
+        </div>
         <details>
           <summary>How to play</summary>
           <ul
@@ -237,10 +258,9 @@ export function HelpModal({
                 <li style={{ marginBottom: 6 }}>
                   <strong style={{ color: hudColors.value }}>Guideline</strong>{" "}
                   — Separate charges (same starting count). One tap before the shot
-                  shows a dashed preview at your aim (full strength bar, not
-                  overflow); when you start charging it follows your actual power.
-                  First flight only to the ground or goal; strength stacks apply;
-                  wind is ignored in the preview.
+                  shows a dashed preview at your aim; use Guide Power for strength,
+                  then Shoot. First flight only to the ground or goal; strength
+                  stacks apply; wind is ignored in the preview.
                 </li>
                 <li style={{ marginBottom: 6, opacity: 0.85 }}>
                   <strong style={{ color: hudColors.value }}>Time</strong> (clock

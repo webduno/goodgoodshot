@@ -240,6 +240,7 @@ export default function CubeScene() {
     "strength" | "noBounce" | "nowind" | "guideline" | undefined
   >(undefined);
   const fireHeldRef = useRef<((held: boolean) => void) | null>(null);
+  const guidelineShootRef = useRef<(() => void) | null>(null);
 
   const pushHudToast = useCallback(
     (
@@ -316,9 +317,7 @@ export default function CubeScene() {
   const [guidelinePreviewClicks, setGuidelinePreviewClicks] = useState(() =>
     halfClicksForStrengthBarRef(DEFAULT_PLAYER_VEHICLE)
   );
-  const [guidelineReadyConfirmed, setGuidelineReadyConfirmed] = useState(false);
   const prevPurchasedGuidelineRef = useRef(false);
-  const prevShotInFlightRef = useRef(shotInFlight);
   const [, setHudTick] = useState(0);
 
   const gameRef = useRef(game);
@@ -366,25 +365,14 @@ export default function CubeScene() {
   useEffect(() => {
     if (guidelineActiveNextShot && !prevPurchasedGuidelineRef.current) {
       setGuidelinePreviewClicks(halfClicksForStrengthBarRef(playerVehicle));
-      setGuidelineReadyConfirmed(false);
     }
     prevPurchasedGuidelineRef.current = guidelineActiveNextShot;
   }, [guidelineActiveNextShot, playerVehicle]);
 
-  useEffect(() => {
-    if (prevShotInFlightRef.current && !shotInFlight) {
-      setGuidelineReadyConfirmed(false);
-    }
-    prevShotInFlightRef.current = shotInFlight;
-  }, [shotInFlight]);
-
   const guidelineArmed =
     guidelineActiveNextShot || sessionFirstBattleGuideline;
   const guidelineAdjusting =
-    guidelineArmed &&
-    !guidelineReadyConfirmed &&
-    chargeHud === null &&
-    !shotInFlight;
+    guidelineArmed && chargeHud === null && !shotInFlight;
 
   useEffect(() => {
     windRef.current = stepWind();
@@ -550,6 +538,10 @@ export default function CubeScene() {
 
   const bindFireHeld = useCallback((handler: ((held: boolean) => void) | null) => {
     fireHeldRef.current = handler;
+  }, []);
+
+  const bindGuidelineShoot = useCallback((handler: (() => void) | null) => {
+    guidelineShootRef.current = handler;
   }, []);
 
   const onShootStart = useCallback(() => {
@@ -742,7 +734,7 @@ export default function CubeScene() {
         if (e.repeat) return;
         e.preventDefault();
         if (guidelineAdjusting) {
-          setGuidelineReadyConfirmed(true);
+          guidelineShootRef.current?.();
           return;
         }
         fireHeldRef.current?.(true);
@@ -882,6 +874,7 @@ export default function CubeScene() {
             coinRenderTick={coinRenderTick}
             onCoinCollected={onCoinCollected}
             onBindFireHeld={bindFireHeld}
+            onBindGuidelineShoot={bindGuidelineShoot}
             isCharging={chargeHud !== null}
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
@@ -961,17 +954,6 @@ export default function CubeScene() {
               style={goldChipButtonStyle()}
             >
               Menu
-            </button>
-            <button
-              type="button"
-              aria-label="Open profile"
-              onClick={() => {
-                setShowHelpModal(false);
-                setShowProfileModal(true);
-              }}
-              style={goldChipButtonStyle()}
-            >
-              Profile
             </button>
           </div>
           <div
@@ -1242,40 +1224,6 @@ export default function CubeScene() {
                 pointerEvents: "none",
               }}
             >
-              {guidelineAdjusting && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    pointerEvents: "auto",
-                  }}
-                >
-                  <button
-                    type="button"
-                    aria-label="Ready"
-                    onClick={() => setGuidelineReadyConfirmed(true)}
-                    disabled={
-                      shotInFlight ||
-                      showFinishModal ||
-                      showStartGameModal ||
-                      showSessionEndModal ||
-                      inCooldown
-                    }
-                    style={hudRoundFireButtonStyle(
-                      shotInFlight ||
-                        showFinishModal ||
-                        showStartGameModal ||
-                        showSessionEndModal ||
-                        inCooldown
-                        ? "disabled"
-                        : "guidelineReady"
-                    )}
-                  >
-                    Ready
-                  </button>
-                </div>
-              )}
               <div
                 style={{
                   display: "flex",
@@ -1300,6 +1248,40 @@ export default function CubeScene() {
                   />
                 )}
               </div>
+              {guidelineAdjusting && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    pointerEvents: "auto",
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-label="Shoot"
+                    onClick={() => guidelineShootRef.current?.()}
+                    disabled={
+                      shotInFlight ||
+                      showFinishModal ||
+                      showStartGameModal ||
+                      showSessionEndModal ||
+                      inCooldown
+                    }
+                    style={hudRoundFireButtonStyle(
+                      shotInFlight ||
+                        showFinishModal ||
+                        showStartGameModal ||
+                        showSessionEndModal ||
+                        inCooldown
+                        ? "disabled"
+                        : "guidelineReady"
+                    )}
+                  >
+                    Shoot
+                  </button>
+                </div>
+              )}
               {!guidelineAdjusting && (
               <div
                 style={{
@@ -1487,6 +1469,10 @@ export default function CubeScene() {
       <HelpModal
         open={showHelpModal}
         onClose={() => setShowHelpModal(false)}
+        onOpenProfile={() => {
+          setShowHelpModal(false);
+          setShowProfileModal(true);
+        }}
         vehicle={playerVehicle}
         retroTvEnabled={retroTvEnabled}
         onRetroTvChange={onRetroTvChange}

@@ -23,7 +23,7 @@ function previewStrengthBarRatio(clicks: number, v: PlayerVehicleConfig): number
 }
 
 /**
- * Vertical slider: sets guideline preview power (click count) before the charge window.
+ * Vertical slider: sets guideline preview and Shoot strength (same click count as the strength bar).
  * Top = max reference bar, bottom = minimum (1 click).
  */
 export function GuidelinePreviewPowerSlider({

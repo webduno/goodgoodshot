@@ -875,10 +875,9 @@ export function StartGameModal({
                     that shot (wind still updates for the next shot).
                   </PowerupLegendRow>
                   <PowerupLegendRow slot="guideline" title="Guideline (red)">
-                    One tap spends one charge: a dashed line follows your aim at
-                    full strength bar (then your actual power while charging) to
-                    the first landing or goal — no wind in the preview; strength
-                    stacks apply.
+                    One tap spends one charge: a dashed line follows your aim to
+                    the first landing or goal. Set power with Guide Power, then
+                    Shoot — no wind in the preview; strength stacks apply.
                   </PowerupLegendRow>
                 </div>
               )}

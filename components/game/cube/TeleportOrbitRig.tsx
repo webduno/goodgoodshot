@@ -243,7 +243,8 @@ export function TeleportOrbitRig({
       }
     } else if (!introDoneRef.current) {
       introProgressRef.current += delta;
-      const rawT = Math.min(1, introProgressRef.current / INTRO_CAMERA_DURATION_SEC);
+      const introDur = Math.max(INTRO_CAMERA_DURATION_SEC, 1e-6);
+      const rawT = Math.min(1, introProgressRef.current / introDur);
       const t = rawT * rawT * (3 - 2 * rawT);
       const sx = gameSpawn[0];
       const sy = gameSpawn[1];

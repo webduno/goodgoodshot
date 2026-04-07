@@ -44,6 +44,7 @@ import {
 import {
   aimPrismLengthForStrength,
   bodyYawQuarterSnappedFromWorldAim,
+  hudAimYawToWorldYawRad,
   spawnTopYFromBlockCenterY,
 } from "@/lib/game/math";
 import { coinCellKey, coinCentersForIslands } from "@/lib/game/path";
@@ -230,6 +231,7 @@ export function SceneContent({
   goalCenter: Vec3;
   islands: readonly IslandRect[];
   biome: BiomeId;
+  /** HUD ring yaw (atan2(dx, −dy)); converted to world XZ for shot, prism, and hull snap. */
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
   aimPitchOffsetRad: number;
@@ -284,6 +286,11 @@ export function SceneContent({
     };
   }, []);
 
+  const worldAimYawRad = useMemo(
+    () => hudAimYawToWorldYawRad(aimYawRad),
+    [aimYawRad]
+  );
+
   const fireProjectile = useCallback(
     (clicks: number) => {
       const w = prepareShotWind();
@@ -302,9 +309,9 @@ export function SceneContent({
         x: topX,
         y: topY,
         z: topZ,
-        vx: horizontalMag * Math.sin(aimYawRad),
+        vx: horizontalMag * Math.sin(worldAimYawRad),
         vy,
-        vz: horizontalMag * Math.cos(aimYawRad),
+        vz: horizontalMag * Math.cos(worldAimYawRad),
         bouncesRemaining: noBounceShot ? 0 : vehicle.landingBounces,
         rolling: false,
         allowRoll: !noBounceShot,
@@ -318,7 +325,7 @@ export function SceneContent({
     },
     [
       aimPitchOffsetRad,
-      aimYawRad,
+      worldAimYawRad,
       getNoBounceActive,
       getPowerupMultiplier,
       onShootStart,
@@ -477,8 +484,8 @@ export function SceneContent({
   const accentColor = rgbTupleToCss(vehicle.accentRgb);
 
   const bodyYawRad = useMemo(
-    () => bodyYawQuarterSnappedFromWorldAim(aimYawRad),
-    [aimYawRad]
+    () => bodyYawQuarterSnappedFromWorldAim(worldAimYawRad),
+    [worldAimYawRad]
   );
 
   const shootTriggerReady =
@@ -576,7 +583,7 @@ export function SceneContent({
         </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}
-          aimYawRad={aimYawRad}
+          aimYawRad={worldAimYawRad}
           defaultVerticalAngleRad={vehicle.launchAngleRad + aimPitchOffsetRad}
           prismLength={aimPrismLengthForStrength(vehicle.strengthPerBaseClick)}
           color={accentColor}

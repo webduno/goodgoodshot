@@ -144,18 +144,16 @@ export const POWERUP_SLOTS = [
 ] as const;
 
 /**
- * First-frame camera offset from spawn (medium close, face visible). Tank hull faces +Z
- * (shot / eyes); use +Z here so the camera sits in front of the face, not behind.
- */
-export const INTRO_CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
-  0.95, 1.22, 3.1,
-];
-/**
- * Gameplay orbit camera offset from spawn (further out in front of the tank; goal stays down +Z).
+ * Gameplay orbit camera offset from spawn (in front of the tank; goal stays down +Z).
  */
 export const CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
   1.38, 1.78, 4.45,
 ];
+/**
+ * First-frame camera matches gameplay (wider start — no intro zoom-in). Tank hull faces +Z
+ * (shot / eyes); +Z offset sits in front of the face, not behind.
+ */
+export const INTRO_CAMERA_OFFSET_FROM_SPAWN = CAMERA_OFFSET_FROM_SPAWN;
 /**
  * Fixed world offset from the ball while follow-ball mode is on: above the ball and toward
  * −Z (spawn side) so the shot stays in view; orbit controls are disabled for this mode.
@@ -163,8 +161,8 @@ export const CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
 export const FOLLOW_BALL_CAMERA_OFFSET: readonly [number, number, number] = [
   0.85, 10.8, -7.4,
 ];
-/** Seconds for intro zoom-out from `INTRO_CAMERA_OFFSET_FROM_SPAWN` to gameplay offset. */
-export const INTRO_CAMERA_DURATION_SEC = 2.4;
+/** Seconds for intro tween when intro and gameplay offsets differ; 0 skips the wait. */
+export const INTRO_CAMERA_DURATION_SEC = 0;
 /** Orbit pivot Y: one block above the spawn block center. */
 export const ORBIT_TARGET_Y_OFFSET = BLOCK_SIZE;
 /**

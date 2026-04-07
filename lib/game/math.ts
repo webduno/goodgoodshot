@@ -16,6 +16,14 @@ export function wrapYawRad(a: number): number {
   return THREE.MathUtils.euclideanModulo(a + Math.PI, Math.PI * 2) - Math.PI;
 }
 
+/**
+ * HUD ring angle (atan2(dx, −dy) in screen space) → world XZ yaw for vx = sin(ψ), vz = cos(ψ).
+ * Negation aligns the 2D control with the scene/camera so the barrel matches the ring.
+ */
+export function hudAimYawToWorldYawRad(hudRad: number): number {
+  return wrapYawRad(-hudRad);
+}
+
 /** Clamp shortest signed delta from a side center to the aim pad arc (±45°). */
 export function clampYawDeltaToPadArc(deltaRad: number): number {
   const d = wrapYawRad(deltaRad);

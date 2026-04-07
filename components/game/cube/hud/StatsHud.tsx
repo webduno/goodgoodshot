@@ -210,6 +210,51 @@ export function StatsHud({
         ) : null}
       </div>
 
+      <button
+        type="button"
+        onClick={onScoreClick}
+        title="View war details"
+        aria-haspopup="dialog"
+        aria-label={`Score ${sessionScoreDisplay}. Open war details.`}
+        style={{
+          pointerEvents: "auto",
+          margin: 0,
+          padding: "6px 8px",
+          ...hudMiniPanel,
+          fontSize: 10,
+          lineHeight: 1.4,
+          cursor: "pointer",
+          textAlign: "left",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            color: hudColors.muted,
+            marginBottom: 2,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+          }}
+        >
+          Score
+        </div>
+        <div
+          style={{
+            color: hudColors.value,
+            fontWeight: 700,
+            fontSize: 12,
+            lineHeight: 1.2,
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {sessionScoreDisplay}
+        </div>
+      </button>
+
       <div
         style={{
           padding: "6px 8px",
@@ -436,51 +481,6 @@ export function StatsHud({
           )}
         </div>
       ) : null}
-
-      <button
-        type="button"
-        onClick={onScoreClick}
-        title="View war details"
-        aria-haspopup="dialog"
-        aria-label={`Score ${sessionScoreDisplay}. Open war details.`}
-        style={{
-          pointerEvents: "auto",
-          margin: 0,
-          padding: "6px 8px",
-          ...hudMiniPanel,
-          fontSize: 10,
-          lineHeight: 1.4,
-          cursor: "pointer",
-          textAlign: "left",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            color: hudColors.muted,
-            marginBottom: 2,
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-          }}
-        >
-          Score
-        </div>
-        <div
-          style={{
-            color: hudColors.value,
-            fontWeight: 700,
-            fontSize: 12,
-            lineHeight: 1.2,
-            fontVariantNumeric: "tabular-nums",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {sessionScoreDisplay}
-        </div>
-      </button>
     </div>
   );
 }

@@ -88,6 +88,7 @@ import {
   bodyYawQuarterSnappedFromWorldAim,
   clampAimPitchOffsetRad,
   clampYawDeltaToPadArc,
+  hudAimYawToWorldYawRad,
   snapAimAngleRad,
   wrapYawRad,
 } from "@/lib/game/math";
@@ -654,8 +655,10 @@ export default function CubeScene() {
       }
       if (k === "a" || k === "A" || k === "ArrowLeft") {
         setAimYawRad((a) => {
-          const next = wrapYawRad(a + AIM_YAW_STEP_RAD);
-          setAimSideYawRad(bodyYawQuarterSnappedFromWorldAim(next));
+          const next = wrapYawRad(a - AIM_YAW_STEP_RAD);
+          setAimSideYawRad(
+            bodyYawQuarterSnappedFromWorldAim(hudAimYawToWorldYawRad(next))
+          );
           return next;
         });
         if (k === "ArrowLeft") e.preventDefault();
@@ -663,8 +666,10 @@ export default function CubeScene() {
       }
       if (k === "d" || k === "D" || k === "ArrowRight") {
         setAimYawRad((a) => {
-          const next = wrapYawRad(a - AIM_YAW_STEP_RAD);
-          setAimSideYawRad(bodyYawQuarterSnappedFromWorldAim(next));
+          const next = wrapYawRad(a + AIM_YAW_STEP_RAD);
+          setAimSideYawRad(
+            bodyYawQuarterSnappedFromWorldAim(hudAimYawToWorldYawRad(next))
+          );
           return next;
         });
         if (k === "ArrowRight") e.preventDefault();
@@ -1000,7 +1005,6 @@ export default function CubeScene() {
               (aimControlMode === "pad" ? (
                 <AimPadHud
                   disabled={shotInFlight}
-                  aimSideYawRad={aimSideYawRad}
                   aimYawRad={aimYawRad}
                   aimPitchOffsetRad={aimPitchOffsetRad}
                   onAimChange={({ yawRad, pitchOffsetRad }) => {
@@ -1039,10 +1043,10 @@ export default function CubeScene() {
                     )
                   }
                   onLeft={() =>
-                    setAimYawRad((a) => wrapYawRad(a + AIM_YAW_STEP_RAD))
+                    setAimYawRad((a) => wrapYawRad(a - AIM_YAW_STEP_RAD))
                   }
                   onRight={() =>
-                    setAimYawRad((a) => wrapYawRad(a - AIM_YAW_STEP_RAD))
+                    setAimYawRad((a) => wrapYawRad(a + AIM_YAW_STEP_RAD))
                   }
                   onPlus90={() =>
                     setAimYawRad((a) =>

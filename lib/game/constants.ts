@@ -156,6 +156,13 @@ export const INTRO_CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] =
 export const CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
   1.38, 1.78, 4.45,
 ];
+/**
+ * Fixed world offset from the ball while follow-ball mode is on: above the ball and toward
+ * −Z (spawn side) so the shot stays in view; orbit controls are disabled for this mode.
+ */
+export const FOLLOW_BALL_CAMERA_OFFSET: readonly [number, number, number] = [
+  0.85, 10.8, -7.4,
+];
 /** Seconds for intro zoom-out from `INTRO_CAMERA_OFFSET_FROM_SPAWN` to gameplay offset. */
 export const INTRO_CAMERA_DURATION_SEC = 2.4;
 /** Orbit pivot Y: one block above the spawn block center. */

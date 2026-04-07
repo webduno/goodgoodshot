@@ -192,9 +192,9 @@ export function SessionEndModal({
   sessionWon: boolean;
   battlesWon: number;
   battlesLost: number;
-  /** Clear session and reload (or leave game). */
+  /** Clear war progress and reload (or leave game). */
   onDone: () => void;
-  /** Begin a fresh session with the chosen length; parent should close this modal. */
+  /** Begin a fresh war with the chosen length; parent should close this modal. */
   onStartNewSession: (battleCount: SessionBattleCount) => void;
 }) {
   const [page, setPage] = useState<1 | 2>(1);
@@ -223,7 +223,7 @@ export function SessionEndModal({
     last &&
     PREDETERMINED_VEHICLES.find((v) => v.id === last.vehicleId)?.name;
 
-  const title = sessionWon ? "Session won" : "Session lost";
+  const title = sessionWon ? "War won" : "War lost";
   const outcomeHint = sessionWon
     ? "You finished with at least as many battle wins as losses."
     : "Battle wins fell short of battle losses this time.";
@@ -232,7 +232,7 @@ export function SessionEndModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="session-end-title"
+      aria-labelledby="war-end-title"
       style={modalBackdrop}
     >
       <style>{`
@@ -281,7 +281,7 @@ export function SessionEndModal({
                 textShadow: "0 1px 0 rgba(255,255,255,0.9)",
               }}
             >
-              ★ Session complete · step 1 of 2
+              ★ War complete
             </p>
             <div
               style={{
@@ -299,10 +299,10 @@ export function SessionEndModal({
                   filter: "drop-shadow(0 3px 2px rgba(0,60,100,0.25))",
                 }}
               >
-                {sessionWon ? "🏆" : "⛳"}
+                {sessionWon ? "🏆" : "⚔️"}
               </span>
               <h2
-                id="session-end-title"
+                id="war-end-title"
                 style={{
                   margin: 0,
                   fontSize: 28,
@@ -317,7 +317,18 @@ export function SessionEndModal({
                   ].join(", "),
                 }}
               >
-                {title}
+                {title}{" "}
+                <span
+                  style={{
+                    fontSize: "0.78em",
+                    fontWeight: 700,
+                    fontVariantNumeric: "tabular-nums",
+                    letterSpacing: "-0.02em",
+                    color: hudColors.label,
+                  }}
+                >
+                  ({battlesWon}/{targetBattles})
+                </span>
               </h2>
             </div>
             <div
@@ -465,7 +476,7 @@ export function SessionEndModal({
                 >
                   ⚡
                 </span>
-                <span>Start a new 3-battle session</span>
+                <span>Start a new 3-battle war</span>
               </span>
             </button>
           </div>
@@ -492,7 +503,7 @@ export function SessionEndModal({
                 color: hudColors.muted,
               }}
             >
-              Session complete · step 2 of 2
+              War complete · step 2 of 2
             </p>
             <h2
               style={{
@@ -512,7 +523,7 @@ export function SessionEndModal({
                 lineHeight: 1.45,
               }}
             >
-              Same stats as the Profile menu — start a new session below or go
+              Same stats as the Profile menu — start a new war below or go
               back to the summary.
             </p>
           </div>
@@ -649,7 +660,7 @@ export function SessionEndModal({
               color: hudColors.label,
             }}
           >
-            New session — pick length
+            New war — pick length
           </p>
           <div
             style={{

@@ -62,7 +62,7 @@ export function HelpModal({
   const clearAllSavedData = () => {
     if (
       !window.confirm(
-        "Clear all saved progress, stats, and session data? The page will reload."
+        "Clear all saved progress, stats, and war data? The page will reload."
       )
     ) {
       return;

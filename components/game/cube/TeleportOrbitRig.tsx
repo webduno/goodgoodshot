@@ -14,6 +14,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
   CAMERA_OFFSET_FROM_SPAWN,
+  FOLLOW_BALL_CAMERA_OFFSET,
   INTRO_CAMERA_DURATION_SEC,
   INTRO_CAMERA_OFFSET_FROM_SPAWN,
   ORBIT_TARGET_Y_OFFSET,
@@ -52,12 +53,22 @@ export function SpawnVisualGroup({ children }: { children: ReactNode }) {
   return <group ref={groupRef}>{children}</group>;
 }
 
+export type BallFollowStateRef = MutableRefObject<{
+  pos: THREE.Vector3;
+  valid: boolean;
+}>;
+
 export function TeleportOrbitRig({
   gameSpawn,
   children,
+  followBallActive = false,
+  ballFollowStateRef,
 }: {
   gameSpawn: Vec3;
   children: ReactNode;
+  /** When true with valid ball position, orbit is disabled and the camera uses a fixed offset from the ball. */
+  followBallActive?: boolean;
+  ballFollowStateRef?: BallFollowStateRef;
 }) {
   const { camera, gl } = useThree();
   const controlsRef = useRef<OrbitControls | null>(null);
@@ -74,6 +85,9 @@ export function TeleportOrbitRig({
   const deltaVRef = useRef(new THREE.Vector3());
   const introDoneRef = useRef(false);
   const introProgressRef = useRef(0);
+  const followBallWasActiveRef = useRef(false);
+  /** True while follow-ball mode is actively tracking a projectile (cleared when ball ends or follow toggles off). */
+  const followBallWasTrackingRef = useRef(false);
 
   useLayoutEffect(() => {
     const controls = new OrbitControls(camera, gl.domElement);
@@ -127,9 +141,86 @@ export function TeleportOrbitRig({
     prevGameRef.current = [...gameSpawn];
   }, [camera, gameSpawn]);
 
+  useLayoutEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    if (followBallWasActiveRef.current && !followBallActive) {
+      const sx = gameSpawn[0];
+      const sy = gameSpawn[1];
+      const sz = gameSpawn[2];
+      camera.position.set(
+        sx + CAMERA_OFFSET_FROM_SPAWN[0],
+        sy + CAMERA_OFFSET_FROM_SPAWN[1],
+        sz + CAMERA_OFFSET_FROM_SPAWN[2]
+      );
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
+      controls.enabled = true;
+      controls.update();
+      clampCameraAboveGround(camera, controls.target);
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+    }
+    followBallWasActiveRef.current = followBallActive;
+  }, [followBallActive, gameSpawn, camera]);
+
   useFrame((_, delta) => {
     const controls = controlsRef.current;
     if (!controls) return;
+
+    const ballState = ballFollowStateRef?.current;
+    const ballValid = !!(ballState?.valid);
+
+    if (!followBallActive) {
+      followBallWasTrackingRef.current = false;
+    }
+
+    if (
+      followBallActive &&
+      ballState &&
+      ballValid &&
+      introDoneRef.current &&
+      !transitioningRef.current
+    ) {
+      followBallWasTrackingRef.current = true;
+      const b = ballState.pos;
+      const ox = FOLLOW_BALL_CAMERA_OFFSET[0];
+      const oy = FOLLOW_BALL_CAMERA_OFFSET[1];
+      const oz = FOLLOW_BALL_CAMERA_OFFSET[2];
+      controls.enabled = false;
+      camera.position.set(b.x + ox, b.y + oy, b.z + oz);
+      controls.target.set(b.x, b.y, b.z);
+      camera.lookAt(controls.target);
+      clampCameraAboveGround(camera, controls.target);
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      return;
+    }
+
+    if (
+      followBallActive &&
+      followBallWasTrackingRef.current &&
+      !ballValid &&
+      introDoneRef.current &&
+      !transitioningRef.current
+    ) {
+      followBallWasTrackingRef.current = false;
+      const sx = gameSpawn[0];
+      const sy = gameSpawn[1];
+      const sz = gameSpawn[2];
+      controls.enabled = true;
+      camera.position.set(
+        sx + CAMERA_OFFSET_FROM_SPAWN[0],
+        sy + CAMERA_OFFSET_FROM_SPAWN[1],
+        sz + CAMERA_OFFSET_FROM_SPAWN[2]
+      );
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
+      controls.update();
+      clampCameraAboveGround(camera, controls.target);
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      return;
+    }
+
     if (transitioningRef.current) {
       progressRef.current += delta;
       const t = Math.min(1, progressRef.current / TELEPORT_DURATION_SEC);

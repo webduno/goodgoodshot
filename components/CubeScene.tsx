@@ -27,6 +27,7 @@ import {
 import { StaticSceneLights } from "@/components/game/cube/StaticSceneLights";
 import {
   goldChipButtonStyle,
+  goldIconButtonStyle,
   hudBottomPanel,
   hudFont,
   hudMiniPanel,
@@ -106,6 +107,7 @@ import {
   useRef,
   useState,
 } from "react";
+import * as THREE from "three";
 
 export default function CubeScene() {
   const { recordHoleCompleted, recordGoldCoin, spendGoldCoin, stats } =
@@ -142,6 +144,11 @@ export default function CubeScene() {
   aimYawRef.current = aimYawRad;
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [shotInFlight, setShotInFlight] = useState(false);
+  const [followBallCamera, setFollowBallCamera] = useState(false);
+  const ballFollowStateRef = useRef({
+    pos: new THREE.Vector3(),
+    valid: false,
+  });
   const [sessionShots, setSessionShots] = useState(0);
   const [playSession, setPlaySession] = useState<PlaySession | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
@@ -725,7 +732,11 @@ export default function CubeScene() {
         <StaticSceneLights />
         <SkyClouds />
         <SkySun />
-        <TeleportOrbitRig gameSpawn={game.spawnCenter}>
+        <TeleportOrbitRig
+          gameSpawn={game.spawnCenter}
+          followBallActive={followBallCamera}
+          ballFollowStateRef={ballFollowStateRef}
+        >
           <SceneContent
             spawnCenter={game.spawnCenter}
             goalCenter={goalCenter}
@@ -762,6 +773,7 @@ export default function CubeScene() {
               // )
             }
             }
+            ballFollowStateRef={ballFollowStateRef}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
@@ -831,6 +843,7 @@ export default function CubeScene() {
         </div>
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
+        <>
         <div
           className="hud-bottom-dock"
           style={{
@@ -1107,6 +1120,57 @@ export default function CubeScene() {
             </div>
           )}
         </div>
+        <div
+          style={{
+            position: "absolute",
+            right: 12,
+            bottom: 12,
+            zIndex: 41,
+            pointerEvents: "auto",
+          }}
+        >
+          <button
+            type="button"
+            aria-label={
+              followBallCamera
+                ? "Turn off follow ball camera"
+                : "Follow the ball while it is in the air"
+            }
+            aria-pressed={followBallCamera}
+            onClick={() => setFollowBallCamera((v) => !v)}
+            style={{
+              ...goldIconButtonStyle(false),
+              width: 48,
+              height: 48,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxSizing: "border-box",
+              ...(followBallCamera
+                ? {
+                    outline: "2px solid rgba(0, 174, 239, 0.95)",
+                    outlineOffset: 2,
+                  }
+                : {}),
+            }}
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            >
+              <circle cx="12" cy="12" r="7" />
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+              <circle cx="12" cy="12" r="2.25" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
+        </div>
+        </>
       )}
       <StartGameModal
         open={showStartGameModal}

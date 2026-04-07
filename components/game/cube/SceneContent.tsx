@@ -26,7 +26,10 @@ import { ShootTriggerCube } from "@/components/game/cube/meshes/ShootTriggerCube
 import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
 import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
-import { SpawnVisualGroup } from "@/components/game/cube/TeleportOrbitRig";
+import {
+  type BallFollowStateRef,
+  SpawnVisualGroup,
+} from "@/components/game/cube/TeleportOrbitRig";
 import {
   BLOCK_SIZE,
   GOAL_BLOCK_COLOR,
@@ -221,6 +224,7 @@ export function SceneContent({
   noWindActive,
   biome,
   onTerrainCoordsClick,
+  ballFollowStateRef,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -258,6 +262,7 @@ export function SceneContent({
   noWindActive: boolean;
   /** Earth / terrain mesh pick: parent can show HUD toast (e.g. coordinates). */
   onTerrainCoordsClick?: (coords: { lat: number; lng: number }) => void;
+  ballFollowStateRef: BallFollowStateRef;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -398,6 +403,18 @@ export function SceneContent({
   }, [goalCenter, spawnCenter]);
 
   void coinRenderTick;
+
+  useFrame(() => {
+    const mesh = meshRef.current;
+    const p = projectileRef.current;
+    const st = ballFollowStateRef.current;
+    if (mesh && p) {
+      st.pos.copy(mesh.position);
+      st.valid = true;
+    } else {
+      st.valid = false;
+    }
+  });
 
   const onFireInput = useCallback(() => {
     if (roundLocked) return;

@@ -28,7 +28,7 @@ import type { SessionBiomeChoice } from "@/lib/game/sessionBattleMaps";
 
 const BATTLE_OPTIONS: SessionBattleCount[] = [3, 9, 18];
 
-/** Scoped hover motion for session-length pills (gamified lift + tilt). */
+/** Scoped hover motion for war-length pills (gamified lift + tilt). */
 const battleLengthButtonCss = `
   .ggsBattleLenBtn {
     transition: transform 0.22s cubic-bezier(0.34, 1.45, 0.64, 1),
@@ -301,7 +301,7 @@ export function StartGameModal({
         role="dialog"
         aria-modal="true"
         aria-busy="true"
-        aria-label="Loading session"
+        aria-label="Loading war"
         style={modalBackdrop}
       >
         <div style={startModalShell}>
@@ -327,7 +327,7 @@ export function StartGameModal({
   const hasStartedBattles = roundsDone > 0;
 
   const title =
-    inProgress && hasStartedBattles ? "Continue session" : "Welcome";
+    inProgress && hasStartedBattles ? "Continue war" : "Welcome";
 
   const rulesPanelContinue: CSSProperties = {
     ...rulesPanel,
@@ -384,7 +384,7 @@ export function StartGameModal({
           <>
             <div style={rulesPanel}>
               Win a battle — hit the goal at or under par (strokes ≤ coins on the
-              hole). The session is a win if your battle wins are at least your
+              hole). The war is a win if your battle wins are at least your
               battle losses (ties count).
             </div>
             <div
@@ -451,7 +451,7 @@ export function StartGameModal({
                   ...hudMiniPanel,
                 }}
               >
-                <div style={statLabel}>Session score</div>
+                <div style={statLabel}>War score</div>
                 <div
                   style={{
                     color: hudColors.value,
@@ -516,7 +516,7 @@ export function StartGameModal({
                     2
                   </span>
                   <div style={{ minWidth: 0 }}>
-                    <div style={welcomeRuleTitle}>Win the session</div>
+                    <div style={welcomeRuleTitle}>Win the war</div>
                     <p style={welcomeRuleBody}>
                       Your{" "}
                       <strong style={{ color: hudColors.value }}>
@@ -537,7 +537,7 @@ export function StartGameModal({
                   <div style={{ minWidth: 0 }}>
                     <div style={welcomeRuleTitle}>Start playing</div>
                     <p style={welcomeRuleBody}>
-                      Pick a session length below —{" "}
+                      Pick a war length below —{" "}
                       <strong style={{ color: hudColors.accent }}>3</strong>,{" "}
                       <strong style={{ color: hudColors.accent }}>9</strong>, or{" "}
                       <strong style={{ color: hudColors.accent }}>18</strong>{" "}
@@ -597,7 +597,7 @@ export function StartGameModal({
                       color: hudColors.label,
                     }}
                   >
-                    Choose fairway style for this session. Random picks plain or
+                    Choose fairway style for this war. Random picks plain or
                     desert independently for each battle; a fixed choice uses
                     that biome for every battle.
                   </p>
@@ -677,7 +677,7 @@ export function StartGameModal({
                       color: hudColors.label,
                     }}
                   >
-                    Optional — pick a vehicle for this session (default works
+                    Optional — pick a vehicle for this war (default works
                     fine). You can change it any time before starting battles.
                   </p>
                   <div
@@ -770,7 +770,7 @@ export function StartGameModal({
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
                     Win a battle — hit the goal at or under par (strokes ≤ coins
-                    on the hole). The session is a win if your battle wins are at
+                    on the hole). The war is a win if your battle wins are at
                     least your battle losses (ties count).
                   </p>
                   <p
@@ -891,7 +891,7 @@ export function StartGameModal({
                 lineHeight: 1.45,
               }}
             >
-              New session — pick length
+              New war — pick length
             </p>
             <div
               style={{

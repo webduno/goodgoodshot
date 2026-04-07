@@ -360,19 +360,18 @@ const progressTrackShared: CSSProperties = {
   borderRadius: 999,
   padding: 1,
   boxSizing: "border-box",
+  background: "#ffffff",
   boxShadow: "inset 0 1px 4px rgba(0,0,0,0.18)",
 };
 
 /** Charge / cooldown timer bar — same width as aim button row. */
 export const progressTrack: CSSProperties = {
   ...progressTrackShared,
-  background: "linear-gradient(180deg, #2d8a3e, #b8f0c8)",
 };
 
 /** Strength build-up bar (above timer during charge). */
 export const progressTrackStrength: CSSProperties = {
   ...progressTrackShared,
-  background: "linear-gradient(180deg, #78350f, #fde68a)",
 };
 
 export function progressFillStyle(

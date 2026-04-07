@@ -67,13 +67,13 @@ export function SessionStatsModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="session-stats-title"
+      aria-labelledby="war-stats-title"
       style={modalBackdrop}
       onClick={onClose}
     >
       <div style={helpModalCard} onClick={(e) => e.stopPropagation()}>
         <h2
-          id="session-stats-title"
+          id="war-stats-title"
           style={{
             margin: "0 0 12px",
             fontSize: 16,
@@ -81,7 +81,7 @@ export function SessionStatsModal({
             color: hudColors.value,
           }}
         >
-          Session
+          War
         </h2>
 
         {!session ? (
@@ -93,7 +93,7 @@ export function SessionStatsModal({
               color: hudColors.label,
             }}
           >
-            No active session. Start or continue a session from the start
+            No active war. Start or continue a war from the start
             screen.
           </p>
         ) : (
@@ -159,7 +159,7 @@ export function SessionStatsModal({
                   </div>
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <div style={statLabel}>Session started</div>
+                  <div style={statLabel}>War started</div>
                   <div style={{ ...statValue, fontSize: 12, fontWeight: 600 }}>
                     {new Date(session.startedAtMs).toLocaleString()}
                   </div>

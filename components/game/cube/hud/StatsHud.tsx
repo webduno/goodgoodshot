@@ -440,9 +440,9 @@ export function StatsHud({
       <button
         type="button"
         onClick={onScoreClick}
-        title="View session details"
+        title="View war details"
         aria-haspopup="dialog"
-        aria-label={`Score ${sessionScoreDisplay}. Open session details.`}
+        aria-label={`Score ${sessionScoreDisplay}. Open war details.`}
         style={{
           pointerEvents: "auto",
           margin: 0,

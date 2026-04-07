@@ -170,9 +170,9 @@ export function HelpModal({
               keys match ↑↓←→. The white wedge points where the shot goes.
             </li>
             <li style={{ marginBottom: 8 }}>
-              <strong style={{ color: hudColors.value }}>Shoot</strong> — Click
-              the <strong style={{ color: hudColors.value }}>Fire</strong> button
-              or press <strong style={{ color: hudColors.value }}>Space</strong>.
+              <strong style={{ color: hudColors.value }}>Shoot</strong> — Use
+              the <strong style={{ color: hudColors.value }}>Hold to shoot</strong>{" "}
+              button or press <strong style={{ color: hudColors.value }}>Space</strong>.
               The first click (or Space) starts a {chargeSec}s charge window.
             </li>
             <li style={{ marginBottom: 8 }}>
@@ -230,7 +230,7 @@ export function HelpModal({
                 <li style={{ marginBottom: 6 }}>
                   <strong style={{ color: hudColors.value }}>Guideline</strong>{" "}
                   — Separate charges (same starting count). One tap before the shot
-                  shows a dashed preview at your aim (full fire-power bar, not
+                  shows a dashed preview at your aim (full strength bar, not
                   overflow); when you start charging it follows your actual power.
                   First flight only to the ground or goal; strength stacks apply;
                   wind is ignored in the preview.

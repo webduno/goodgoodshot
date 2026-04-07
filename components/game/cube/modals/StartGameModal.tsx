@@ -26,7 +26,7 @@ import {
 } from "@/lib/game/playSession";
 import type { SessionBiomeChoice } from "@/lib/game/sessionBattleMaps";
 
-const BATTLE_OPTIONS: SessionBattleCount[] = [3, 9, 18];
+const BATTLE_OPTIONS: SessionBattleCount[] = [3, 5, 9];
 
 /** Scoped hover motion for war-length pills (gamified lift + tilt). */
 const battleLengthButtonCss = `
@@ -539,8 +539,8 @@ export function StartGameModal({
                     <p style={welcomeRuleBody}>
                       Pick a war length below —{" "}
                       <strong style={{ color: hudColors.accent }}>3</strong>,{" "}
-                      <strong style={{ color: hudColors.accent }}>9</strong>, or{" "}
-                      <strong style={{ color: hudColors.accent }}>18</strong>{" "}
+                      <strong style={{ color: hudColors.accent }}>5</strong>, or{" "}
+                      <strong style={{ color: hudColors.accent }}>9</strong>{" "}
                       battles.
                     </p>
                   </div>
@@ -786,7 +786,9 @@ export function StartGameModal({
                     Aim with the on-screen controls or{" "}
                     <strong style={{ color: hudColors.value }}>WASD</strong> /{" "}
                     <strong style={{ color: hudColors.value }}>arrows</strong>.
-                    Tap <strong style={{ color: hudColors.value }}>Fire</strong>{" "}
+                    Hold the <strong style={{ color: hudColors.value }}>
+                      bottom-right button
+                    </strong>{" "}
                     or press <strong style={{ color: hudColors.value }}>Space</strong>{" "}
                     to start a charge window; extra taps add power. Open{" "}
                     <strong style={{ color: hudColors.value }}>Power-ups</strong>{" "}
@@ -823,7 +825,7 @@ export function StartGameModal({
                   </PowerupLegendRow>
                   <PowerupLegendRow slot="guideline" title="Guideline (teal)">
                     One tap spends one charge: a dashed line follows your aim at
-                    full fire-power bar (then your actual power while charging) to
+                    full strength bar (then your actual power while charging) to
                     the first landing or goal — no wind in the preview; strength
                     stacks apply.
                   </PowerupLegendRow>

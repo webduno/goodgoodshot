@@ -14,7 +14,7 @@ export type SessionBattleMapsPayload = {
 };
 
 function isSessionBattleCount(n: number): n is SessionBattleCount {
-  return n === 3 || n === 9 || n === 18;
+  return n === 3 || n === 5 || n === 9;
 }
 
 function parseGameStateLoose(raw: unknown): GameState | null {

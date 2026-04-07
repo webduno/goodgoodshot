@@ -4,10 +4,18 @@ import { useMemo } from "react";
 
 import { hudFont, hudMiniPanel } from "@/components/gameHudStyles";
 import { islandColorsForBiome, minimapTeeSurfaceColor } from "@/lib/game/biomes";
-import { FIELD_MINIMAP_DESERT_FOUNDATION } from "@/lib/game/constants";
+import {
+  FIELD_MINIMAP_DESERT_FOUNDATION,
+  GOAL_PYRAMID_COLOR,
+} from "@/lib/game/constants";
 import type { BiomeId, IslandRect } from "@/lib/game/types";
 
 const VIEW = 100;
+
+/** Minimap pyramid icon (viewBox units) — large enough to read at ~116px inner width. */
+const PYRAMID_MINIMAP_APEX_Y = 7;
+const PYRAMID_MINIMAP_BASE_Y = 6;
+const PYRAMID_MINIMAP_HALF_W = 6;
 
 /**
  * Top-down schematic of the current hole’s island footprints (`IslandRect`), matching
@@ -16,18 +24,27 @@ const VIEW = 100;
 export function StaticCourseMinimap({
   islands,
   biome,
+  goalWorldX,
+  goalWorldZ,
 }: {
   islands: readonly IslandRect[];
   biome: BiomeId;
+  /** Lane XZ of the goal pyramid (same as `goalCenter[0]` / `[2]`). */
+  goalWorldX: number;
+  goalWorldZ: number;
 }) {
   const { turf, foundation } = islandColorsForBiome(biome);
   const teeTop = minimapTeeSurfaceColor(biome);
   const foundationStrip =
     biome === "desert" ? FIELD_MINIMAP_DESERT_FOUNDATION : foundation;
 
-  const { rects, viewBox } = useMemo(() => {
+  const { rects, viewBox, pyramid } = useMemo(() => {
     if (islands.length === 0) {
-      return { rects: [] as const, viewBox: `0 0 ${VIEW} ${VIEW}` };
+      return {
+        rects: [] as const,
+        viewBox: `0 0 ${VIEW} ${VIEW}`,
+        pyramid: null as { cx: number; cy: number } | null,
+      };
     }
 
     let minX = Infinity;
@@ -63,8 +80,16 @@ export function StaticCourseMinimap({
       return { i, sx, sy, sw, sh };
     });
 
-    return { rects, viewBox: `0 0 ${VIEW} ${VIEW}` };
-  }, [islands]);
+    /** Same mapping as island edges: goal pyramid center on XZ. */
+    const cx = ((bx1 - goalWorldX) / bw) * VIEW;
+    const cy = ((bz1 - goalWorldZ) / bh) * VIEW;
+
+    return {
+      rects,
+      viewBox: `0 0 ${VIEW} ${VIEW}`,
+      pyramid: { cx, cy },
+    };
+  }, [islands, goalWorldX, goalWorldZ]);
 
   if (islands.length === 0) return null;
 
@@ -74,10 +99,6 @@ export function StaticCourseMinimap({
       style={{
         ...hudMiniPanel,
         ...hudFont,
-        position: "absolute",
-        top: 52,
-        right: 12,
-        zIndex: 42,
         width: 128,
         height: 128,
         padding: 6,
@@ -120,6 +141,16 @@ export function StaticCourseMinimap({
             strokeWidth={0.4}
           />
         ))}
+        {pyramid && (
+          <polygon
+            points={`${pyramid.cx},${pyramid.cy - PYRAMID_MINIMAP_APEX_Y} ${pyramid.cx - PYRAMID_MINIMAP_HALF_W},${pyramid.cy + PYRAMID_MINIMAP_BASE_Y} ${pyramid.cx + PYRAMID_MINIMAP_HALF_W},${pyramid.cy + PYRAMID_MINIMAP_BASE_Y}`}
+            fill={GOAL_PYRAMID_COLOR}
+            stroke="#f0f4f8"
+            strokeWidth={2.25}
+            strokeLinejoin="round"
+            paintOrder="stroke fill"
+          />
+        )}
       </svg>
     </div>
   );

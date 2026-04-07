@@ -1,7 +1,6 @@
 "use client";
 import {
   launchStrengthFromClicks,
-  maxClicksForStrengthBarRef,
   rgbTupleToCss,
   vehicleChargeMs,
   type PlayerVehicleConfig,
@@ -110,11 +109,13 @@ function VehicleNextShotPowerupLabel({
   noBounceActive,
   noWindActive,
   guidelineActiveNextShot,
+  onGuidelineClick,
 }: {
   powerupStackCount: number;
   noBounceActive: boolean;
   noWindActive: boolean;
   guidelineActiveNextShot: boolean;
+  onGuidelineClick?: () => void;
 }) {
   const hasAny =
     powerupStackCount > 0 ||
@@ -178,12 +179,33 @@ function VehicleNextShotPowerupLabel({
               No wind
             </span>
           )}
-          {guidelineActiveNextShot && (
-            <span style={pillStyle("guideline")}>
-              <PowerupHudIcon slotId="guideline" color="currentColor" size={11} />
-              Guideline
-            </span>
-          )}
+          {guidelineActiveNextShot &&
+            (onGuidelineClick ? (
+              <button
+                type="button"
+                aria-label="Guideline info"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGuidelineClick();
+                }}
+                style={{
+                  ...pillStyle("guideline"),
+                  pointerEvents: "auto",
+                  cursor: "pointer",
+                  margin: 0,
+                  font: "inherit",
+                  fontFamily: "inherit",
+                }}
+              >
+                <PowerupHudIcon slotId="guideline" color="currentColor" size={11} />
+                Guideline
+              </button>
+            ) : (
+              <span style={pillStyle("guideline")}>
+                <PowerupHudIcon slotId="guideline" color="currentColor" size={11} />
+                Guideline
+              </span>
+            ))}
         </div>
       </div>
     </Html>
@@ -246,8 +268,11 @@ export function SceneContent({
   guidelineActiveNextShot,
   onGuidelineConsumedForShot,
   chargeHudForGuideline,
+  guidelinePreviewClicks,
+  guidelineFireBlocked,
   biome,
   onTerrainCoordsClick,
+  onGuidelinePillClick,
   ballFollowStateRef,
 }: {
   spawnCenter: Vec3;
@@ -291,11 +316,17 @@ export function SceneContent({
   onGuidelineConsumedForShot: () => void;
   /**
    * While charging: live clicks. When null but guideline is armed: idle preview uses
-   * full strength bar only (not overflow / not a separate “max”).
+   * `guidelinePreviewClicks` (slider value, kept after Ready until the shot).
    */
   chargeHudForGuideline: { clicks: number } | null;
+  /** Idle guideline preview: click count (1 … ref bar max); same value after Ready until charging. */
+  guidelinePreviewClicks: number;
+  /** True while adjusting guideline: shoot controls do not start a charge. */
+  guidelineFireBlocked: boolean;
   /** Earth / terrain mesh pick: parent can show HUD toast (e.g. coordinates). */
   onTerrainCoordsClick?: (coords: { lat: number; lng: number }) => void;
+  /** Opens Guideline info (e.g. when the floating Guideline pill is tapped). */
+  onGuidelinePillClick?: () => void;
   ballFollowStateRef: BallFollowStateRef;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -330,7 +361,7 @@ export function SceneContent({
     const charging = chargeHudForGuideline !== null;
     const clicks = charging
       ? chargeHudForGuideline.clicks
-      : maxClicksForStrengthBarRef(vehicle);
+      : guidelinePreviewClicks;
     const force =
       launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
     return sampleFirstSegmentGuideline(
@@ -345,6 +376,7 @@ export function SceneContent({
   }, [
     aimPitchOffsetRad,
     chargeHudForGuideline,
+    guidelinePreviewClicks,
     getPowerupMultiplier,
     goalCenter,
     guidelineActiveNextShot,
@@ -492,6 +524,7 @@ export function SceneContent({
     if (roundLocked) return;
     if (cooldownUntil !== null && Date.now() < cooldownUntil) return;
     if (projectileRef.current) return;
+    if (guidelineFireBlocked) return;
 
     if (chargingRef.current) {
       bumpChargeClicks();
@@ -500,7 +533,14 @@ export function SceneContent({
 
     beginChargeWindow();
   },
-    [roundLocked, cooldownUntil, beginChargeWindow, bumpChargeClicks, onChargeHudUpdate]
+    [
+      roundLocked,
+      cooldownUntil,
+      beginChargeWindow,
+      bumpChargeClicks,
+      onChargeHudUpdate,
+      guidelineFireBlocked,
+    ]
   );
 
   const setFireHeld = useCallback(
@@ -556,7 +596,8 @@ export function SceneContent({
   const shootTriggerReady =
     !roundLocked &&
     (cooldownUntil === null || Date.now() >= cooldownUntil) &&
-    !shotInFlight;
+    !shotInFlight &&
+    !guidelineFireBlocked;
 
   const shootTriggerPhase: "ready" | "charging" | "inactive" =
     !shootTriggerReady
@@ -646,6 +687,7 @@ export function SceneContent({
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
             guidelineActiveNextShot={guidelineActiveNextShot}
+            onGuidelineClick={onGuidelinePillClick}
           />
         </group>
         <AimYawPrism

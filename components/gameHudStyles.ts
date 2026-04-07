@@ -228,7 +228,11 @@ export function hudRoundPowerupButtonStyle(disabled: boolean): CSSProperties {
   };
 }
 
-export type FireButtonHudVariant = "ready" | "charging" | "disabled";
+export type FireButtonHudVariant =
+  | "ready"
+  | "charging"
+  | "disabled"
+  | "guidelineReady";
 
 /** Circular Fire — bottom dock: red (ready), orange (charging), grey (shot / cooldown / locked). */
 export function hudRoundFireButtonStyle(
@@ -236,16 +240,21 @@ export function hudRoundFireButtonStyle(
 ): CSSProperties {
   const disabled = variant === "disabled";
   const charging = variant === "charging";
+  const guidelineReady = variant === "guidelineReady";
   const bg = disabled
     ? glassDisabled
     : charging
       ? glassFaceFireCharging
-      : glassFaceRed;
+      : guidelineReady
+        ? POWERUP_SLOT_ACCENT.guideline.ready
+        : glassFaceRed;
   const shadow = disabled
     ? dropSm
     : charging
       ? dropSmOrange
-      : dropSmRed;
+      : guidelineReady
+        ? POWERUP_SLOT_ACCENT.guideline.shadow
+        : dropSmRed;
   const text = disabled
     ? textOnGlossButtonDisabled
     : charging
@@ -254,7 +263,13 @@ export function hudRoundFireButtonStyle(
           textShadow:
             "0 1px 2px rgba(80, 30, 0, 0.35), 0 0 1px rgba(80, 30, 0, 0.25)",
         }
-      : textOnGlossButton;
+      : guidelineReady
+        ? {
+            color: "#134e4a",
+            textShadow:
+              "0 1px 2px rgba(255, 255, 255, 0.45), 0 0 1px rgba(19, 78, 74, 0.35)",
+          }
+        : textOnGlossButton;
   return {
     ...hudFont,
     ...text,

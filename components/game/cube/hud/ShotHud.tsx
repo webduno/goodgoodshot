@@ -104,7 +104,7 @@ export function ShotHud({
   return null;
 }
 
-/** Vertical fire power fill — placed above the Fire button (right dock). */
+/** Vertical shot power fill — placed above the Hold to shoot button (right dock). */
 export function FirePowerVerticalHud({
   shotInFlight,
   chargeHud,
@@ -182,7 +182,7 @@ export function FirePowerVerticalHud({
           borderRadius: 3,
         }}
       >
-        Fire
+        Shot
         <br />
         power
       </div>

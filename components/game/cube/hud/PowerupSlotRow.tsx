@@ -129,7 +129,7 @@ export function PowerupSlotRow({
               ? `no bounce and no roll after landing for this shot (${noBounceCharges} no-bounce charges left)`
               : slot.id === "nowind"
                 ? `ignore wind on the ball for this shot (${noWindCharges} no-wind charges left)`
-                : `show a no-wind trajectory at full fire bar before you shoot, then actual power while charging (${guidelineCharges} guideline charges left)`;
+                : `show a no-wind trajectory at full strength bar before you shoot, then actual power while charging (${guidelineCharges} guideline charges left)`;
         const buttonTitle =
           slot.id === "strength"
             ? `${slot.name}: ×2 per tap · ${strengthCharges} charge${strengthCharges === 1 ? "" : "s"}`

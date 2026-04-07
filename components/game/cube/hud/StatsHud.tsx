@@ -8,7 +8,6 @@ import {
 import { useState, type CSSProperties } from "react";
 
 import { hudColors, hudFont, hudMiniPanel } from "@/components/gameHudStyles";
-import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 
 import { HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
 
@@ -24,7 +23,6 @@ export function StatsHud({
   powerupStackCount,
   noBounceActive,
   noWindActive,
-  windHud,
   vehicle,
   sessionScoreDisplay,
   onScoreClick,
@@ -41,7 +39,6 @@ export function StatsHud({
   powerupStackCount: number;
   noBounceActive: boolean;
   noWindActive: boolean;
-  windHud: { x: number; z: number };
   vehicle: PlayerVehicleConfig;
   /** e.g. `2/9(45)` — wins / games in session (strokes, incl. current hole). */
   sessionScoreDisplay: string;
@@ -54,14 +51,6 @@ export function StatsHud({
   const inCooldown = cooldownUntil !== null && remainingMs > 0;
   const charging = chargeHud !== null;
   const powerupMult = Math.pow(2, powerupStackCount);
-
-  const windMag = Math.hypot(windHud.x, windHud.z);
-  const windPercentOfMax =
-    WIND_ACCEL_MAX > 0 ? (windMag / WIND_ACCEL_MAX) * 100 : 0;
-  /** Meteorological convention: direction the wind comes from (opposite to acceleration). */
-  const windFromAngleDeg =
-    (Math.atan2(-windHud.z, -windHud.x) * 180) / Math.PI;
-  const windArrowLen = 6 + (Math.min(windMag, WIND_ACCEL_MAX) / WIND_ACCEL_MAX) * 14;
 
   const mainCss = rgbTupleToCss(vehicle.mainRgb);
   const accentCss = rgbTupleToCss(vehicle.accentRgb);
@@ -176,7 +165,7 @@ export function StatsHud({
             <div
               role="status"
               aria-label={`Base launch strength ${baseLaunchStrength.toFixed(2)}`}
-              title="Launch strength on the first tap in the charge window; hold Fire, Space, or the rear button to ramp clicks"
+              title="Launch strength on the first tap in the charge window; hold Shoot, Space, or the rear button to ramp clicks"
               style={{
                 color: "#ffffff",
                 fontWeight: 700,
@@ -289,70 +278,9 @@ export function StatsHud({
           fontWeight: 700,
           fontSize: 14,
           fontVariantNumeric: "tabular-nums",
-          marginBottom: 10,
         }}
       >
         {holePar > 0 ? `${sessionShots}/${holePar}` : sessionShots}
-      </div>
-      <div
-        style={{
-          color: hudColors.muted,
-          marginBottom: 2,
-          marginTop: 4,
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-        }}
-      >
-        Wind
-      </div>
-      <div
-        role="img"
-        aria-label={`Wind ${windPercentOfMax.toFixed(0)}% of max from ${windFromAngleDeg.toFixed(0)}° in world XZ (X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)})`}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          alignSelf: "flex-start",
-          gap: 2,
-          color: hudColors.value,
-          marginBottom: 6,
-        }}
-      >
-        <svg
-          width={40}
-          height={40}
-          viewBox="0 0 40 40"
-          aria-hidden
-        >
-          <g transform={`translate(20 20) rotate(${windFromAngleDeg})`}>
-            <line
-              x1={-windArrowLen * 0.15}
-              y1={0}
-              x2={windArrowLen * 0.65}
-              y2={0}
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-            />
-            <polygon
-              points={`${windArrowLen * 0.85},0 ${windArrowLen * 0.55},-4 ${windArrowLen * 0.55},4`}
-              fill="currentColor"
-            />
-          </g>
-        </svg>
-        <span
-          style={{
-            fontVariantNumeric: "tabular-nums",
-            fontWeight: 600,
-            fontSize: 11,
-            lineHeight: 1.2,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {windPercentOfMax.toFixed(0)}%
-        </span>
       </div>
 
       {shotInFlight && (

@@ -3,6 +3,7 @@
 import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
+import { GuidelineInfoModal } from "@/components/game/cube/modals/GuidelineInfoModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { SessionStatsModal } from "@/components/game/cube/modals/SessionStatsModal";
@@ -11,9 +12,11 @@ import { StartGameModal } from "@/components/game/cube/modals/StartGameModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { AimPadHud } from "@/components/game/cube/hud/AimPadHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
+import { GuidelinePreviewPowerSlider } from "@/components/game/cube/hud/GuidelinePreviewPowerSlider";
 import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StaticCourseMinimap } from "@/components/game/cube/hud/StaticCourseMinimap";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
+import { WindHud } from "@/components/game/cube/hud/WindHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
 import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
 import { IslandMiniVillage } from "@/components/game/cube/meshes/IslandMiniVillage";
@@ -38,6 +41,8 @@ import {
   hudRoundPowerupButtonStyle,
 } from "@/components/gameHudStyles";
 import {
+  halfClicksForStrengthBarRef,
+  maxClicksForStrengthBarRef,
   resolveVehicleFromUrlParam,
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
@@ -160,6 +165,13 @@ export default function CubeScene() {
   const [sessionShots, setSessionShots] = useState(0);
   const [playSession, setPlaySession] = useState<PlaySession | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
+  /** First hole of the session: show trajectory guideline on every shot without spending charges. */
+  const sessionFirstBattleGuideline = useMemo(
+    () =>
+      playSession !== null &&
+      playSession.battlesWon + playSession.battlesLost === 0,
+    [playSession]
+  );
 
   useEffect(() => {
     setPlaySession(loadActivePlaySession());
@@ -199,6 +211,7 @@ export default function CubeScene() {
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSessionStatsModal, setShowSessionStatsModal] = useState(false);
+  const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -262,7 +275,7 @@ export default function CubeScene() {
 
   const onContinueSession = useCallback(() => {
     setShowStartGameModal(false);
-    pushHudToast(`Tap Fire to start`);
+    pushHudToast(`Hold to shoot to start`);
   }, [pushHudToast]);
 
   const onStartNewSession = useCallback(
@@ -279,7 +292,7 @@ export default function CubeScene() {
       setPlaySession(next);
       dispatch({ type: "REPLACE_GAME_STATE", state: maps[0] });
       setShowStartGameModal(false);
-      pushHudToast(`Tap Fire to start`);
+      pushHudToast(`Hold to shoot to start`);
     },
     [pushHudToast]
   );
@@ -287,6 +300,12 @@ export default function CubeScene() {
     remainingMs: number;
     clicks: number;
   } | null>(null);
+  const [guidelinePreviewClicks, setGuidelinePreviewClicks] = useState(() =>
+    halfClicksForStrengthBarRef(resolveVehicleFromUrlParam(null))
+  );
+  const [guidelineReadyConfirmed, setGuidelineReadyConfirmed] = useState(false);
+  const prevPurchasedGuidelineRef = useRef(false);
+  const prevShotInFlightRef = useRef(shotInFlight);
   const [, setHudTick] = useState(0);
 
   const gameRef = useRef(game);
@@ -325,6 +344,34 @@ export default function CubeScene() {
   noWindChargesRef.current = noWindCharges;
   guidelineChargesRef.current = guidelineCharges;
   const inCooldown = cooldownUntil !== null;
+
+  useEffect(() => {
+    const m = maxClicksForStrengthBarRef(playerVehicle);
+    setGuidelinePreviewClicks((c) => Math.min(m, Math.max(1, c)));
+  }, [playerVehicle]);
+
+  useEffect(() => {
+    if (guidelineActiveNextShot && !prevPurchasedGuidelineRef.current) {
+      setGuidelinePreviewClicks(halfClicksForStrengthBarRef(playerVehicle));
+      setGuidelineReadyConfirmed(false);
+    }
+    prevPurchasedGuidelineRef.current = guidelineActiveNextShot;
+  }, [guidelineActiveNextShot, playerVehicle]);
+
+  useEffect(() => {
+    if (prevShotInFlightRef.current && !shotInFlight) {
+      setGuidelineReadyConfirmed(false);
+    }
+    prevShotInFlightRef.current = shotInFlight;
+  }, [shotInFlight]);
+
+  const guidelineArmed =
+    guidelineActiveNextShot || sessionFirstBattleGuideline;
+  const guidelineAdjusting =
+    guidelineArmed &&
+    !guidelineReadyConfirmed &&
+    chargeHud === null &&
+    !shotInFlight;
 
   useEffect(() => {
     windRef.current = stepWind();
@@ -421,7 +468,7 @@ export default function CubeScene() {
       }
 
       if (slotId === "guideline") {
-        if (guidelineActiveNextShot) return;
+        if (guidelineActiveNextShot || sessionFirstBattleGuideline) return;
         if (guidelineChargesRef.current <= 0) return;
         setGuidelineCharges((c) => (c <= 0 ? c : c - 1));
         setGuidelineActiveNextShot(true);
@@ -429,7 +476,13 @@ export default function CubeScene() {
         burstPowerupUseConfetti("guideline");
       }
     },
-    [guidelineActiveNextShot, pushHudToast, shotInFlight, showFinishModal]
+    [
+      guidelineActiveNextShot,
+      sessionFirstBattleGuideline,
+      pushHudToast,
+      shotInFlight,
+      showFinishModal,
+    ]
   );
 
   const buyPowerupCharge = useCallback(
@@ -471,7 +524,7 @@ export default function CubeScene() {
   );
 
   const onChargeWindowStart = useCallback(() => {
-    pushHudToast("Tap or hold to add power");
+    pushHudToast("Hold to add power");
   }, [pushHudToast]);
 
   const bindFireHeld = useCallback((handler: ((held: boolean) => void) | null) => {
@@ -621,7 +674,8 @@ export default function CubeScene() {
       showStartGameModal ||
       showSessionEndModal ||
       showHelpModal ||
-      showProfileModal
+      showProfileModal ||
+      showGuidelineInfoModal
     ) {
       return;
     }
@@ -664,6 +718,10 @@ export default function CubeScene() {
         }
         if (e.repeat) return;
         e.preventDefault();
+        if (guidelineAdjusting) {
+          setGuidelineReadyConfirmed(true);
+          return;
+        }
         fireHeldRef.current?.(true);
         return;
       }
@@ -715,9 +773,11 @@ export default function CubeScene() {
     showSessionEndModal,
     showHelpModal,
     showProfileModal,
+    showGuidelineInfoModal,
     inCooldown,
     chargeHud,
     activatePowerup,
+    guidelineAdjusting,
   ]);
 
   useEffect(() => {
@@ -803,9 +863,13 @@ export default function CubeScene() {
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
-            guidelineActiveNextShot={guidelineActiveNextShot}
+            guidelineActiveNextShot={
+              guidelineActiveNextShot || sessionFirstBattleGuideline
+            }
             onGuidelineConsumedForShot={onGuidelineConsumedForShot}
             chargeHudForGuideline={chargeHud}
+            guidelinePreviewClicks={guidelinePreviewClicks}
+            guidelineFireBlocked={guidelineAdjusting}
             biome={game.biome}
             onTerrainCoordsClick={(coords) =>
             {
@@ -814,6 +878,7 @@ export default function CubeScene() {
               // )
             }
             }
+            onGuidelinePillClick={() => setShowGuidelineInfoModal(true)}
             ballFollowStateRef={ballFollowStateRef}
           />
         </TeleportOrbitRig>
@@ -843,7 +908,6 @@ export default function CubeScene() {
           powerupStackCount={powerupStackCount}
           noBounceActive={noBounceActive}
           noWindActive={noWindActive}
-          windHud={windHud}
           vehicle={playerVehicle}
           sessionScoreDisplay={formatSessionScoreHud(playSession, sessionShots)}
           onScoreClick={() => setShowSessionStatsModal(true)}
@@ -884,7 +948,27 @@ export default function CubeScene() {
               Profile
             </button>
           </div>
-          <StaticCourseMinimap islands={islands} biome={game.biome} />
+          <div
+            style={{
+              position: "absolute",
+              top: 52,
+              right: 12,
+              zIndex: 42,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 8,
+              pointerEvents: "none",
+            }}
+          >
+            <StaticCourseMinimap
+              islands={islands}
+              biome={game.biome}
+              goalWorldX={game.goalWorldX}
+              goalWorldZ={game.goalWorldZ}
+            />
+            <WindHud windHud={windHud} />
+          </div>
         </>
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
@@ -949,12 +1033,12 @@ export default function CubeScene() {
                       flexDirection: "column",
                       alignItems: "center",
                       lineHeight: 1.05,
-                      fontSize: 10,
+                      fontSize: 14,
                       fontWeight: 700,
                     }}
                   >
                     <span>Power</span>
-                    <span style={{ fontSize: 9 }}>-ups</span>
+                    <span style={{ fontSize: 16 }}>-ups</span>
                   </span>
                 )}
             </button>
@@ -1022,7 +1106,9 @@ export default function CubeScene() {
                   }
                   canUseNoWind={noWindCharges > 0 && !noWindActive}
                   canUseGuideline={
-                    guidelineCharges > 0 && !guidelineActiveNextShot
+                    guidelineCharges > 0 &&
+                    !guidelineActiveNextShot &&
+                    !sessionFirstBattleGuideline
                   }
                   canAffordBuy={stats.totalGoldCoins >= 1}
                   onPowerup={activatePowerup}
@@ -1128,12 +1214,30 @@ export default function CubeScene() {
                 pointerEvents: "none",
               }}
             >
-              <FirePowerVerticalHud
-                shotInFlight={shotInFlight}
-                chargeHud={chargeHud}
-                vehicle={playerVehicle}
-                powerupStackCount={powerupStackCount}
-              />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  gap: 8,
+                  pointerEvents: "none",
+                }}
+              >
+                <FirePowerVerticalHud
+                  shotInFlight={shotInFlight}
+                  chargeHud={chargeHud}
+                  vehicle={playerVehicle}
+                  powerupStackCount={powerupStackCount}
+                />
+                {guidelineAdjusting && (
+                  <GuidelinePreviewPowerSlider
+                    vehicle={playerVehicle}
+                    clicks={guidelinePreviewClicks}
+                    onClicksChange={setGuidelinePreviewClicks}
+                  />
+                )}
+              </div>
               <div
                 style={{
                   display: "flex",
@@ -1142,76 +1246,114 @@ export default function CubeScene() {
                   pointerEvents: "auto",
                 }}
               >
-              <button
-                type="button"
-                aria-label="Fire"
-                onPointerDown={(e) => {
-                  const fireDisabled =
+              {guidelineAdjusting ? (
+                <button
+                  type="button"
+                  aria-label="Ready"
+                  onClick={() => setGuidelineReadyConfirmed(true)}
+                  disabled={
                     shotInFlight ||
                     showFinishModal ||
                     showStartGameModal ||
                     showSessionEndModal ||
-                    inCooldown;
-                  if (fireDisabled) return;
-                  if (e.pointerType === "mouse" && e.button !== 0) return;
-                  if (e.currentTarget instanceof HTMLElement) {
-                    try {
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                    } catch {
-                      /* ignore */
-                    }
+                    inCooldown
                   }
-                  fireHeldRef.current?.(true);
-                }}
-                onPointerUp={(e) => {
-                  if (e.pointerType === "mouse" && e.button !== 0) return;
-                  if (e.currentTarget instanceof HTMLElement) {
-                    try {
-                      e.currentTarget.releasePointerCapture(e.pointerId);
-                    } catch {
-                      /* ignore */
+                  style={hudRoundFireButtonStyle(
+                    shotInFlight ||
+                      showFinishModal ||
+                      showStartGameModal ||
+                      showSessionEndModal ||
+                      inCooldown
+                      ? "disabled"
+                      : "guidelineReady"
+                  )}
+                >
+                  Ready
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  aria-label="Hold to shoot"
+                  onPointerDown={(e) => {
+                    const fireDisabled =
+                      shotInFlight ||
+                      showFinishModal ||
+                      showStartGameModal ||
+                      showSessionEndModal ||
+                      inCooldown;
+                    if (fireDisabled) return;
+                    if (e.pointerType === "mouse" && e.button !== 0) return;
+                    if (e.currentTarget instanceof HTMLElement) {
+                      try {
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                      } catch {
+                        /* ignore */
+                      }
                     }
-                  }
-                  fireHeldRef.current?.(false);
-                }}
-                onPointerCancel={() => fireHeldRef.current?.(false)}
-                disabled={
-                  shotInFlight ||
-                  showFinishModal ||
-                  showStartGameModal ||
-                  showSessionEndModal ||
-                  inCooldown
-                }
-                style={hudRoundFireButtonStyle(
-                  shotInFlight ||
+                    fireHeldRef.current?.(true);
+                  }}
+                  onPointerUp={(e) => {
+                    if (e.pointerType === "mouse" && e.button !== 0) return;
+                    if (e.currentTarget instanceof HTMLElement) {
+                      try {
+                        e.currentTarget.releasePointerCapture(e.pointerId);
+                      } catch {
+                        /* ignore */
+                      }
+                    }
+                    fireHeldRef.current?.(false);
+                  }}
+                  onPointerCancel={() => fireHeldRef.current?.(false)}
+                  disabled={
+                    shotInFlight ||
                     showFinishModal ||
                     showStartGameModal ||
                     showSessionEndModal ||
                     inCooldown
-                    ? "disabled"
-                    : chargeHud !== null
-                      ? "charging"
-                      : "ready"
-                )}
-              >
-                {chargeHud === null ? (
-                  "Fire"
-                ) : (
-                  <span
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      lineHeight: 1.05,
-                      fontSize: 8,
-                      fontWeight: 700,
-                    }}
-                  >
-                    <span>Tap / hold</span>
-                    <span>+Power</span>
-                  </span>
-                )}
-              </button>
+                  }
+                  style={hudRoundFireButtonStyle(
+                    shotInFlight ||
+                      showFinishModal ||
+                      showStartGameModal ||
+                      showSessionEndModal ||
+                      inCooldown
+                      ? "disabled"
+                      : chargeHud !== null
+                        ? "charging"
+                        : "ready"
+                  )}
+                >
+                  {chargeHud === null ? (
+                    <span
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        lineHeight: 1.05,
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>Hold</span>
+                      <span>to shoot</span>
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        lineHeight: 1.05,
+                        fontSize: 8,
+                        fontWeight: 700,
+                      }}
+                    >
+                      <span>Hold</span>
+                      <span>+power</span>
+                    </span>
+                  )}
+                </button>
+              )}
               </div>
             </div>
           )}
@@ -1297,6 +1439,11 @@ export default function CubeScene() {
           setShowSessionEndModal(false);
           onStartNewSession(battleCount, "random");
         }}
+      />
+      <GuidelineInfoModal
+        open={showGuidelineInfoModal}
+        onClose={() => setShowGuidelineInfoModal(false)}
+        onOpenPowerupMenu={() => setShowPowerupMenu(true)}
       />
       <HelpModal
         open={showHelpModal}

@@ -16,7 +16,7 @@ import {
 import { PREDETERMINED_VEHICLES } from "@/components/playerVehicleConfig";
 import type { SessionBattleCount } from "@/lib/game/playSession";
 
-const BATTLE_OPTIONS: SessionBattleCount[] = [3, 9, 18];
+const BATTLE_OPTIONS: SessionBattleCount[] = [3, 5, 9];
 
 const fredoka = Fredoka({
   subsets: ["latin"],

@@ -4,7 +4,7 @@ export const PLAY_SESSION_STORAGE_KEY = "goodgoodshot.playSession.v3";
 const LEGACY_V2_KEY = "goodgoodshot.playSession.v2";
 const LEGACY_V1_KEY = "goodgoodshot.playSession.v1";
 
-export type SessionBattleCount = 3 | 9 | 18;
+export type SessionBattleCount = 3 | 5 | 9;
 
 export type PlaySession = {
   targetBattles: SessionBattleCount;
@@ -43,7 +43,7 @@ export function formatSessionScoreHud(
 }
 
 function isSessionBattleCount(n: number): n is SessionBattleCount {
-  return n === 3 || n === 9 || n === 18;
+  return n === 3 || n === 5 || n === 9;
 }
 
 function normalizePlaySession(parsed: unknown): PlaySession | null {

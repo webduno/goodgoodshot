@@ -159,6 +159,13 @@ export function maxClicksForStrengthBarRef(v: PlayerVehicleConfig): number {
   return Math.max(2, Math.round(v.secondsBeforeShotTrigger * 6) + 1);
 }
 
+/** Midpoint of the reference strength bar (default guideline preview). */
+export function halfClicksForStrengthBarRef(v: PlayerVehicleConfig): number {
+  const max = maxClicksForStrengthBarRef(v);
+  if (max <= 1) return 1;
+  return Math.round(1 + (max - 1) / 2);
+}
+
 export function vehicleChargeMs(v: PlayerVehicleConfig): number {
   return v.secondsBeforeShotTrigger * 1000;
 }

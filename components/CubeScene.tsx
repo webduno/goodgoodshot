@@ -4,7 +4,6 @@ import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { CourseMapModal } from "@/components/game/cube/modals/CourseMapModal";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
-import { GuidelineInfoModal } from "@/components/game/cube/modals/GuidelineInfoModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { SessionStatsModal } from "@/components/game/cube/modals/SessionStatsModal";
@@ -93,6 +92,10 @@ import {
   persistRetroTvEnabled,
 } from "@/lib/game/retroTvSettings";
 import {
+  loadGuidelineEnabled,
+  persistGuidelineEnabled,
+} from "@/lib/game/guidelineSettings";
+import {
   bodyYawQuarterSnappedFromWorldAim,
   clampAimPitchOffsetRad,
   clampYawDeltaToPadArc,
@@ -167,14 +170,6 @@ export default function CubeScene() {
   const [sessionShots, setSessionShots] = useState(0);
   const [playSession, setPlaySession] = useState<PlaySession | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
-  /** First hole of the session: show trajectory guideline on every shot without spending charges. */
-  const sessionFirstBattleGuideline = useMemo(
-    () =>
-      playSession !== null &&
-      playSession.battlesWon + playSession.battlesLost === 0,
-    [playSession]
-  );
-
   useEffect(() => {
     setPlaySession(loadActivePlaySession());
     setSessionReady(true);
@@ -213,14 +208,18 @@ export default function CubeScene() {
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [retroTvEnabled, setRetroTvEnabled] = useState(false);
+  const [guidelineEnabled, setGuidelineEnabled] = useState(true);
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSessionStatsModal, setShowSessionStatsModal] = useState(false);
-  const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
   const [showCourseMapModal, setShowCourseMapModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
+  }, []);
+
+  useEffect(() => {
+    setGuidelineEnabled(loadGuidelineEnabled());
   }, []);
 
   useEffect(() => {
@@ -257,6 +256,11 @@ export default function CubeScene() {
   const onRetroTvChange = useCallback((next: boolean) => {
     setRetroTvEnabled(next);
     persistRetroTvEnabled(next);
+  }, []);
+
+  const onGuidelineEnabledChange = useCallback((next: boolean) => {
+    setGuidelineEnabled(next);
+    persistGuidelineEnabled(next);
   }, []);
 
   const onAimControlModeChange = useCallback((next: AimControlMode) => {
@@ -317,7 +321,6 @@ export default function CubeScene() {
   const [guidelinePreviewClicks, setGuidelinePreviewClicks] = useState(() =>
     halfClicksForStrengthBarRef(DEFAULT_PLAYER_VEHICLE)
   );
-  const prevPurchasedGuidelineRef = useRef(false);
   const [, setHudTick] = useState(0);
 
   const gameRef = useRef(game);
@@ -339,22 +342,16 @@ export default function CubeScene() {
   const strengthChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const noBounceChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const noWindChargesRef = useRef(INITIAL_POWERUP_CHARGES);
-  const guidelineChargesRef = useRef(INITIAL_POWERUP_CHARGES);
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
   const [noWindActive, setNoWindActive] = useState(false);
-  const [guidelineActiveNextShot, setGuidelineActiveNextShot] = useState(false);
   const [windHud, setWindHud] = useState({ x: 0, z: 0 });
   const [strengthCharges, setStrengthCharges] = useState(INITIAL_POWERUP_CHARGES);
   const [noBounceCharges, setNoBounceCharges] = useState(INITIAL_POWERUP_CHARGES);
   const [noWindCharges, setNoWindCharges] = useState(INITIAL_POWERUP_CHARGES);
-  const [guidelineCharges, setGuidelineCharges] = useState(
-    INITIAL_POWERUP_CHARGES
-  );
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
   noWindChargesRef.current = noWindCharges;
-  guidelineChargesRef.current = guidelineCharges;
   const inCooldown = cooldownUntil !== null;
 
   useEffect(() => {
@@ -362,15 +359,7 @@ export default function CubeScene() {
     setGuidelinePreviewClicks((c) => Math.min(m, Math.max(1, c)));
   }, [playerVehicle]);
 
-  useEffect(() => {
-    if (guidelineActiveNextShot && !prevPurchasedGuidelineRef.current) {
-      setGuidelinePreviewClicks(halfClicksForStrengthBarRef(playerVehicle));
-    }
-    prevPurchasedGuidelineRef.current = guidelineActiveNextShot;
-  }, [guidelineActiveNextShot, playerVehicle]);
-
-  const guidelineArmed =
-    guidelineActiveNextShot || sessionFirstBattleGuideline;
+  const guidelineArmed = guidelineEnabled;
   const guidelineAdjusting =
     guidelineArmed && chargeHud === null && !shotInFlight;
 
@@ -424,9 +413,7 @@ export default function CubeScene() {
     setNoWindActive(false);
   }, []);
 
-  const onGuidelineConsumedForShot = useCallback(() => {
-    setGuidelineActiveNextShot((prev) => (prev ? false : prev));
-  }, []);
+  const onGuidelineConsumedForShot = useCallback(() => {}, []);
 
   const prepareShotWind = useCallback(() => {
     const useNoWind = noWindRef.current;
@@ -475,23 +462,8 @@ export default function CubeScene() {
         burstPowerupUseConfetti("nowind");
         return;
       }
-
-      if (slotId === "guideline") {
-        if (guidelineActiveNextShot || sessionFirstBattleGuideline) return;
-        if (guidelineChargesRef.current <= 0) return;
-        setGuidelineCharges((c) => (c <= 0 ? c : c - 1));
-        setGuidelineActiveNextShot(true);
-        pushHudToast(`"Guideline" used`, "guideline");
-        burstPowerupUseConfetti("guideline");
-      }
     },
-    [
-      guidelineActiveNextShot,
-      sessionFirstBattleGuideline,
-      pushHudToast,
-      shotInFlight,
-      showFinishModal,
-    ]
+    [pushHudToast, shotInFlight, showFinishModal]
   );
 
   const buyPowerupCharge = useCallback(
@@ -499,8 +471,7 @@ export default function CubeScene() {
       if (
         slotId !== "strength" &&
         slotId !== "noBounce" &&
-        slotId !== "nowind" &&
-        slotId !== "guideline"
+        slotId !== "nowind"
       ) {
         return;
       }
@@ -517,9 +488,6 @@ export default function CubeScene() {
       } else if (slotId === "nowind") {
         setNoWindCharges((c) => c + 1);
         burstPowerupBuyConfetti("nowind");
-      } else {
-        setGuidelineCharges((c) => c + 1);
-        burstPowerupBuyConfetti("guideline");
       }
     },
     [spendGoldCoin, pushHudToast]
@@ -689,8 +657,7 @@ export default function CubeScene() {
       showStartGameModal ||
       showSessionEndModal ||
       showHelpModal ||
-      showProfileModal ||
-      showGuidelineInfoModal
+      showProfileModal
     ) {
       return;
     }
@@ -713,9 +680,7 @@ export default function CubeScene() {
             ? ("noBounce" as const)
             : k === "3" || e.code === "Numpad3"
               ? ("nowind" as const)
-              : k === "4" || e.code === "Numpad4"
-                ? ("guideline" as const)
-                : null;
+              : null;
       if (powerupFromKey !== null) {
         e.preventDefault();
         activatePowerup(powerupFromKey);
@@ -788,7 +753,6 @@ export default function CubeScene() {
     showSessionEndModal,
     showHelpModal,
     showProfileModal,
-    showGuidelineInfoModal,
     inCooldown,
     chargeHud,
     activatePowerup,
@@ -879,9 +843,7 @@ export default function CubeScene() {
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
-            guidelineActiveNextShot={
-              guidelineActiveNextShot || sessionFirstBattleGuideline
-            }
+            guidelineActiveNextShot={guidelineEnabled}
             onGuidelineConsumedForShot={onGuidelineConsumedForShot}
             chargeHudForGuideline={chargeHud}
             guidelinePreviewClicks={guidelinePreviewClicks}
@@ -894,7 +856,6 @@ export default function CubeScene() {
               // )
             }
             }
-            onGuidelinePillClick={() => setShowGuidelineInfoModal(true)}
             ballFollowStateRef={ballFollowStateRef}
             onEnemyKillReward={onEnemyKillReward}
             goalEnemies={game.goalEnemies}
@@ -1109,17 +1070,11 @@ export default function CubeScene() {
                   strengthCharges={strengthCharges}
                   noBounceCharges={noBounceCharges}
                   noWindCharges={noWindCharges}
-                  guidelineCharges={guidelineCharges}
                   canUseStrength={strengthCharges > 0}
                   canUseNoBounce={
                     noBounceCharges > 0 && !noBounceActive
                   }
                   canUseNoWind={noWindCharges > 0 && !noWindActive}
-                  canUseGuideline={
-                    guidelineCharges > 0 &&
-                    !guidelineActiveNextShot &&
-                    !sessionFirstBattleGuideline
-                  }
                   canAffordBuy={stats.totalGoldCoins >= 1}
                   onPowerup={activatePowerup}
                   onBuyPowerupCharge={buyPowerupCharge}
@@ -1461,11 +1416,6 @@ export default function CubeScene() {
           onStartNewSession(battleCount, "random");
         }}
       />
-      <GuidelineInfoModal
-        open={showGuidelineInfoModal}
-        onClose={() => setShowGuidelineInfoModal(false)}
-        onOpenPowerupMenu={() => setShowPowerupMenu(true)}
-      />
       <HelpModal
         open={showHelpModal}
         onClose={() => setShowHelpModal(false)}
@@ -1476,6 +1426,8 @@ export default function CubeScene() {
         vehicle={playerVehicle}
         retroTvEnabled={retroTvEnabled}
         onRetroTvChange={onRetroTvChange}
+        guidelineEnabled={guidelineEnabled}
+        onGuidelineEnabledChange={onGuidelineEnabledChange}
         aimControlMode={aimControlMode}
         onAimControlModeChange={onAimControlModeChange}
       />

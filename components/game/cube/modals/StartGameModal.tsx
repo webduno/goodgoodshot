@@ -874,11 +874,19 @@ export function StartGameModal({
                     One tap spends one charge and removes wind on the ball for
                     that shot (wind still updates for the next shot).
                   </PowerupLegendRow>
-                  <PowerupLegendRow slot="guideline" title="Guideline (red)">
-                    One tap spends one charge: a dashed line follows your aim to
-                    the first landing or goal. Set power with Guide Power, then
-                    Shoot — no wind in the preview; strength stacks apply.
-                  </PowerupLegendRow>
+                  <p
+                    style={{
+                      margin: "10px 0 0",
+                      fontSize: 11,
+                      lineHeight: 1.45,
+                      color: hudColors.muted,
+                    }}
+                  >
+                    Trajectory guideline (red dashed arc) is a separate setting:
+                    open <strong style={{ color: hudColors.value }}>Menu</strong>{" "}
+                    → <strong style={{ color: hudColors.value }}>Game Config</strong>{" "}
+                    after you start.
+                  </p>
                 </div>
               )}
 

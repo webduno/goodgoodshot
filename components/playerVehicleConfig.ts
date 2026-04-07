@@ -168,7 +168,7 @@ export function launchStrengthFromClicks(
  * Same formula as `strengthBarRefBounds` in `FirePowerVerticalHud` / `ShotHud`.
  */
 export function maxClicksForStrengthBarRef(v: PlayerVehicleConfig): number {
-  return Math.max(2, Math.round(v.secondsBeforeShotTrigger * 6) + 1);
+  return Math.max(2, Math.round(v.secondsBeforeShotTrigger * 16) + 1);
 }
 
 /** Midpoint of the reference strength bar (default guideline preview). */

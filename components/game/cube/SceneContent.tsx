@@ -93,7 +93,7 @@ const VEHICLE_POWERUP_LABEL_Y = 0.92;
 const VEHICLE_HTML_Z_INDEX_RANGE: [number, number] = [35, 0];
 
 function pillStyle(
-  slot: "strength" | "noBounce" | "nowind" | "guideline"
+  slot: "strength" | "noBounce" | "nowind"
 ): CSSProperties {
   const a = POWERUP_SLOT_ACCENT[slot];
   const text =
@@ -101,9 +101,7 @@ function pillStyle(
       ? "#7c2d12"
       : slot === "noBounce"
         ? "#4c1d95"
-        : slot === "nowind"
-          ? "#0c4a5e"
-          : "#134e4a";
+        : "#0c4a5e";
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -126,20 +124,13 @@ function VehicleNextShotPowerupLabel({
   powerupStackCount,
   noBounceActive,
   noWindActive,
-  guidelineActiveNextShot,
-  onGuidelineClick,
 }: {
   powerupStackCount: number;
   noBounceActive: boolean;
   noWindActive: boolean;
-  guidelineActiveNextShot: boolean;
-  onGuidelineClick?: () => void;
 }) {
   const hasAny =
-    powerupStackCount > 0 ||
-    noBounceActive ||
-    noWindActive ||
-    guidelineActiveNextShot;
+    powerupStackCount > 0 || noBounceActive || noWindActive;
   if (!hasAny) return null;
 
   const strengthMult = Math.pow(2, powerupStackCount);
@@ -197,33 +188,6 @@ function VehicleNextShotPowerupLabel({
               No wind
             </span>
           )}
-          {guidelineActiveNextShot &&
-            (onGuidelineClick ? (
-              <button
-                type="button"
-                aria-label="Guideline info"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGuidelineClick();
-                }}
-                style={{
-                  ...pillStyle("guideline"),
-                  pointerEvents: "auto",
-                  cursor: "pointer",
-                  margin: 0,
-                  font: "inherit",
-                  fontFamily: "inherit",
-                }}
-              >
-                <PowerupHudIcon slotId="guideline" color="currentColor" size={11} />
-                Guideline
-              </button>
-            ) : (
-              <span style={pillStyle("guideline")}>
-                <PowerupHudIcon slotId="guideline" color="currentColor" size={11} />
-                Guideline
-              </span>
-            ))}
         </div>
       </div>
     </Html>
@@ -291,7 +255,6 @@ export function SceneContent({
   guidelineFireBlocked,
   biome,
   onTerrainCoordsClick,
-  onGuidelinePillClick,
   ballFollowStateRef,
   onEnemyKillReward,
   goalEnemies,
@@ -352,8 +315,6 @@ export function SceneContent({
   guidelineFireBlocked: boolean;
   /** Earth / terrain mesh pick: parent can show HUD toast (e.g. coordinates). */
   onTerrainCoordsClick?: (coords: { lat: number; lng: number }) => void;
-  /** Opens Guideline info (e.g. when the floating Guideline pill is tapped). */
-  onGuidelinePillClick?: () => void;
   ballFollowStateRef: BallFollowStateRef;
   /** +3 gold + confetti when the ball hits the goal messenger. */
   onEnemyKillReward: () => void;
@@ -797,8 +758,6 @@ export function SceneContent({
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
-            guidelineActiveNextShot={guidelineActiveNextShot}
-            onGuidelineClick={onGuidelinePillClick}
           />
         </group>
         <AimYawPrism

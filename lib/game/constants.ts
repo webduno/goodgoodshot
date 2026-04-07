@@ -168,7 +168,7 @@ export const POWERUP_SLOTS = [
   {
     id: "guideline",
     name: "Guideline",
-    implemented: true,
+    implemented: false,
   },
   { id: "time", name: "Time", implemented: false },
   { id: "magnet", name: "Magnet", implemented: false },

@@ -37,6 +37,8 @@ export function HelpModal({
   vehicle,
   retroTvEnabled,
   onRetroTvChange,
+  guidelineEnabled,
+  onGuidelineEnabledChange,
   aimControlMode,
   onAimControlModeChange,
 }: {
@@ -46,6 +48,8 @@ export function HelpModal({
   vehicle: PlayerVehicleConfig;
   retroTvEnabled: boolean;
   onRetroTvChange: (next: boolean) => void;
+  guidelineEnabled: boolean;
+  onGuidelineEnabledChange: (next: boolean) => void;
   aimControlMode: AimControlMode;
   onAimControlModeChange: (next: AimControlMode) => void;
 }) {
@@ -214,12 +218,14 @@ export function HelpModal({
               <strong style={{ color: hudColors.value }}>Power-ups</strong> —
               tap the <strong style={{ color: hudColors.value }}>Power-ups</strong>{" "}
               button on the left when you are not charging to open the slot panel
-              and pick boosts before your first click. Six slots (left to right):{" "}
+              and pick boosts before your first click. Three slots (left to right):{" "}
               <strong style={{ color: hudColors.value }}>Strength</strong>,{" "}
-              <strong style={{ color: hudColors.value }}>No bounce</strong>,{" "}
-              <strong style={{ color: hudColors.value }}>No wind</strong>, and{" "}
-              <strong style={{ color: hudColors.value }}>Guideline</strong> are
-              available; the rest are coming later.
+              <strong style={{ color: hudColors.value }}>No bounce</strong>, and{" "}
+              <strong style={{ color: hudColors.value }}>No wind</strong> are
+              available; more slots are coming later. Trajectory{" "}
+              <strong style={{ color: hudColors.value }}>Guideline</strong> is
+              toggled under <strong style={{ color: hudColors.value }}>Menu</strong>{" "}
+              → <strong style={{ color: hudColors.value }}>Game Config</strong>.
               <ul
                 style={{
                   margin: "8px 0 0",
@@ -254,13 +260,6 @@ export function HelpModal({
                   the ball horizontally; it changes every shot and is shown in the
                   stats panel (arrow: direction the wind comes from, meteorological
                   convention).
-                </li>
-                <li style={{ marginBottom: 6 }}>
-                  <strong style={{ color: hudColors.value }}>Guideline</strong>{" "}
-                  — Separate charges (same starting count). One tap before the shot
-                  shows a dashed preview at your aim; use Guide Power for strength,
-                  then Shoot. First flight only to the ground or goal; strength
-                  stacks apply; wind is ignored in the preview.
                 </li>
                 <li style={{ marginBottom: 6, opacity: 0.85 }}>
                   <strong style={{ color: hudColors.value }}>Time</strong> (clock
@@ -533,6 +532,63 @@ export function HelpModal({
             >
               Curved screen, darker corners, and scanlines. Preference is saved
               in this browser.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+                marginTop: 8,
+              }}
+            >
+              <span
+                style={{
+                  color: hudColors.label,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Guideline (trajectory preview)
+              </span>
+              <button
+                type="button"
+                aria-pressed={guidelineEnabled}
+                aria-label={
+                  guidelineEnabled
+                    ? "Disable trajectory guideline"
+                    : "Enable trajectory guideline"
+                }
+                onClick={() => onGuidelineEnabledChange(!guidelineEnabled)}
+                style={{
+                  ...goldChipButtonStyle(),
+                  minWidth: 72,
+                  fontWeight: 700,
+                  ...(guidelineEnabled
+                    ? {
+                        backgroundImage:
+                          "linear-gradient(135deg, #22c55e 0%, #15803d 100%)",
+                        color: "#ffffff",
+                      }
+                    : {
+                        opacity: 0.85,
+                      }),
+                }}
+              >
+                {guidelineEnabled ? "On" : "Off"}
+              </button>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10,
+                lineHeight: 1.45,
+                color: hudColors.muted,
+              }}
+            >
+              When on, a dashed path shows where the shot would land without wind;
+              set strength with Guide Power, then Shoot. Saved in this browser.
             </p>
             <button
               type="button"

@@ -133,6 +133,23 @@
         { "type": "cube", "pos": [0.09, 0.05, 0.45], "size": [0.04, 0.06, 0.04], "color": [24, 24, 28], "polygonOffset": true },
         { "type": "cube", "pos": [0, -0.04, 0.42], "size": [0.42, 0.12, 0.08], "color": [52, 40, 88], "polygonOffset": true }
       ]
+    },
+    {
+      "v_id": "meshy-ratata",
+      "name": "Ratata",
+      "mainRgb": [0, 114, 188],
+      "accentRgb": [0, 174, 239],
+      "strengthPerBaseClick": 9,
+      "extraClickStrengthFraction": 0.09,
+      "secondsBeforeShotTrigger": 2.2,
+      "shotCooldownSeconds": 5,
+      "gravityY": -21.5,
+      "launchAngleDeg": 52,
+      "landingBounces": 1,
+      "bounceRestitution": 0.5,
+      "rollDeceleration": 8.5,
+      "meshObjPath": "/model/Meshy_AI_ratata_0407023011_texture.obj",
+      "meshObjYawOffsetDeg": 0
     }
   ]
 }

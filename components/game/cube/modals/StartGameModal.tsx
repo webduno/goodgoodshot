@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import {
   goldPillButtonStyle,
   hudColors,
@@ -15,8 +16,13 @@ import {
 import {
   PREDETERMINED_VEHICLES,
   rgbTupleToCss,
-  resolveVehicleFromUrlParam,
 } from "@/components/playerVehicleConfig";
+import {
+  isVehicleUnlocked,
+  PREMIUM_RATATA_VEHICLE_ID,
+  resolvePlayerVehicle,
+  shouldShowRatataBetaTag,
+} from "@/lib/game/vehicleUnlock";
 import { INITIAL_POWERUP_CHARGES } from "@/lib/game/constants";
 import { burstVehicleStartConfetti } from "@/lib/game/confetti";
 import {
@@ -261,6 +267,7 @@ export function StartGameModal({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { stats } = usePlayerStats();
   const [newSessionStep, setNewSessionStep] = useState(0);
   /** Optional vehicle / controls / power-ups wizard; default is a short overview only. */
   const [gameConfigOpen, setGameConfigOpen] = useState(false);
@@ -281,8 +288,9 @@ export function StartGameModal({
     [pathname, router, searchParams]
   );
 
-  const selectedVehicle = resolveVehicleFromUrlParam(
-    searchParams.get("vehicle")
+  const selectedVehicle = resolvePlayerVehicle(
+    searchParams.get("vehicle"),
+    stats
   );
 
   useEffect(() => {
@@ -691,11 +699,19 @@ export function StartGameModal({
                   >
                     {PREDETERMINED_VEHICLES.map((v) => {
                       const selected = selectedVehicle.id === v.id;
+                      const unlocked = isVehicleUnlocked(stats, v.id);
+                      const betaTag =
+                        shouldShowRatataBetaTag() &&
+                        v.id === PREMIUM_RATATA_VEHICLE_ID;
                       return (
                         <button
                           key={v.id}
                           type="button"
-                          onClick={() => setVehicleInUrl(v.id)}
+                          disabled={!unlocked}
+                          onClick={() => {
+                            if (!unlocked) return;
+                            setVehicleInUrl(v.id);
+                          }}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -708,7 +724,8 @@ export function StartGameModal({
                             background: selected
                               ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(210, 240, 255, 0.55) 100%)"
                               : "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(230, 248, 255, 0.35) 100%)",
-                            cursor: "pointer",
+                            cursor: unlocked ? "pointer" : "not-allowed",
+                            opacity: unlocked ? 1 : 0.55,
                             textAlign: "left",
                             ...hudFont,
                           }}
@@ -745,9 +762,43 @@ export function StartGameModal({
                               fontSize: 12.5,
                               fontWeight: 700,
                               color: hudColors.value,
+                              display: "flex",
+                              gap: 6,
+                              alignItems: "center",
+                              flexWrap: "wrap",
                             }}
                           >
                             {v.name}
+                            {betaTag ? (
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 800,
+                                  letterSpacing: "0.06em",
+                                  textTransform: "uppercase",
+                                  padding: "2px 6px",
+                                  borderRadius: 6,
+                                  color: "#ffffff",
+                                  background:
+                                    "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)",
+                                  border: "1px solid rgba(255,255,255,0.55)",
+                                  textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                                }}
+                              >
+                                Beta
+                              </span>
+                            ) : null}
+                            {!unlocked ? (
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  color: hudColors.muted,
+                                }}
+                              >
+                                Win 1 battle to unlock
+                              </span>
+                            ) : null}
                           </span>
                           {selected ? (
                             <span

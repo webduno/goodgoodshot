@@ -41,11 +41,12 @@ import {
   hudRoundPowerupButtonStyle,
 } from "@/components/gameHudStyles";
 import {
+  DEFAULT_PLAYER_VEHICLE,
   halfClicksForStrengthBarRef,
   maxClicksForStrengthBarRef,
-  resolveVehicleFromUrlParam,
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
+import { resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
   burstPowerupBuyConfetti,
@@ -124,8 +125,8 @@ export default function CubeScene() {
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
   const playerVehicle = useMemo(
-    () => resolveVehicleFromUrlParam(vehicleParam),
-    [vehicleParam]
+    () => resolvePlayerVehicle(vehicleParam, stats),
+    [vehicleParam, stats]
   );
 
   const [game, dispatch] = useReducer(
@@ -301,7 +302,7 @@ export default function CubeScene() {
     clicks: number;
   } | null>(null);
   const [guidelinePreviewClicks, setGuidelinePreviewClicks] = useState(() =>
-    halfClicksForStrengthBarRef(resolveVehicleFromUrlParam(null))
+    halfClicksForStrengthBarRef(DEFAULT_PLAYER_VEHICLE)
   );
   const [guidelineReadyConfirmed, setGuidelineReadyConfirmed] = useState(false);
   const prevPurchasedGuidelineRef = useRef(false);

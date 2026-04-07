@@ -8,6 +8,7 @@ import {
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import {
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -25,6 +26,7 @@ import { TeeHoleSign } from "@/components/game/cube/meshes/TeeHoleSign";
 import { ShootTriggerCube } from "@/components/game/cube/meshes/ShootTriggerCube";
 import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
+import { VehicleObjMesh } from "@/components/game/cube/meshes/VehicleObjMesh";
 import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
 import {
   type BallFollowStateRef,
@@ -655,7 +657,25 @@ export function SceneContent({
       />
       <SpawnVisualGroup>
         <group rotation={[0, bodyYawRad, 0]}>
-          {vehicle.bodyParts != null && vehicle.bodyParts.length > 0 ? (
+          {vehicle.meshObjPath != null && vehicle.meshObjPath.length > 0 ? (
+            <Suspense
+              fallback={
+                <mesh castShadow receiveShadow>
+                  <boxGeometry args={[BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE]} />
+                  <meshStandardMaterial
+                    color={bodyColor}
+                    roughness={0.32}
+                    metalness={0.2}
+                  />
+                </mesh>
+              }
+            >
+              <VehicleObjMesh
+                url={vehicle.meshObjPath}
+                yawOffsetRad={vehicle.meshObjYawOffsetRad}
+              />
+            </Suspense>
+          ) : vehicle.bodyParts != null && vehicle.bodyParts.length > 0 ? (
             <group>
               <VehicleBodyParts
                 parts={vehicle.bodyParts}
@@ -678,7 +698,7 @@ export function SceneContent({
               key={`wheel-${i}`}
               position={pos}
               size={VEHICLE_CORNER_BLOCK_SIZE}
-              color={accentColor}
+              color={bodyColor}
             />
           ))}
           <ShootTriggerCube phase={shootTriggerPhase} onFireHeld={setFireHeld} />
@@ -694,7 +714,12 @@ export function SceneContent({
           spawnCenter={[0, 0, 0]}
           aimYawRad={worldAimYawRad}
           defaultVerticalAngleRad={vehicle.launchAngleRad + aimPitchOffsetRad}
-          prismLength={aimPrismLengthForStrength(vehicle.strengthPerBaseClick)}
+          prismLength={
+            aimPrismLengthForStrength(vehicle.strengthPerBaseClick) *
+            (vehicle.meshObjPath != null && vehicle.meshObjPath.length > 0
+              ? 1.14
+              : 1)
+          }
           color={accentColor}
         />
       </SpawnVisualGroup>

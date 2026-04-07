@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import {
   DEFAULT_V_ID,
   PREDETERMINED_VEHICLES,
@@ -23,6 +24,11 @@ import {
 import type { AimControlMode } from "@/lib/game/aimControlSettings";
 import { clearPlaySession } from "@/lib/game/playSession";
 import { clearPlayerStats } from "@/lib/playerStats/storage";
+import {
+  isVehicleUnlocked,
+  PREMIUM_RATATA_VEHICLE_ID,
+  shouldShowRatataBetaTag,
+} from "@/lib/game/vehicleUnlock";
 
 export function HelpModal({
   open,
@@ -41,6 +47,7 @@ export function HelpModal({
   aimControlMode: AimControlMode;
   onAimControlModeChange: (next: AimControlMode) => void;
 }) {
+  const { stats } = usePlayerStats();
   if (!open) return null;
 
   const chargeSec = vehicle.secondsBeforeShotTrigger;
@@ -272,14 +279,25 @@ export function HelpModal({
           >
             {PREDETERMINED_VEHICLES.map((v) => {
               const isCurrent = v.id === vehicle.id;
+              const unlocked = isVehicleUnlocked(stats, v.id);
+              const betaTag =
+                shouldShowRatataBetaTag() && v.id === PREMIUM_RATATA_VEHICLE_ID;
               const mainCss = rgbTupleToCss(v.mainRgb);
               const accentCss = rgbTupleToCss(v.accentRgb);
               return (
                 <button
                   key={v.id}
                   type="button"
-                  onClick={() => reloadWithVehicle(v.id)}
-                  title={`Load ${v.name} and start a new round`}
+                  disabled={!unlocked}
+                  onClick={() => {
+                    if (!unlocked) return;
+                    reloadWithVehicle(v.id);
+                  }}
+                  title={
+                    unlocked
+                      ? `Load ${v.name} and start a new round`
+                      : "Win 1 battle to unlock"
+                  }
                   style={{
                     ...goldChipButtonStyle(),
                     fontSize: 10,
@@ -289,6 +307,8 @@ export function HelpModal({
                     border: "1px solid rgba(255,255,255,0.88)",
                     color: "#ffffff",
                     textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+                    opacity: unlocked ? 1 : 0.55,
+                    cursor: unlocked ? "pointer" : "not-allowed",
                     ...(isCurrent
                       ? {
                           boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 12px rgba(0,0,0,0.28), 0 0 0 2px ${accentCss}, 0 0 14px ${accentCss}`,
@@ -299,7 +319,33 @@ export function HelpModal({
                         }),
                   }}
                 >
-                  {v.name}
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {v.name}
+                    {betaTag ? (
+                      <span
+                        style={{
+                          fontSize: 7,
+                          fontWeight: 800,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          padding: "1px 5px",
+                          borderRadius: 4,
+                          background:
+                            "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)",
+                          border: "1px solid rgba(255,255,255,0.55)",
+                        }}
+                      >
+                        Beta
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
               );
             })}

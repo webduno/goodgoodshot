@@ -49,6 +49,13 @@ type JsonVehicle = {
   rollDeceleration?: number;
   /** Composite hull; omit or empty only for the default single-box vehicle. */
   bodyParts?: VehicleBodyPart[];
+  /**
+   * Optional textured mesh (public URL to `.obj`; sibling `.mtl` / textures loaded automatically).
+   * When set, this replaces primitive `bodyParts` in the scene (unless both are missing — then default box).
+   */
+  meshObjPath?: string;
+  /** Extra local yaw on the OBJ hull after auto-fit (degrees → radians at load). */
+  meshObjYawOffsetDeg?: number;
 };
 
 type DefaultVehiclesFile = {
@@ -79,6 +86,9 @@ export type PlayerVehicleConfig = {
   rollDeceleration: number;
   /** Composite primitives; when missing/empty and id is `default`, scene uses one box. */
   bodyParts: readonly VehicleBodyPart[] | undefined;
+  /** Textured `.obj` hull (see `meshObjPath` in JSON). */
+  meshObjPath: string | undefined;
+  meshObjYawOffsetRad: number;
 };
 
 export function rgbTupleToCss(rgb: RgbTuple): string {
@@ -105,6 +115,8 @@ function jsonVehicleToConfig(entry: JsonVehicle): PlayerVehicleConfig {
     bounceRestitution: entry.bounceRestitution ?? DEFAULT_BOUNCE_RESTITUTION,
     rollDeceleration: entry.rollDeceleration ?? DEFAULT_ROLL_DECELERATION,
     bodyParts: entry.bodyParts,
+    meshObjPath: entry.meshObjPath,
+    meshObjYawOffsetRad: degToRad(entry.meshObjYawOffsetDeg ?? 0),
   };
 }
 

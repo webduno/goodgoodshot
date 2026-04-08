@@ -245,6 +245,13 @@ export default function CubeScene() {
     null
   );
 
+  const clearGuidelineSpacePowerRepeat = useCallback(() => {
+    if (guidelineSpacePowerRepeatRef.current) {
+      clearInterval(guidelineSpacePowerRepeatRef.current);
+      guidelineSpacePowerRepeatRef.current = null;
+    }
+  }, []);
+
   const pushHudToast = useCallback(
     (
       message: string,
@@ -690,7 +697,7 @@ export default function CubeScene() {
         activatePowerup(powerupFromKey);
         return;
       }
-      if (k === " ") {
+      if (k === " " || e.code === "Space") {
         if (
           shotInFlight ||
           showFinishModal ||
@@ -708,9 +715,7 @@ export default function CubeScene() {
             setGuidelinePreviewClicks((c) => Math.min(m, Math.max(1, c) + 1));
           };
           bumpGuidePower();
-          if (guidelineSpacePowerRepeatRef.current) {
-            clearInterval(guidelineSpacePowerRepeatRef.current);
-          }
+          clearGuidelineSpacePowerRepeat();
           guidelineSpacePowerRepeatRef.current = setInterval(
             bumpGuidePower,
             CHARGE_HOLD_REPEAT_MS
@@ -762,10 +767,7 @@ export default function CubeScene() {
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
-      if (guidelineSpacePowerRepeatRef.current) {
-        clearInterval(guidelineSpacePowerRepeatRef.current);
-        guidelineSpacePowerRepeatRef.current = null;
-      }
+      clearGuidelineSpacePowerRepeat();
     };
   }, [
     shotInFlight,
@@ -779,11 +781,14 @@ export default function CubeScene() {
     activatePowerup,
     guidelineAdjusting,
     playerVehicle,
+    clearGuidelineSpacePowerRepeat,
   ]);
 
   useEffect(() => {
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key !== " ") return;
+      if (e.key !== " " && e.code !== "Space") return;
+      /** Stop repeat even if keyup targets an input (interval may have started from window keydown). */
+      clearGuidelineSpacePowerRepeat();
       const t = e.target;
       if (
         t instanceof HTMLElement &&
@@ -794,15 +799,25 @@ export default function CubeScene() {
       ) {
         return;
       }
-      if (guidelineSpacePowerRepeatRef.current) {
-        clearInterval(guidelineSpacePowerRepeatRef.current);
-        guidelineSpacePowerRepeatRef.current = null;
-      }
       fireHeldRef.current?.(false);
     };
+    const onWindowBlur = () => {
+      clearGuidelineSpacePowerRepeat();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        clearGuidelineSpacePowerRepeat();
+      }
+    };
     window.addEventListener("keyup", onKeyUp);
-    return () => window.removeEventListener("keyup", onKeyUp);
-  }, []);
+    window.addEventListener("blur", onWindowBlur);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onWindowBlur);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [clearGuidelineSpacePowerRepeat]);
 
   const powerupMenuLocked = chargeHud !== null || shotInFlight;
   const powerupMenuOpen = showPowerupMenu && !powerupMenuLocked;

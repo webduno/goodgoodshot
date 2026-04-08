@@ -303,12 +303,15 @@ export function SceneContent({
   ballFollowStateRef,
   onEnemyKillReward,
   goalEnemies,
+  /** Hub / town: no tee, goal block, lane coins, or messengers — only vehicle + ball on islands. */
+  hubMode = false,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
   islands: readonly IslandRect[];
   biome: BiomeId;
   goalEnemies: readonly GoalEnemySpec[];
+  hubMode?: boolean;
   /** HUD ring yaw (atan2(dx, −dy)); converted to world XZ for shot, prism, and hull snap. */
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
@@ -597,8 +600,11 @@ export function SceneContent({
   }, []);
 
   const yellowLaneMarkers = useMemo(
-    () => coinCentersForIslands(islands, INITIAL_LANE_ORIGIN[1]),
-    [islands]
+    () =>
+      hubMode
+        ? []
+        : coinCentersForIslands(islands, INITIAL_LANE_ORIGIN[1]),
+    [islands, hubMode]
   );
 
   const goalLength = useMemo(() => {
@@ -749,13 +755,17 @@ export function SceneContent({
       >
         <TerrainTextured clickedHandler={onTerrainTexturedClick} />
       </group> */}
-      <SpawnTeePad />
-      <TeeCornerTree biome={biome} />
-      <TeeHoleSign
-        biome={biome}
-        goalLength={goalLength}
-        coinCount={yellowLaneMarkers.length}
-      />
+      {!hubMode && (
+        <>
+          <SpawnTeePad />
+          <TeeCornerTree biome={biome} />
+          <TeeHoleSign
+            biome={biome}
+            goalLength={goalLength}
+            coinCount={yellowLaneMarkers.length}
+          />
+        </>
+      )}
       <SpawnVisualGroup>
         <group rotation={[0, bodyYawRad, 0]}>
           {vehicle.meshObjPath != null && vehicle.meshObjPath.length > 0 ? (
@@ -822,31 +832,33 @@ export function SceneContent({
           color={accentColor}
         />
       </SpawnVisualGroup>
-      <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />
-      {goalEnemies.map((spec, i) => (
-        <GoalMessengerCharacter
-          key={`messenger-${i}-${spec.colorHex}-${goalCenter[0]}-${goalCenter[2]}`}
-          goalCenter={goalCenter}
-          spawnCenter={spawnCenter}
-          alive={enemyAliveMask[i] === true}
-          paused={roundLocked}
-          onReachedVehicle={onEnemyReachedVehicle}
-          enemySimRef={enemySimRef}
-          enemyIndex={i}
-          colorHex={spec.colorHex}
-          startOffsetXZ={goalEnemySpawnOffsetXZ(
-            islands,
-            goalCenter,
-            i,
-            goalEnemies.length
-          )}
-        />
-      ))}
-      {yellowLaneMarkers.map((center, i) => {
-        const ck = coinCellKey(center);
-        if (collectedCoinKeysRef.current.has(ck)) return null;
-        return <LaneCoin key={`lane-coin-${i}-${ck}`} position={center} />;
-      })}
+      {!hubMode && <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />}
+      {!hubMode &&
+        goalEnemies.map((spec, i) => (
+          <GoalMessengerCharacter
+            key={`messenger-${i}-${spec.colorHex}-${goalCenter[0]}-${goalCenter[2]}`}
+            goalCenter={goalCenter}
+            spawnCenter={spawnCenter}
+            alive={enemyAliveMask[i] === true}
+            paused={roundLocked || shotInFlight}
+            onReachedVehicle={onEnemyReachedVehicle}
+            enemySimRef={enemySimRef}
+            enemyIndex={i}
+            colorHex={spec.colorHex}
+            startOffsetXZ={goalEnemySpawnOffsetXZ(
+              islands,
+              goalCenter,
+              i,
+              goalEnemies.length
+            )}
+          />
+        ))}
+      {!hubMode &&
+        yellowLaneMarkers.map((center, i) => {
+          const ck = coinCellKey(center);
+          if (collectedCoinKeysRef.current.has(ck)) return null;
+          return <LaneCoin key={`lane-coin-${i}-${ck}`} position={center} />;
+        })}
       <SphereToGoal
         meshRef={meshRef}
         projectileRef={projectileRef}

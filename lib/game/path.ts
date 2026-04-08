@@ -1,7 +1,9 @@
 import {
+  COIN_MAX_HEIGHT_ABOVE_FLOOR,
   LANE_MARKER_COUNT_PER_SIDE,
   LANE_MARKER_SIDE_OFFSET_X,
 } from "./constants";
+import { randomIntInclusive } from "./math";
 import type { Vec3 } from "./types";
 
 /** Stable id for a 1×1×1 grid coin cell (lane bonus pickup). */
@@ -10,7 +12,8 @@ export function coinCellKey(center: Vec3): string {
 }
 
 /**
- * One coin per island, snapped to integer block centers (same convention as `snapBlockCenterToGrid`).
+ * One coin per island, snapped to integer block centers on XZ (same convention as `snapBlockCenterToGrid`).
+ * Y is randomized from floor (`laneY`) up to `laneY + COIN_MAX_HEIGHT_ABOVE_FLOOR`.
  */
 export function coinCentersForIslands(
   islands: readonly { worldX: number; worldZ: number }[],
@@ -19,7 +22,7 @@ export function coinCentersForIslands(
   return islands.map(
     (is): Vec3 => [
       Math.round(is.worldX),
-      laneY,
+      laneY + randomIntInclusive(0, COIN_MAX_HEIGHT_ABOVE_FLOOR),
       Math.round(is.worldZ),
     ]
   );

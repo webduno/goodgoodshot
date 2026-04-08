@@ -56,6 +56,7 @@ export function PowerupSlotRow({
   canAffordBuy,
   onPowerup,
   onBuyPowerupCharge,
+  omitNoWind = false,
 }: {
   strengthCharges: number;
   noBounceCharges: number;
@@ -66,6 +67,8 @@ export function PowerupSlotRow({
   canAffordBuy: boolean;
   onPowerup: (slotId: PowerupSlotId) => void;
   onBuyPowerupCharge: (slotId: PowerupSlotId) => void;
+  /** When true, the No wind slot is hidden (e.g. plaza hub has no wind). */
+  omitNoWind?: boolean;
 }) {
   const buyChipStyle = {
     width: "100%",
@@ -98,7 +101,9 @@ export function PowerupSlotRow({
         ...hudFont,
       }}
     >
-      {POWERUP_SLOTS.filter((s) => s.implemented).map((slot) => {
+      {POWERUP_SLOTS.filter(
+        (s) => s.implemented && (!omitNoWind || s.id !== "nowind")
+      ).map((slot) => {
         const slotCharges = implementedCharges(
           slot.id,
           strengthCharges,

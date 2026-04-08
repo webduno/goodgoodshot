@@ -34,6 +34,7 @@ export function HelpModal({
   open,
   onClose,
   onOpenProfile,
+  onGoToPlaza,
   vehicle,
   retroTvEnabled,
   onRetroTvChange,
@@ -45,6 +46,8 @@ export function HelpModal({
   open: boolean;
   onClose: () => void;
   onOpenProfile: () => void;
+  /** When set, shows a chip next to Profile that navigates to the plaza hub. */
+  onGoToPlaza?: () => void;
   vehicle: PlayerVehicleConfig;
   retroTvEnabled: boolean;
   onRetroTvChange: (next: boolean) => void;
@@ -173,14 +176,34 @@ export function HelpModal({
           >
             Menu
           </h2>
-          <button
-            type="button"
-            aria-label="Open profile"
-            onClick={onOpenProfile}
-            style={goldChipButtonStyle()}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+            }}
           >
-            Profile
-          </button>
+            {onGoToPlaza ? (
+              <button
+                type="button"
+                aria-label="Go to plaza"
+                onClick={onGoToPlaza}
+                style={goldChipButtonStyle()}
+              >
+                Plaza
+              </button>
+            ) : null}
+            <button
+              type="button"
+              aria-label="Open profile"
+              onClick={onOpenProfile}
+              style={goldChipButtonStyle()}
+            >
+              Profile
+            </button>
+          </div>
         </div>
         <details>
           <summary>How to play</summary>

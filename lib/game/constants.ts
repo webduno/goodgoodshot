@@ -1,4 +1,5 @@
 import { PREDETERMINED_VEHICLES } from "@/components/playerVehicleConfig";
+import type { SessionBattleCount } from "@/lib/game/playSession";
 import * as THREE from "three";
 
 export const BLOCK_SIZE = 1;
@@ -10,6 +11,13 @@ export const SHOOT_TRIGGER_CUBE_SIZE = 0.2;
  */
 export const GOAL_Z_MIN = 70;
 export const GOAL_Z_MAX = 350;
+/**
+ * Goal position for hub / practice scenes with no real hole: far from play so the ball never
+ * hits the goal box and the airborne guideline does not terminate on it.
+ */
+export const PLAZA_FAKE_GOAL_CENTER = [5000, -200, 5000] as const;
+/** Battles in a war entered through the plaza portal (label + `startWarSessionAndRedirectHome` must match). */
+export const PLAZA_WAR_PORTAL_BATTLE_COUNT: SessionBattleCount = 3;
 /** Random sideways offset for the green goal (grid units). */
 export const GOAL_X_MIN = -26;
 export const GOAL_X_MAX = 26;
@@ -98,6 +106,9 @@ export const LANE_MARKER_COUNT_PER_SIDE = 5;
 /** Distance from lane center (X) — ten unit blocks to each side. */
 export const LANE_MARKER_SIDE_OFFSET_X = 10 * BLOCK_SIZE;
 export const LANE_MARKER_COLOR = "#fce62e";
+
+/** Lane bonus coins: random Y is floor + [0 … this] (world units). */
+export const COIN_MAX_HEIGHT_ABOVE_FLOOR = 15;
 
 /** Small cubes at the four bottom corners of the spawn block (vehicle wheels). */
 export const VEHICLE_CORNER_BLOCK_SIZE = 0.38;

@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import {
+  goldChipButtonStyle,
   goldPillButtonStyle,
   hudColors,
   hudFont,
@@ -288,6 +289,14 @@ export function StartGameModal({
     [pathname, router, searchParams]
   );
 
+  const goToPlaza = useCallback(() => {
+    const p = new URLSearchParams();
+    const v = searchParams.get("vehicle");
+    if (v) p.set("vehicle", v);
+    const qs = p.toString();
+    router.push(qs ? `/plaza?${qs}` : "/plaza");
+  }, [router, searchParams]);
+
   const selectedVehicle = resolvePlayerVehicle(
     searchParams.get("vehicle"),
     stats
@@ -474,19 +483,41 @@ export function StartGameModal({
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                burstVehicleStartConfetti(
-                  selectedVehicle.mainRgb,
-                  selectedVehicle.accentRgb
-                );
-                onContinue();
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
               }}
-              style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
             >
-              Continue
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  burstVehicleStartConfetti(
+                    selectedVehicle.mainRgb,
+                    selectedVehicle.accentRgb
+                  );
+                  onContinue();
+                }}
+                style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
+              >
+                Continue
+              </button>
+              <button
+                type="button"
+                onClick={goToPlaza}
+                style={{
+                  ...goldChipButtonStyle(),
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                Go to plaza
+              </button>
+            </div>
           </>
         ) : (
           <>

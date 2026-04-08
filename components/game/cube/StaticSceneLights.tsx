@@ -10,7 +10,12 @@ import { MID_GOAL_Z } from "@/lib/game/constants";
  * Two world-fixed key lights (spawn and goal regions). They do not follow `spawnCenter` or the camera.
  * Shadow cameras are sized to cover the initial field plane.
  */
-export function StaticSceneLights() {
+export function StaticSceneLights({
+  omitGoalDirectional = false,
+}: {
+  /** Plaza hub: use a single directional key (spawn side only). */
+  omitGoalDirectional?: boolean;
+} = {}) {
   const { scene } = useThree();
   const spawnLightRef = useRef<THREE.DirectionalLight>(null);
   const goalLightRef = useRef<THREE.DirectionalLight>(null);
@@ -58,16 +63,18 @@ export function StaticSceneLights() {
       />
       <directionalLight
         ref={spawnLightRef}
-        position={[-12, 30, -16]}
+        position={[24, 30, -64]}
         intensity={0.72}
         castShadow
       />
-      <directionalLight
-        ref={goalLightRef}
-        position={[14, 38, MID_GOAL_Z + 42]}
-        intensity={0.62}
-        castShadow
-      />
+      {!omitGoalDirectional && (
+        <directionalLight
+          ref={goalLightRef}
+          position={[-14, 38, MID_GOAL_Z + 42]}
+          intensity={0.62}
+          castShadow
+        />
+      )}
     </>
   );
 }

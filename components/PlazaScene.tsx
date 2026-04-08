@@ -11,9 +11,10 @@ import { GuidelinePreviewPowerSlider } from "@/components/game/cube/hud/Guidelin
 import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
+import { PlazaFrutigerAeroDecor } from "@/components/game/cube/meshes/PlazaFrutigerAeroDecor";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
-import { PlazaWarPortalTorus } from "@/components/game/cube/meshes/PlazaWarPortalTorus";
+import { PlazaPortalTorus } from "@/components/game/cube/meshes/PlazaWarPortalTorus";
 import { RetroTvPostFx } from "@/components/game/cube/effects/RetroTvPostFx";
 import {
   RendererStatsCollector,
@@ -22,6 +23,7 @@ import {
 import { SceneContent } from "@/components/game/cube/SceneContent";
 import { TeleportOrbitRig } from "@/components/game/cube/TeleportOrbitRig";
 import { StaticSceneLights } from "@/components/game/cube/StaticSceneLights";
+import { PlazaHubFillLights } from "@/components/game/cube/meshes/PlazaHubFillLights";
 import {
   goldChipButtonStyle,
   goldIconButtonStyle,
@@ -77,12 +79,12 @@ import {
   snapAimAngleRad,
   wrapYawRad,
 } from "@/lib/game/math";
-import { PLAZA_HUB_ISLANDS } from "@/lib/game/plazaHub";
+import { PLAZA_HUB_ISLANDS, PLAZA_WALKABLE_HALF } from "@/lib/game/plazaHub";
 import { startWarSessionAndRedirectHome } from "@/lib/game/startWarSession";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { type PowerupSlotId, type Vec3 } from "@/lib/game/types";
 import { Canvas } from "@react-three/fiber";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -95,6 +97,7 @@ import * as THREE from "three";
 export default function PlazaScene() {
   const { spendGoldCoin, stats } = usePlayerStats();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const vehicleParam = searchParams.get("vehicle");
   const playerVehicle = useMemo(
     () => resolvePlayerVehicle(vehicleParam, stats),
@@ -341,6 +344,19 @@ export default function PlazaScene() {
     startWarSessionAndRedirectHome(PLAZA_WAR_PORTAL_BATTLE_COUNT, "random");
   }, []);
 
+  const onHomePortalEnter = useCallback(() => {
+    const v = searchParams.get("vehicle");
+    router.push(v ? `/?vehicle=${encodeURIComponent(v)}` : "/");
+  }, [router, searchParams]);
+
+  const onNineBattlePortalEnter = useCallback(() => {
+    startWarSessionAndRedirectHome(9, "random");
+  }, []);
+
+  const onFiveBattlePortalEnter = useCallback(() => {
+    startWarSessionAndRedirectHome(5, "random");
+  }, []);
+
   const onProjectileEnd = useCallback(
     (outcome: "hit" | "miss" | "penalty" | "enemy_loss", _landing?: Vec3) => {
       setShotInFlight(false);
@@ -569,6 +585,7 @@ export default function PlazaScene() {
         shadows="soft"
       >
         <StaticSceneLights omitGoalDirectional />
+        <PlazaHubFillLights />
         <SkyClouds />
         <SkySun />
         <TeleportOrbitRig
@@ -616,10 +633,46 @@ export default function PlazaScene() {
           />
         </TeleportOrbitRig>
         <InitialFieldGround islands={islands} biome="plain" />
-        <PlazaWarPortalTorus
+        <PlazaFrutigerAeroDecor
+          wx={islands[0]!.worldX}
+          wz={islands[0]!.worldZ}
+          walk={islands[0]!.walkableHalfX ?? islands[0]!.halfX}
+          outer={islands[0]!.halfX}
+        />
+        <PlazaPortalTorus
+          worldX={0}
+          worldZ={PLAZA_WALKABLE_HALF}
+          label={`${PLAZA_WAR_PORTAL_BATTLE_COUNT} Battle War`}
           ballFollowStateRef={ballFollowStateRef}
           shotInFlight={shotInFlight}
           onBallEnter={onWarPortalEnter}
+        />
+        <PlazaPortalTorus
+          worldX={0}
+          worldZ={-PLAZA_WALKABLE_HALF}
+          rotationY={Math.PI}
+          label="Home"
+          ballFollowStateRef={ballFollowStateRef}
+          shotInFlight={shotInFlight}
+          onBallEnter={onHomePortalEnter}
+        />
+        <PlazaPortalTorus
+          worldX={PLAZA_WALKABLE_HALF}
+          worldZ={0}
+          rotationY={-Math.PI / 2}
+          label="9 Battle War"
+          ballFollowStateRef={ballFollowStateRef}
+          shotInFlight={shotInFlight}
+          onBallEnter={onNineBattlePortalEnter}
+        />
+        <PlazaPortalTorus
+          worldX={-PLAZA_WALKABLE_HALF}
+          worldZ={0}
+          rotationY={Math.PI / 2}
+          label="5 Battle War"
+          ballFollowStateRef={ballFollowStateRef}
+          shotInFlight={shotInFlight}
+          onBallEnter={onFiveBattlePortalEnter}
         />
         <RetroTvPostFx enabled={retroTvEnabled} />
         <RendererStatsCollector statsRef={rendererStatsRef} />

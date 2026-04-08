@@ -15,6 +15,7 @@ import {
   helpModalCard,
   hudColors,
   modalBackdrop,
+  plazaHubButtonStyle,
 } from "@/components/gameHudStyles";
 import {
   AIM_PITCH_MAX_RAD,
@@ -190,7 +191,7 @@ export function HelpModal({
                 type="button"
                 aria-label="Go to plaza"
                 onClick={onGoToPlaza}
-                style={goldChipButtonStyle()}
+                style={plazaHubButtonStyle({ variant: "chip" })}
               >
                 Plaza
               </button>

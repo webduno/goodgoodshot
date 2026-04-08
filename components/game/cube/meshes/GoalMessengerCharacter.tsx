@@ -192,8 +192,9 @@ export function GoalMessengerCharacter({
         anchorY="bottom"
         outlineWidth={0.035}
         outlineColor="#1a0505"
+        letterSpacing={2}
       >
-        ENEMY
+        ENEMY VIRUS
       </Text>
     </group>
   );

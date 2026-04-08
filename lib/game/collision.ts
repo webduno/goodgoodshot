@@ -43,9 +43,11 @@ export function pointOnAnyIsland(
   islands: readonly IslandRect[]
 ): boolean {
   for (const is of islands) {
+    const hx = is.walkableHalfX ?? is.halfX;
+    const hz = is.walkableHalfZ ?? is.halfZ;
     if (
-      Math.abs(px - is.worldX) <= is.halfX &&
-      Math.abs(pz - is.worldZ) <= is.halfZ
+      Math.abs(px - is.worldX) <= hx &&
+      Math.abs(pz - is.worldZ) <= hz
     ) {
       return true;
     }

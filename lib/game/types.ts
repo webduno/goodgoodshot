@@ -23,6 +23,12 @@ export type IslandRect = {
   worldZ: number;
   halfX: number;
   halfZ: number;
+  /**
+   * When set (plaza hub), ball physics uses this **inner** rect only; the outer ring
+   * (`halfX` / `halfZ`) stays visual-only (raised plinths, houses, portals).
+   */
+  walkableHalfX?: number;
+  walkableHalfZ?: number;
   /** Visual block height (Y); top face stays at `TURF_TOP_Y` in the renderer. */
   blockThickness: number;
   /**

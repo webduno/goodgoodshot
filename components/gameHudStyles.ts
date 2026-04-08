@@ -197,6 +197,51 @@ export function goldChipButtonStyle(): CSSProperties {
   };
 }
 
+const plazaHubGlassText: CSSProperties = {
+  ...hudFont,
+  color: "#ffffff",
+  textShadow:
+    "0 1px 2px rgba(0, 55, 45, 0.7), 0 0 1px rgba(0, 45, 35, 0.45)",
+};
+
+const plazaHubGradient =
+  "linear-gradient(165deg, #ecfdf5 0%, #6ee7b7 24%, #059669 55%, #065f46 100%)";
+
+const plazaHubShadow =
+  "inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 12px rgba(5, 95, 70, 0.38)";
+
+/**
+ * Plaza hub navigation — emerald glass, distinct from default blue HUD buttons.
+ * Use everywhere “Plaza” / “Go to plaza” / “Tutorial plaza” appears.
+ */
+export function plazaHubButtonStyle(opts?: {
+  fullWidth?: boolean;
+  variant?: "chip" | "compact" | "full";
+}): CSSProperties {
+  const variant = opts?.variant ?? "full";
+  const fullWidth = opts?.fullWidth ?? false;
+  const padding =
+    variant === "chip"
+      ? "5px 12px"
+      : variant === "compact"
+        ? "10px 14px"
+        : "12px 14px";
+  const fontSize = variant === "chip" ? 11 : variant === "compact" ? 12 : 13;
+  return {
+    ...plazaHubGlassText,
+    padding,
+    fontSize,
+    fontWeight: 700,
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.88)",
+    backgroundImage: plazaHubGradient,
+    cursor: "pointer",
+    boxShadow: plazaHubShadow,
+    width: fullWidth ? "100%" : "auto",
+    boxSizing: "border-box",
+  };
+}
+
 /** Round bottom-dock actions (Power-ups, Fire). */
 export const HUD_ROUND_ACTION_PX = 68;
 

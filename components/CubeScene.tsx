@@ -479,7 +479,7 @@ export default function CubeScene() {
     recordGoldCoin();
     recordGoldCoin();
     burstMessengerKillConfetti();
-    pushHudToast("Messenger down! +3 coins");
+    pushHudToast("Enemy Virus down! +3 coins");
   }, [recordGoldCoin, pushHudToast]);
 
   const getPowerupMultiplier = useCallback(

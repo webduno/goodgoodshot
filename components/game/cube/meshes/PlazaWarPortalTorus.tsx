@@ -7,12 +7,11 @@ import * as THREE from "three";
 
 import type { BallFollowStateRef } from "@/components/game/cube/TeleportOrbitRig";
 import { PLAZA_WAR_PORTAL_BATTLE_COUNT, TURF_TOP_Y } from "@/lib/game/constants";
+import { PLAZA_WALKABLE_HALF } from "@/lib/game/plazaHub";
 
 /** Major radius, tube radius — match `torusGeometry` args for trigger bounds. */
 const PORTAL_MAJOR_R = 3;
 const PORTAL_TUBE_R = 0.42;
-/** Center Z on the plaza island, in front of spawn (+Z). */
-const PORTAL_Z = 20;
 /** Tiny lift so the mesh does not z-fight with the island slab. */
 const TURF_CLEARANCE = 0.018;
 /** Sign panel above the arch (world Y is computed from torus bounds). */
@@ -31,11 +30,19 @@ const SIGN_GAP_ABOVE_ARCH = 0.36;
  * Half-torus portal mesh; when the ball’s world position enters the mesh AABB while in flight,
  * `onBallEnter` runs once per shot.
  */
-export function PlazaWarPortalTorus({
+export function PlazaPortalTorus({
+  worldX,
+  worldZ,
+  rotationY = 0,
+  label,
   ballFollowStateRef,
   shotInFlight,
   onBallEnter,
 }: {
+  worldX: number;
+  worldZ: number;
+  rotationY?: number;
+  label: string;
   ballFollowStateRef: BallFollowStateRef;
   shotInFlight: boolean;
   onBallEnter: () => void;
@@ -71,8 +78,6 @@ export function PlazaWarPortalTorus({
   const signCenterY =
     portalY + portalTopLocalY + SIGN_GAP_ABOVE_ARCH + SIGN_HEIGHT / 2;
 
-  const signLabel = `${PLAZA_WAR_PORTAL_BATTLE_COUNT} Battle War`;
-
   const signMeshRef = useRef<THREE.Mesh>(null);
 
   useLayoutEffect(() => {
@@ -105,13 +110,8 @@ export function PlazaWarPortalTorus({
   });
 
   return (
-    <group>
-      <mesh
-        ref={meshRef}
-        position={[0, portalY, PORTAL_Z]}
-        castShadow
-        receiveShadow
-      >
+    <group position={[worldX, 0, worldZ]} rotation={[0, rotationY, 0]}>
+      <mesh ref={meshRef} position={[0, portalY, 0]} castShadow receiveShadow>
         <primitive object={portalGeometry} attach="geometry" />
         <meshStandardMaterial
           color="#a8e6ff"
@@ -121,7 +121,7 @@ export function PlazaWarPortalTorus({
           metalness={0.28}
         />
       </mesh>
-      <group position={[0, signCenterY, PORTAL_Z]}>
+      <group position={[0, signCenterY, 0]}>
         <mesh ref={signMeshRef} castShadow receiveShadow>
           <boxGeometry args={[SIGN_WIDTH, SIGN_HEIGHT, SIGN_DEPTH]} />
           <meshStandardMaterial
@@ -144,7 +144,7 @@ export function PlazaWarPortalTorus({
           anchorY="middle"
           maxWidth={SIGN_WIDTH - 0.7}
         >
-          {signLabel}
+          {label}
         </Text>
         <Text
           position={[0, 0, -(SIGN_DEPTH / 2 + 0.032)]}
@@ -156,9 +156,33 @@ export function PlazaWarPortalTorus({
           anchorY="middle"
           maxWidth={SIGN_WIDTH - 0.7}
         >
-          {signLabel}
+          {label}
         </Text>
       </group>
     </group>
+  );
+}
+
+/** Default north-edge war portal (same label + behavior as before `PlazaPortalTorus`). */
+export function PlazaWarPortalTorus({
+  ballFollowStateRef,
+  shotInFlight,
+  onBallEnter,
+}: {
+  ballFollowStateRef: BallFollowStateRef;
+  shotInFlight: boolean;
+  onBallEnter: () => void;
+}) {
+  const signLabel = `${PLAZA_WAR_PORTAL_BATTLE_COUNT} Battle War`;
+  return (
+    <PlazaPortalTorus
+      worldX={0}
+      worldZ={PLAZA_WALKABLE_HALF}
+      rotationY={0}
+      label={signLabel}
+      ballFollowStateRef={ballFollowStateRef}
+      shotInFlight={shotInFlight}
+      onBallEnter={onBallEnter}
+    />
   );
 }

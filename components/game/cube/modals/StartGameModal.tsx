@@ -6,12 +6,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import {
-  goldChipButtonStyle,
   goldPillButtonStyle,
   hudColors,
   hudFont,
   hudMiniPanel,
   modalBackdrop,
+  plazaHubButtonStyle,
   POWERUP_SLOT_ACCENT,
 } from "@/components/gameHudStyles";
 import {
@@ -199,6 +199,69 @@ const linkButtonStyle: CSSProperties = {
 
 const newSessionIntroSteps = 4;
 
+function WelcomeRulesOverview() {
+  return (
+    <>
+      <div
+        style={{
+          ...welcomeRuleRow,
+          paddingBottom: 10,
+          marginBottom: 10,
+          borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
+        }}
+      >
+        <span aria-hidden style={welcomeRuleBadge}>
+          1
+        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={welcomeRuleTitle}>Win the battle</div>
+          <p style={welcomeRuleBody}>
+            Reach the goal at or under{" "}
+            <strong style={{ color: hudColors.value }}>par</strong> — strokes ≤
+            lane coins on the hole.
+          </p>
+        </div>
+      </div>
+      <div
+        style={{
+          ...welcomeRuleRow,
+          paddingBottom: 10,
+          marginBottom: 10,
+          borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
+        }}
+      >
+        <span aria-hidden style={welcomeRuleBadge}>
+          2
+        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={welcomeRuleTitle}>Win the war</div>
+          <p style={welcomeRuleBody}>
+            Your{" "}
+            <strong style={{ color: hudColors.value }}>battle wins</strong>{" "}
+            should be at least your{" "}
+            <strong style={{ color: hudColors.value }}>battle losses</strong>{" "}
+            (ties count).
+          </p>
+        </div>
+      </div>
+      <div style={{ ...welcomeRuleRow, marginBottom: 12 }}>
+        <span aria-hidden style={welcomeRuleBadge}>
+          3
+        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={welcomeRuleTitle}>Start playing</div>
+          <p style={welcomeRuleBody}>
+            Pick a war length below —{" "}
+            <strong style={{ color: hudColors.accent }}>3</strong>,{" "}
+            <strong style={{ color: hudColors.accent }}>5</strong>, or{" "}
+            <strong style={{ color: hudColors.accent }}>9</strong> battles.
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function PowerupLegendRow({
   slot,
   title,
@@ -272,6 +335,7 @@ export function StartGameModal({
   const [newSessionStep, setNewSessionStep] = useState(0);
   /** Optional vehicle / controls / power-ups wizard; default is a short overview only. */
   const [gameConfigOpen, setGameConfigOpen] = useState(false);
+  const [welcomeGameInfoOpen, setWelcomeGameInfoOpen] = useState(false);
   const [biomeChoice, setBiomeChoice] =
     useState<SessionBiomeChoice>("random");
 
@@ -306,6 +370,7 @@ export function StartGameModal({
     if (open) {
       setNewSessionStep(0);
       setGameConfigOpen(false);
+      setWelcomeGameInfoOpen(false);
       setBiomeChoice("random");
     }
   }, [open]);
@@ -345,6 +410,11 @@ export function StartGameModal({
 
   const title =
     inProgress && hasStartedBattles ? "Continue war" : "Welcome";
+
+  const isFirstVisitWelcome =
+    stats.totalShotsLifetime === 0 && stats.lastCompletedGame === null;
+
+  const showStandardWarPick = !isFirstVisitWelcome || gameConfigOpen;
 
   const rulesPanelContinue: CSSProperties = {
     ...rulesPanel,
@@ -506,14 +576,10 @@ export function StartGameModal({
               <button
                 type="button"
                 onClick={goToPlaza}
-                style={{
-                  ...goldChipButtonStyle(),
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "10px 14px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
+                style={plazaHubButtonStyle({
+                  variant: "compact",
+                  fullWidth: true,
+                })}
               >
                 Go to plaza
               </button>
@@ -522,68 +588,152 @@ export function StartGameModal({
         ) : (
           <>
             {!gameConfigOpen ? (
+              isFirstVisitWelcome ? (
+                <>
+                  <div
+                    style={{
+                      ...rulesWelcomePanel,
+                      marginBottom: 14,
+                    }}
+                  >
+                    <div style={{ ...statLabel, marginBottom: 10 }}>
+                      Play solo
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setWelcomeGameInfoOpen((openInfo) => !openInfo)
+                      }
+                      aria-expanded={welcomeGameInfoOpen}
+                      style={{
+                        ...linkButtonStyle,
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        marginBottom: welcomeGameInfoOpen ? 10 : 0,
+                      }}
+                    >
+                      {welcomeGameInfoOpen
+                        ? "Hide game info"
+                        : "How the game works (rules)"}
+                    </button>
+                    {welcomeGameInfoOpen ? (
+                      <div
+                        style={{
+                          marginBottom: 10,
+                          paddingBottom: 4,
+                          borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
+                        }}
+                      >
+                        <WelcomeRulesOverview />
+                      </div>
+                    ) : null}
+                    <p
+                      style={{
+                        margin: "0 0 12px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: hudColors.label,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      New war — pick length
+                    </p>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        gap: 8,
+                        marginBottom: 4,
+                      }}
+                    >
+                      {BATTLE_OPTIONS.map((battleCount) => (
+                        <button
+                          key={battleCount}
+                          type="button"
+                          className="ggsBattleLenBtn"
+                          onClick={() => {
+                            burstVehicleStartConfetti(
+                              selectedVehicle.mainRgb,
+                              selectedVehicle.accentRgb
+                            );
+                            onStartSession(battleCount, biomeChoice);
+                          }}
+                          style={{
+                            ...goldPillButtonStyle({
+                              disabled: false,
+                              fullWidth: true,
+                            }),
+                            flex: 1,
+                            minWidth: 0,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 2,
+                            padding: "10px 6px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 20,
+                              fontWeight: 800,
+                              lineHeight: 1,
+                            }}
+                          >
+                            {battleCount}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              opacity: 0.92,
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            battles
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <p
+                      style={{
+                        margin: "10px 0 8px",
+                        fontSize: 11,
+                        lineHeight: 1.45,
+                        color: hudColors.muted,
+                        paddingTop: 6,
+                        borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
+                      }}
+                    >
+                      Optional: change vehicle or read extra help if you want to
+                      tweak your setup.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGameConfigOpen(true);
+                        setNewSessionStep(0);
+                      }}
+                      style={{ ...linkButtonStyle, display: "inline" }}
+                    >
+                      Change game config
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={goToPlaza}
+                    style={plazaHubButtonStyle({
+                      variant: "full",
+                      fullWidth: true,
+                    })}
+                  >
+                    Tutorial plaza
+                  </button>
+                </>
+              ) : (
               <div style={rulesWelcomePanel}>
-                <div
-                  style={{
-                    ...welcomeRuleRow,
-                    paddingBottom: 10,
-                    marginBottom: 10,
-                    borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
-                  }}
-                >
-                  <span aria-hidden style={welcomeRuleBadge}>
-                    1
-                  </span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={welcomeRuleTitle}>Win the battle</div>
-                    <p style={welcomeRuleBody}>
-                      Reach the goal at or under{" "}
-                      <strong style={{ color: hudColors.value }}>par</strong> —
-                      strokes ≤ lane coins on the hole.
-                    </p>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    ...welcomeRuleRow,
-                    paddingBottom: 10,
-                    marginBottom: 10,
-                    borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
-                  }}
-                >
-                  <span aria-hidden style={welcomeRuleBadge}>
-                    2
-                  </span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={welcomeRuleTitle}>Win the war</div>
-                    <p style={welcomeRuleBody}>
-                      Your{" "}
-                      <strong style={{ color: hudColors.value }}>
-                        battle wins
-                      </strong>{" "}
-                      should be at least your{" "}
-                      <strong style={{ color: hudColors.value }}>
-                        battle losses
-                      </strong>{" "}
-                      (ties count).
-                    </p>
-                  </div>
-                </div>
-                <div style={{ ...welcomeRuleRow, marginBottom: 12 }}>
-                  <span aria-hidden style={welcomeRuleBadge}>
-                    3
-                  </span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={welcomeRuleTitle}>Start playing</div>
-                    <p style={welcomeRuleBody}>
-                      Pick a war length below —{" "}
-                      <strong style={{ color: hudColors.accent }}>3</strong>,{" "}
-                      <strong style={{ color: hudColors.accent }}>5</strong>, or{" "}
-                      <strong style={{ color: hudColors.accent }}>9</strong>{" "}
-                      battles.
-                    </p>
-                  </div>
-                </div>
+                <WelcomeRulesOverview />
                 <p
                   style={{
                     margin: "0 0 8px",
@@ -608,6 +758,7 @@ export function StartGameModal({
                   Change game config
                 </button>
               </div>
+              )
             ) : (
             <div style={rulesPanelContinue}>
               <p
@@ -981,74 +1132,78 @@ export function StartGameModal({
             </div>
             )}
 
-            <p
-              style={{
-                margin: "0 0 12px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: hudColors.label,
-                lineHeight: 1.45,
-              }}
-            >
-              New war — pick length
-            </p>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                gap: 8,
-                marginBottom: 4,
-              }}
-            >
-              {BATTLE_OPTIONS.map((battleCount) => (
-                <button
-                  key={battleCount}
-                  type="button"
-                  className="ggsBattleLenBtn"
-                  onClick={() => {
-                    burstVehicleStartConfetti(
-                      selectedVehicle.mainRgb,
-                      selectedVehicle.accentRgb
-                    );
-                    onStartSession(battleCount, biomeChoice);
-                  }}
+            {showStandardWarPick ? (
+              <>
+                <p
                   style={{
-                    ...goldPillButtonStyle({
-                      disabled: false,
-                      fullWidth: true,
-                    }),
-                    flex: 1,
-                    minWidth: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 2,
-                    padding: "10px 6px",
+                    margin: "0 0 12px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: hudColors.label,
+                    lineHeight: 1.45,
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 800,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {battleCount}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      opacity: 0.92,
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    battles
-                  </span>
-                </button>
-              ))}
-            </div>
+                  New war — pick length
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    gap: 8,
+                    marginBottom: 4,
+                  }}
+                >
+                  {BATTLE_OPTIONS.map((battleCount) => (
+                    <button
+                      key={battleCount}
+                      type="button"
+                      className="ggsBattleLenBtn"
+                      onClick={() => {
+                        burstVehicleStartConfetti(
+                          selectedVehicle.mainRgb,
+                          selectedVehicle.accentRgb
+                        );
+                        onStartSession(battleCount, biomeChoice);
+                      }}
+                      style={{
+                        ...goldPillButtonStyle({
+                          disabled: false,
+                          fullWidth: true,
+                        }),
+                        flex: 1,
+                        minWidth: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 2,
+                        padding: "10px 6px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 800,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {battleCount}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          opacity: 0.92,
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        battles
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </>
         )}
       </div>

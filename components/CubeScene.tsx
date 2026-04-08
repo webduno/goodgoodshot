@@ -110,6 +110,7 @@ import {
   wrapYawRad,
 } from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
+import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { parCoinCountForIslands } from "@/lib/game/path";
 import {
   INITIAL_LANE_ORIGIN,
@@ -458,6 +459,7 @@ export default function CubeScene() {
     (key: string) => {
       if (collectedCoinKeysRef.current.has(key)) return;
       collectedCoinKeysRef.current.add(key);
+      playSfx(SFX.coinCollect);
       recordGoldCoin();
       setCoinRenderTick((t) => t + 1);
     },
@@ -510,6 +512,7 @@ export default function CubeScene() {
         setPowerupStackCount(powerupStackRef.current);
         setStrengthCharges((c) => (c <= 0 ? c : c - 1));
         const mult = Math.pow(2, powerupStackRef.current);
+        playSfx(SFX.slash);
         pushHudToast(`"Strength" used (×${mult})`, "strength");
         burstPowerupUseConfetti("strength");
         return;
@@ -522,6 +525,7 @@ export default function CubeScene() {
         noBounceRef.current = true;
         setNoBounceActive(true);
         setNoBounceCharges((c) => (c <= 0 ? c : c - 1));
+        playSfx(SFX.slash);
         pushHudToast(`"No bounce" used`, "noBounce");
         burstPowerupUseConfetti("noBounce");
         return;
@@ -533,6 +537,7 @@ export default function CubeScene() {
         noWindRef.current = true;
         setNoWindActive(true);
         setNoWindCharges((c) => (c <= 0 ? c : c - 1));
+        playSfx(SFX.slash);
         pushHudToast(`"No wind" used`, "nowind");
         burstPowerupUseConfetti("nowind");
         return;

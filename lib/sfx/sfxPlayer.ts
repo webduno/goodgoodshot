@@ -15,7 +15,10 @@ function getShared(): HTMLAudioElement {
 
 /** Public URLs under `/public` (e.g. `/sfx/short/msn.mp3`). Add keys as you add files. */
 export const SFX = {
-  enemyKill: "/sfx/short/msn.mp3",
+  enemyKill: "/sfx/short/cling.mp3",
+  shoot: "/sfx/short/shoot1.mp3",
+  slash: "/sfx/short/slash.mp3",
+  coinCollect: "/sfx/coinss.mp3",
 } as const;
 
 export function playSfx(src: string): void {

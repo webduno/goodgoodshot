@@ -497,6 +497,7 @@ export function SceneContent({
       mesh.visible = true;
       mesh.rotation.set(0, 0, 0);
       mesh.position.set(topX, topY, topZ);
+      playSfx(SFX.shoot);
       onShootStart();
     },
     [

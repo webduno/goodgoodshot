@@ -124,6 +124,9 @@ import {
 } from "react";
 import * as THREE from "three";
 
+/** After war end → new war + reload, skip the start modal on the next load. */
+const SESSION_SKIP_START_MODAL_KEY = "goodgoodshot.skipStartModal";
+
 export default function CubeScene() {
   const { recordHoleCompleted, recordGoldCoin, spendGoldCoin, stats } =
     usePlayerStats();
@@ -177,6 +180,12 @@ export default function CubeScene() {
   }, []);
 
   const sessionMapHydrationKeyRef = useRef<string | null>(null);
+  /** Mid-war battle finished: session is saved but map advance waits for Continue. */
+  const deferMapAdvanceRef = useRef(false);
+  const pendingBattleFinishRef = useRef<{
+    outcome: "hit" | "enemy_loss";
+    landing?: Vec3;
+  } | null>(null);
 
   useLayoutEffect(() => {
     if (!sessionReady) return;
@@ -185,9 +194,19 @@ export default function CubeScene() {
       ? `${session.startedAtMs}-${session.targetBattles}-${session.battlesWon + session.battlesLost}`
       : "none";
     if (sessionMapHydrationKeyRef.current === key) return;
+
+    if (!session) {
+      sessionMapHydrationKeyRef.current = key;
+      return;
+    }
+
+    if (deferMapAdvanceRef.current) {
+      sessionMapHydrationKeyRef.current = key;
+      return;
+    }
+
     sessionMapHydrationKeyRef.current = key;
 
-    if (!session) return;
     const mapped = getSessionBattleMapForSession(session);
     if (mapped) {
       dispatch({ type: "REPLACE_GAME_STATE", state: mapped });
@@ -207,6 +226,17 @@ export default function CubeScene() {
     "par"
   );
   const [showStartGameModal, setShowStartGameModal] = useState(true);
+  useLayoutEffect(() => {
+    if (!sessionReady) return;
+    try {
+      if (sessionStorage.getItem(SESSION_SKIP_START_MODAL_KEY) === "1") {
+        sessionStorage.removeItem(SESSION_SKIP_START_MODAL_KEY);
+        if (playSession) setShowStartGameModal(false);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [sessionReady, playSession]);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [retroTvEnabled, setRetroTvEnabled] = useState(false);
   const [guidelineEnabled, setGuidelineEnabled] = useState(true);
@@ -324,6 +354,20 @@ export default function CubeScene() {
       pushHudToast(`Hold to shoot to start`);
     },
     [pushHudToast]
+  );
+
+  /** War complete screen: new maps + session in localStorage, then full reload into play. */
+  const onStartNewWarAfterSessionEnd = useCallback(
+    (battleCount: SessionBattleCount) => {
+      try {
+        sessionStorage.setItem(SESSION_SKIP_START_MODAL_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      onStartNewSession(battleCount, "random");
+      window.location.reload();
+    },
+    [onStartNewSession]
   );
   const [chargeHud, setChargeHud] = useState<{
     remainingMs: number;
@@ -544,6 +588,7 @@ export default function CubeScene() {
           revertSpawn: [...spawnBeforeShotRef.current] as Vec3,
         });
       } else {
+        let deferredMap = false;
         if (outcome === "hit" || outcome === "enemy_loss") {
           const g = gameRef.current;
           const par = parCoinCountForIslands(
@@ -592,16 +637,21 @@ export default function CubeScene() {
               setShowSessionEndModal(true);
               return;
             }
+            deferredMap = true;
+            deferMapAdvanceRef.current = true;
+            pendingBattleFinishRef.current = { outcome, landing };
           }
           setFinishBattleWon(battleWon);
           setFinishPar(par);
           setFinishLossReason(outcome === "enemy_loss" ? "enemy" : "par");
         }
-        dispatch({
-          type: "PROJECTILE_END",
-          outcome,
-          landing,
-        });
+        if (!(outcome === "hit" || outcome === "enemy_loss") || !deferredMap) {
+          dispatch({
+            type: "PROJECTILE_END",
+            outcome,
+            landing,
+          });
+        }
       }
       if (outcome === "hit" || outcome === "enemy_loss") {
         setShowFinishModal(true);
@@ -611,6 +661,34 @@ export default function CubeScene() {
     },
     [maybeWindToast, playerVehicle, pushHudToast, recordHoleCompleted]
   );
+
+  const onFinishBattleContinue = useCallback(() => {
+    const pending = pendingBattleFinishRef.current;
+    if (!pending) return;
+    deferMapAdvanceRef.current = false;
+    if (playSession) {
+      const mapped = getSessionBattleMapForSession(playSession);
+      if (mapped) {
+        dispatch({ type: "REPLACE_GAME_STATE", state: mapped });
+      } else {
+        dispatch({
+          type: "PROJECTILE_END",
+          outcome: pending.outcome,
+          landing: pending.landing,
+        });
+      }
+    }
+    pendingBattleFinishRef.current = null;
+
+    setSessionShots(0);
+    strengthUsesRoundRef.current = 0;
+    noBounceUsesRoundRef.current = 0;
+    waterPenaltiesRoundRef.current = 0;
+    resetPowerupStack();
+    setShowFinishModal(false);
+    setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
+    maybeWindToast(windRef.current.x, windRef.current.z, true);
+  }, [dispatch, maybeWindToast, playSession, playerVehicle, resetPowerupStack]);
 
   useEffect(() => {
     if (!cooldownUntil) return;
@@ -1439,6 +1517,7 @@ export default function CubeScene() {
         par={finishPar}
         battleWon={finishBattleWon}
         lossReason={finishLossReason}
+        onContinue={onFinishBattleContinue}
       />
       <SessionEndModal
         open={showSessionEndModal}
@@ -1452,10 +1531,7 @@ export default function CubeScene() {
           clearPlaySession();
           window.location.reload();
         }}
-        onStartNewSession={(battleCount) => {
-          setShowSessionEndModal(false);
-          onStartNewSession(battleCount, "random");
-        }}
+        onStartNewSession={onStartNewWarAfterSessionEnd}
       />
       <HelpModal
         open={showHelpModal}

@@ -69,6 +69,7 @@ import { POWERUP_SLOT_ACCENT } from "@/components/gameHudStyles";
 import { EarthTextured } from "../EarthTextured";
 import { ShotGuidelineArc } from "@/components/game/cube/ShotGuidelineArc";
 import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
+import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 
 /** Spread messengers along X when more enemies than distinct islands (fallback). */
 function goalEnemyCrowdOffset(
@@ -404,6 +405,7 @@ export function SceneContent({
         next[index] = false;
         return next;
       });
+      playSfx(SFX.enemyKill);
       onEnemyKillReward();
     },
     [onEnemyKillReward]

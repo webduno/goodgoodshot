@@ -15,6 +15,7 @@ export function FinishGameModal({
   par,
   battleWon,
   lossReason = "par",
+  onContinue,
 }: {
   open: boolean;
   sessionShots: number;
@@ -22,6 +23,7 @@ export function FinishGameModal({
   battleWon: boolean;
   /** When `battleWon` is false: over-par goal vs messenger reached the vehicle. */
   lossReason?: "par" | "enemy";
+  onContinue: () => void;
 }) {
   useEffect(() => {
     if (!open || !battleWon) return;
@@ -80,10 +82,10 @@ export function FinishGameModal({
         </p>
         <button
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={onContinue}
           style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
         >
-          Next round
+          Continue
         </button>
       </div>
     </div>

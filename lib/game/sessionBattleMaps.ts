@@ -52,6 +52,14 @@ function pickRandomBiome(): BiomeId {
   return BIOME_IDS[Math.floor(Math.random() * BIOME_IDS.length)]!;
 }
 
+/** Random biome that is never equal to `previous` when that would leave at least one option. */
+function pickRandomBiomeAvoidingPrevious(previous: BiomeId | undefined): BiomeId {
+  if (previous === undefined) return pickRandomBiome();
+  const candidates = BIOME_IDS.filter((b) => b !== previous);
+  if (candidates.length === 0) return pickRandomBiome();
+  return candidates[Math.floor(Math.random() * candidates.length)]!;
+}
+
 /**
  * Resolves biome per battle: random picks independently; fixed uses the same biome for all.
  */
@@ -65,8 +73,13 @@ export function generateSessionBattleMaps(
   choice: SessionBiomeChoice
 ): GameState[] {
   const out: GameState[] = [];
+  let prevRandomBiome: BiomeId | undefined;
   for (let i = 0; i < targetBattles; i++) {
-    const biome = resolveBiomeForBattle(choice);
+    const biome =
+      choice === "random"
+        ? pickRandomBiomeAvoidingPrevious(prevRandomBiome)
+        : choice;
+    if (choice === "random") prevRandomBiome = biome;
     out.push(
       createInitialGameState({
         biome,

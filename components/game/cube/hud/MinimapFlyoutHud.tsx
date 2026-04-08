@@ -6,7 +6,7 @@ import type { IslandRect } from "@/lib/game/types";
 import { WIND_HUD_CIRCLE_PX } from "./WindHud";
 
 /**
- * Circular map control (same size as `WindHud`) — opens the course map modal in `CubeScene`.
+ * Circular map control (same size as `WindHud`) — opens the battle map modal in `CubeScene`.
  */
 export function MinimapFlyoutHud({
   islands,
@@ -32,7 +32,7 @@ export function MinimapFlyoutHud({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={mapModalOpen}
-        aria-label="Open course map"
+        aria-label="Open battle map"
         onClick={onOpenMap}
         style={{
           ...hudMiniPanel,

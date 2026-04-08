@@ -1,6 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
+import { isLocalhostHostname } from "@/lib/isLocalhost";
 import type { MutableRefObject } from "react";
 
 export type RendererStatsSnapshot = {
@@ -19,6 +20,10 @@ export function RendererStatsCollector({
 }) {
   /** R3F runs `useFrame` before `gl.render()`; `info` still holds the prior frame’s totals until the next render resets. */
   useFrame((state) => {
+    if (typeof window === "undefined" || !isLocalhostHostname(window.location.hostname)) {
+      statsRef.current = null;
+      return;
+    }
     const { gl } = state;
     statsRef.current = {
       calls: gl.info.render.calls,

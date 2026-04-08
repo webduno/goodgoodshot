@@ -75,6 +75,7 @@ import {
   clearSessionBattleMaps,
   generateSessionBattleMaps,
   getSessionBattleMapForSession,
+  loadSessionBattleMaps,
   saveSessionBattleMaps,
   type SessionBiomeChoice,
 } from "@/lib/game/sessionBattleMaps";
@@ -217,6 +218,20 @@ export default function CubeScene() {
       dispatch({ type: "REPLACE_GAME_STATE", state: mapped });
     }
   }, [sessionReady, playSession]);
+
+  const sessionWarMapsPayload = useMemo(() => {
+    if (!playSession) return null;
+    const payload = loadSessionBattleMaps();
+    if (!payload) return null;
+    if (
+      payload.startedAtMs !== playSession.startedAtMs ||
+      payload.targetBattles !== playSession.targetBattles
+    ) {
+      return null;
+    }
+    return payload;
+  }, [playSession]);
+
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showSessionEndModal, setShowSessionEndModal] = useState(false);
   const [sessionEndTotalStrokes, setSessionEndTotalStrokes] = useState(0);
@@ -1560,6 +1575,12 @@ export default function CubeScene() {
         biome={game.biome}
         goalWorldX={game.goalWorldX}
         goalWorldZ={game.goalWorldZ}
+        warMaps={sessionWarMapsPayload?.maps ?? null}
+        initialBattleIndex={
+          playSession
+            ? playSession.battlesWon + playSession.battlesLost
+            : 0
+        }
       />
     </div>
   );

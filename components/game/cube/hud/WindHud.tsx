@@ -6,20 +6,41 @@ import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 /** Shared with map toggle so the wind gauge and map button match. */
 export const WIND_HUD_CIRCLE_PX = 56;
 
+/** 8-point compass: North matches +Z (sun / farthest goal). */
+const WIND_FROM_CARDINAL_8 = [
+  "N",
+  "NE",
+  "E",
+  "SE",
+  "S",
+  "SW",
+  "W",
+  "NW",
+] as const;
+
 export function WindHud({ windHud }: { windHud: { x: number; z: number } }) {
   const windMag = Math.hypot(windHud.x, windHud.z);
   const windPercentOfMax =
     WIND_ACCEL_MAX > 0 ? (windMag / WIND_ACCEL_MAX) * 100 : 0;
   /** Meteorological convention: direction the wind comes from (opposite to acceleration). */
-  const windFromAngleDeg =
-    (Math.atan2(-windHud.z, -windHud.x) * 180) / Math.PI;
-  /** Fixed length: direction-only; strength is shown as the % label. */
-  const windArrowLen = 20;
+  const fromX = -windHud.x;
+  const fromZ = -windHud.z;
+  /** Bearing from +Z (north) clockwise in the XZ plane; undefined when calm. */
+  const windFromBearingDeg =
+    windMag < 1e-6
+      ? undefined
+      : ((Math.atan2(fromX, fromZ) * 180) / Math.PI + 360) % 360;
+  const windFromLabel =
+    windFromBearingDeg === undefined
+      ? "Calm"
+      : WIND_FROM_CARDINAL_8[
+          Math.floor((windFromBearingDeg + 22.5) / 45) % 8
+        ];
 
   return (
     <div
       role="img"
-      aria-label={`Wind ${windPercentOfMax.toFixed(0)}% of max from ${windFromAngleDeg.toFixed(0)}° in world XZ (X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)})`}
+      aria-label={`Wind ${windPercentOfMax.toFixed(0)}% of max from the ${windFromLabel} (${windFromBearingDeg?.toFixed(0) ?? "—"}° bearing, +Z is north); world XZ X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)}`}
       style={{
         ...hudMiniPanel,
         ...hudFont,
@@ -50,29 +71,19 @@ export function WindHud({ windHud }: { windHud: { x: number; z: number } }) {
       >
         Wind
       </span>
-      <svg
-        width={24}
-        height={24}
-        viewBox="0 0 40 40"
+      <span
         aria-hidden
-        style={{ color: hudColors.value, flexShrink: 0 }}
+        style={{
+          color: hudColors.value,
+          flexShrink: 0,
+          fontWeight: 700,
+          fontSize: windFromLabel.length > 2 ? 9 : 11,
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+        }}
       >
-        <g transform={`translate(20 20) rotate(${windFromAngleDeg})`}>
-          <line
-            x1={-windArrowLen * 0.15}
-            y1={0}
-            x2={windArrowLen * 0.65}
-            y2={0}
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-          />
-          <polygon
-            points={`${windArrowLen * 0.85},0 ${windArrowLen * 0.55},-4 ${windArrowLen * 0.55},4`}
-            fill="currentColor"
-          />
-        </g>
-      </svg>
+        {windFromLabel}
+      </span>
       <span
         style={{
           color: hudColors.value,

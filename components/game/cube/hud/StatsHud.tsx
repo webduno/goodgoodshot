@@ -10,6 +10,7 @@ import { useEffect, useState, type CSSProperties, type MutableRefObject } from "
 import type { RendererStatsSnapshot } from "@/components/game/cube/RendererStatsCollector";
 
 import { hudColors, hudFont, hudMiniPanel } from "@/components/gameHudStyles";
+import { isLocalhostHostname } from "@/lib/isLocalhost";
 
 import { HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
 
@@ -48,8 +49,14 @@ export function StatsHud({
 }) {
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const [drawCalls, setDrawCalls] = useState<number | null>(null);
+  const [isLocalhost, setIsLocalhost] = useState(false);
 
   useEffect(() => {
+    setIsLocalhost(isLocalhostHostname(window.location.hostname));
+  }, []);
+
+  useEffect(() => {
+    if (!isLocalhost) return;
     let raf = 0;
     let last = 0;
     const tick = (t: number) => {
@@ -62,7 +69,7 @@ export function StatsHud({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [rendererStatsRef]);
+  }, [rendererStatsRef, isLocalhost]);
 
   const remainingMs =
     cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
@@ -274,47 +281,49 @@ export function StatsHud({
         )}
       </button>
 
-      <div
-        role="status"
-        aria-label={
-          drawCalls !== null
-            ? `WebGL draw calls last frame: ${drawCalls}`
-            : "WebGL draw calls loading"
-        }
-        title="Draw calls from THREE.WebGLRenderer.info.render.calls (≈ prior frame)"
-        style={{
-          padding: "6px 8px",
-          ...hudMiniPanel,
-          fontSize: 10,
-          lineHeight: 1.4,
-          width: "fit-content",
-          maxWidth: "100%",
-          boxSizing: "border-box",
-        }}
-      >
+      {isLocalhost && (
         <div
+          role="status"
+          aria-label={
+            drawCalls !== null
+              ? `WebGL draw calls last frame: ${drawCalls}`
+              : "WebGL draw calls loading"
+          }
+          title="Draw calls from THREE.WebGLRenderer.info.render.calls (≈ prior frame)"
           style={{
-            color: hudColors.muted,
-            marginBottom: 2,
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
+            padding: "6px 8px",
+            ...hudMiniPanel,
+            fontSize: 10,
+            lineHeight: 1.4,
+            width: "fit-content",
+            maxWidth: "100%",
+            boxSizing: "border-box",
           }}
         >
-          Draw calls
+          <div
+            style={{
+              color: hudColors.muted,
+              marginBottom: 2,
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Draw calls
+          </div>
+          <div
+            style={{
+              color: hudColors.value,
+              fontWeight: 700,
+              fontSize: 14,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {drawCalls !== null ? drawCalls : "—"}
+          </div>
         </div>
-        <div
-          style={{
-            color: hudColors.value,
-            fontWeight: 700,
-            fontSize: 14,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {drawCalls !== null ? drawCalls : "—"}
-        </div>
-      </div>
+      )}
 
       {(charging && !shotInFlight && chargeHud) ||
       (inCooldown && !shotInFlight && !charging) ? (

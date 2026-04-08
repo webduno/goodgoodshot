@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
+  goldIconButtonStyle,
   goldPillButtonStyle,
   helpModalCard,
   hudColors,
   hudFont,
   modalBackdrop,
 } from "@/components/gameHudStyles";
-import type { BiomeId, IslandRect } from "@/lib/game/types";
+import type { BiomeId, GameState, IslandRect } from "@/lib/game/types";
 
 import { StaticCourseMinimap } from "@/components/game/cube/hud/StaticCourseMinimap";
 
@@ -20,6 +21,8 @@ export function CourseMapModal({
   biome,
   goalWorldX,
   goalWorldZ,
+  warMaps,
+  initialBattleIndex = 0,
 }: {
   open: boolean;
   onClose: () => void;
@@ -27,23 +30,78 @@ export function CourseMapModal({
   biome: BiomeId;
   goalWorldX: number;
   goalWorldZ: number;
+  /** All battles in the current war (from session storage); when length > 1, arrows browse each map. */
+  warMaps?: readonly GameState[] | null;
+  /** Battle index to show when opening (0-based). */
+  initialBattleIndex?: number;
 }) {
+  const multiWar = warMaps != null && warMaps.length > 1;
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!warMaps || warMaps.length <= 1) return;
+    const clamped = Math.max(
+      0,
+      Math.min(initialBattleIndex, warMaps.length - 1)
+    );
+    setSelectedIndex(clamped);
+  }, [open, initialBattleIndex, warMaps]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (!warMaps || warMaps.length <= 1) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setSelectedIndex(
+          (i) => (i - 1 + warMaps.length) % warMaps.length
+        );
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setSelectedIndex((i) => (i + 1) % warMaps.length);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, warMaps]);
 
-  if (!open || islands.length === 0) return null;
+  const display = useMemo(() => {
+    if (multiWar && warMaps) {
+      const g = warMaps[selectedIndex];
+      if (!g) {
+        return { islands, biome, goalWorldX, goalWorldZ };
+      }
+      return {
+        islands: g.islands,
+        biome: g.biome,
+        goalWorldX: g.goalWorldX,
+        goalWorldZ: g.goalWorldZ,
+      };
+    }
+    return { islands, biome, goalWorldX, goalWorldZ };
+  }, [
+    multiWar,
+    warMaps,
+    selectedIndex,
+    islands,
+    biome,
+    goalWorldX,
+    goalWorldZ,
+  ]);
+
+  if (!open) return null;
+  if (display.islands.length === 0) return null;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="course-map-title"
+      aria-labelledby="battle-map-title"
       style={modalBackdrop}
       onClick={onClose}
     >
@@ -62,7 +120,7 @@ export function CourseMapModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2
-          id="course-map-title"
+          id="battle-map-title"
           style={{
             margin: 0,
             fontSize: 16,
@@ -70,14 +128,79 @@ export function CourseMapModal({
             color: hudColors.value,
           }}
         >
-          Course map
+          Battle map
         </h2>
-        <StaticCourseMinimap
-          islands={islands}
-          biome={biome}
-          goalWorldX={goalWorldX}
-          goalWorldZ={goalWorldZ}
-        />
+        {multiWar ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto 1fr",
+              alignItems: "center",
+              columnGap: 8,
+              width: "100%",
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Previous battle map"
+              style={{ ...goldIconButtonStyle(false), justifySelf: "end" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!warMaps) return;
+                const len = warMaps.length;
+                setSelectedIndex((i) => (i - 1 + len) % len);
+              }}
+            >
+              ‹
+            </button>
+            <StaticCourseMinimap
+              islands={display.islands}
+              biome={display.biome}
+              goalWorldX={display.goalWorldX}
+              goalWorldZ={display.goalWorldZ}
+            />
+            <button
+              type="button"
+              aria-label="Next battle map"
+              style={{ ...goldIconButtonStyle(false), justifySelf: "start" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!warMaps) return;
+                const len = warMaps.length;
+                setSelectedIndex((i) => (i + 1) % len);
+              }}
+            >
+              ›
+            </button>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+            <StaticCourseMinimap
+              islands={display.islands}
+              biome={display.biome}
+              goalWorldX={display.goalWorldX}
+              goalWorldZ={display.goalWorldZ}
+            />
+          </div>
+        )}
+        {multiWar && warMaps ? (
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              fontWeight: 600,
+              color: hudColors.muted,
+            }}
+          >
+            Battle {selectedIndex + 1} of {warMaps.length}
+          </p>
+        ) : null}
         <button
           type="button"
           style={goldPillButtonStyle({ disabled: false, fullWidth: true })}

@@ -59,6 +59,7 @@ import {
   AIM_PITCH_STEP_RAD,
   AIM_YAW_QUARTER_TURN_RAD,
   AIM_YAW_STEP_RAD,
+  CHARGE_HOLD_REPEAT_MS,
   SKY_GRADIENT_CSS,
   INITIAL_POWERUP_CHARGES,
 } from "@/lib/game/constants";
@@ -240,6 +241,9 @@ export default function CubeScene() {
   >(undefined);
   const fireHeldRef = useRef<((held: boolean) => void) | null>(null);
   const guidelineShootRef = useRef<(() => void) | null>(null);
+  const guidelineSpacePowerRepeatRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
 
   const pushHudToast = useCallback(
     (
@@ -699,7 +703,18 @@ export default function CubeScene() {
         if (e.repeat) return;
         e.preventDefault();
         if (guidelineAdjusting) {
-          guidelineShootRef.current?.();
+          const m = maxClicksForStrengthBarRef(playerVehicle);
+          const bumpGuidePower = () => {
+            setGuidelinePreviewClicks((c) => Math.min(m, Math.max(1, c) + 1));
+          };
+          bumpGuidePower();
+          if (guidelineSpacePowerRepeatRef.current) {
+            clearInterval(guidelineSpacePowerRepeatRef.current);
+          }
+          guidelineSpacePowerRepeatRef.current = setInterval(
+            bumpGuidePower,
+            CHARGE_HOLD_REPEAT_MS
+          );
           return;
         }
         fireHeldRef.current?.(true);
@@ -745,7 +760,13 @@ export default function CubeScene() {
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (guidelineSpacePowerRepeatRef.current) {
+        clearInterval(guidelineSpacePowerRepeatRef.current);
+        guidelineSpacePowerRepeatRef.current = null;
+      }
+    };
   }, [
     shotInFlight,
     showFinishModal,
@@ -757,6 +778,7 @@ export default function CubeScene() {
     chargeHud,
     activatePowerup,
     guidelineAdjusting,
+    playerVehicle,
   ]);
 
   useEffect(() => {
@@ -771,6 +793,10 @@ export default function CubeScene() {
           t.isContentEditable)
       ) {
         return;
+      }
+      if (guidelineSpacePowerRepeatRef.current) {
+        clearInterval(guidelineSpacePowerRepeatRef.current);
+        guidelineSpacePowerRepeatRef.current = null;
       }
       fireHeldRef.current?.(false);
     };

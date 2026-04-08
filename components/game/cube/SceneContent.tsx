@@ -37,6 +37,7 @@ import {
 } from "@/components/game/cube/TeleportOrbitRig";
 import {
   BLOCK_SIZE,
+  CHARGE_HOLD_REPEAT_MS,
   GOAL_BLOCK_COLOR,
   FIELD_PLANE_HALF_WIDTH_X,
   FIELD_PLANE_Z_BEFORE_SPAWN,
@@ -69,11 +70,8 @@ import { EarthTextured } from "../EarthTextured";
 import { ShotGuidelineArc } from "@/components/game/cube/ShotGuidelineArc";
 import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
 
-/** Interval between automatic +power steps while Fire / Space / rear trigger is held (charge window). */
-const CHARGE_HOLD_REPEAT_MS = 85;
-
-/** Spread multiple goal messengers along X so they do not overlap at spawn. */
-function goalEnemyStartOffset(
+/** Spread messengers along X when more enemies than distinct islands (fallback). */
+function goalEnemyCrowdOffset(
   index: number,
   total: number
 ): { x: number; z: number } {
@@ -81,6 +79,52 @@ function goalEnemyStartOffset(
   const step = 0.58;
   const mid = (total - 1) / 2;
   return { x: (index - mid) * step, z: 0 };
+}
+
+/**
+ * World offset from `goalCenter` so each messenger spawns on a different island when possible.
+ * Islands are ordered spawn → goal; index 0 uses the goal island, 1 the previous, etc.
+ * Matches `GoalMessengerCharacter` anchor `(goalCenter + offset) + (0.35, -0.85)` ≡ island center + (0.35, -0.85).
+ * When `total` exceeds `islands.length`, extras share the goal island with crowding vs index 0.
+ */
+function goalEnemySpawnOffsetXZ(
+  islands: readonly IslandRect[],
+  goalCenter: Vec3,
+  index: number,
+  total: number
+): { x: number; z: number } {
+  if (total <= 1) return { x: 0, z: 0 };
+  if (islands.length === 0) return goalEnemyCrowdOffset(index, total);
+
+  const goalIsland = islands[islands.length - 1]!;
+  const baseOnGoal = {
+    x: goalIsland.worldX - goalCenter[0],
+    z: goalIsland.worldZ - goalCenter[2],
+  };
+
+  const onGoalCount =
+    total > islands.length ? total - islands.length + 1 : 1;
+
+  if (index === 0) {
+    const crowd = goalEnemyCrowdOffset(0, onGoalCount);
+    return {
+      x: baseOnGoal.x + crowd.x,
+      z: baseOnGoal.z + crowd.z,
+    };
+  }
+  if (index >= islands.length) {
+    const k = index - islands.length + 1;
+    const crowd = goalEnemyCrowdOffset(k, onGoalCount);
+    return {
+      x: baseOnGoal.x + crowd.x,
+      z: baseOnGoal.z + crowd.z,
+    };
+  }
+  const is = islands[islands.length - 1 - index]!;
+  return {
+    x: is.worldX - goalCenter[0],
+    z: is.worldZ - goalCenter[2],
+  };
 }
 
 /** Local Y above spawn block center: clears default hull top (~0.5) and typical barrel. */
@@ -294,7 +338,7 @@ export function SceneContent({
   onCoinCollected: (key: string) => void;
   /** Press/release for fire + hold-to-add-power (Fire button, Space, rear red cube). */
   onBindFireHeld: (handler: ((held: boolean) => void) | null) => void;
-  /** Guideline mode: fire immediately at the slider click count (Shoot / Space). */
+  /** Guideline mode: fire at the slider click count (Shoot button). */
   onBindGuidelineShoot?: (handler: (() => void) | null) => void;
   /** Queued strength stacks (2^count multiplier) for the next shot. */
   powerupStackCount: number;
@@ -787,7 +831,12 @@ export function SceneContent({
           enemySimRef={enemySimRef}
           enemyIndex={i}
           colorHex={spec.colorHex}
-          startOffsetXZ={goalEnemyStartOffset(i, goalEnemies.length)}
+          startOffsetXZ={goalEnemySpawnOffsetXZ(
+            islands,
+            goalCenter,
+            i,
+            goalEnemies.length
+          )}
         />
       ))}
       {yellowLaneMarkers.map((center, i) => {

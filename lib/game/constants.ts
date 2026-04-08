@@ -31,6 +31,9 @@ export const AIM_PITCH_MAX_RAD = THREE.MathUtils.degToRad(15);
 /** Nudge per tap (matches horizontal aim step). */
 export const AIM_PITCH_STEP_RAD = AIM_YAW_STEP_RAD;
 
+/** Interval between automatic +power steps while Fire / Space / rear trigger is held (charge window). */
+export const CHARGE_HOLD_REPEAT_MS = 85;
+
 export const SPHERE_RADIUS = 0.2;
 
 /** Top of the green field mesh (`InitialFieldGround`); aligns with block bottom at y = 0. */
@@ -179,7 +182,7 @@ export const POWERUP_SLOTS = [
  * Gameplay orbit camera offset from spawn (behind the tank along −Z; look toward +Z / sun).
  */
 export const CAMERA_OFFSET_FROM_SPAWN: readonly [number, number, number] = [
-  -1.38, 1.78, -6.45,
+  -2.38, 2.78, -9.45,
 ];
 /**
  * First-frame camera matches gameplay (wider start — no intro zoom-in). Tank hull faces +Z

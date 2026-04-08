@@ -24,6 +24,10 @@ import { IslandTrees } from "@/components/game/cube/meshes/IslandTrees";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
 import { RetroTvPostFx } from "@/components/game/cube/effects/RetroTvPostFx";
+import {
+  RendererStatsCollector,
+  type RendererStatsSnapshot,
+} from "@/components/game/cube/RendererStatsCollector";
 import { SceneContent } from "@/components/game/cube/SceneContent";
 import {
   TeleportOrbitRig,
@@ -171,6 +175,7 @@ export default function CubeScene() {
     pos: new THREE.Vector3(),
     valid: false,
   });
+  const rendererStatsRef = useRef<RendererStatsSnapshot | null>(null);
   const [sessionShots, setSessionShots] = useState(0);
   const [playSession, setPlaySession] = useState<PlaySession | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
@@ -663,32 +668,15 @@ export default function CubeScene() {
   );
 
   const onFinishBattleContinue = useCallback(() => {
-    const pending = pendingBattleFinishRef.current;
-    if (!pending) return;
-    deferMapAdvanceRef.current = false;
-    if (playSession) {
-      const mapped = getSessionBattleMapForSession(playSession);
-      if (mapped) {
-        dispatch({ type: "REPLACE_GAME_STATE", state: mapped });
-      } else {
-        dispatch({
-          type: "PROJECTILE_END",
-          outcome: pending.outcome,
-          landing: pending.landing,
-        });
+    try {
+      if (playSession) {
+        sessionStorage.setItem(SESSION_SKIP_START_MODAL_KEY, "1");
       }
+    } catch {
+      /* ignore */
     }
-    pendingBattleFinishRef.current = null;
-
-    setSessionShots(0);
-    strengthUsesRoundRef.current = 0;
-    noBounceUsesRoundRef.current = 0;
-    waterPenaltiesRoundRef.current = 0;
-    resetPowerupStack();
-    setShowFinishModal(false);
-    setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
-    maybeWindToast(windRef.current.x, windRef.current.z, true);
-  }, [dispatch, maybeWindToast, playSession, playerVehicle, resetPowerupStack]);
+    window.location.reload();
+  }, [playSession]);
 
   useEffect(() => {
     if (!cooldownUntil) return;
@@ -986,6 +974,7 @@ export default function CubeScene() {
         <IslandBushes islands={islands} biome={game.biome} />
         <IslandTrees islands={islands} biome={game.biome} />
         <RetroTvPostFx enabled={retroTvEnabled} />
+        <RendererStatsCollector statsRef={rendererStatsRef} />
       </Canvas>
       <ToastNotif
         showToken={hudToastToken}
@@ -1008,6 +997,7 @@ export default function CubeScene() {
           noWindActive={noWindActive}
           vehicle={playerVehicle}
           onScoreClick={() => setShowSessionStatsModal(true)}
+          rendererStatsRef={rendererStatsRef}
         />
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (

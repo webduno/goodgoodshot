@@ -5,7 +5,9 @@ import {
   rgbTupleToCss,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type MutableRefObject } from "react";
+
+import type { RendererStatsSnapshot } from "@/components/game/cube/RendererStatsCollector";
 
 import { hudColors, hudFont, hudMiniPanel } from "@/components/gameHudStyles";
 
@@ -25,6 +27,7 @@ export function StatsHud({
   noWindActive,
   vehicle,
   onScoreClick,
+  rendererStatsRef,
 }: {
   /** Max strokes (inclusive) to count as a battle win when you hole out — same as lane bonus coin count. */
   holePar: number;
@@ -40,8 +43,26 @@ export function StatsHud({
   noWindActive: boolean;
   vehicle: PlayerVehicleConfig;
   onScoreClick: () => void;
+  /** Filled each frame inside `<Canvas>` from `WebGLRenderer.info` (draw calls / triangles). */
+  rendererStatsRef: MutableRefObject<RendererStatsSnapshot | null>;
 }) {
   const [vehicleOpen, setVehicleOpen] = useState(false);
+  const [drawCalls, setDrawCalls] = useState<number | null>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = 0;
+    const tick = (t: number) => {
+      if (t - last >= 100) {
+        last = t;
+        const s = rendererStatsRef.current;
+        setDrawCalls(s ? s.calls : null);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [rendererStatsRef]);
 
   const remainingMs =
     cooldownUntil !== null ? Math.max(0, cooldownUntil - Date.now()) : 0;
@@ -252,6 +273,48 @@ export function StatsHud({
           </div>
         )}
       </button>
+
+      <div
+        role="status"
+        aria-label={
+          drawCalls !== null
+            ? `WebGL draw calls last frame: ${drawCalls}`
+            : "WebGL draw calls loading"
+        }
+        title="Draw calls from THREE.WebGLRenderer.info.render.calls (≈ prior frame)"
+        style={{
+          padding: "6px 8px",
+          ...hudMiniPanel,
+          fontSize: 10,
+          lineHeight: 1.4,
+          width: "fit-content",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            color: hudColors.muted,
+            marginBottom: 2,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+          }}
+        >
+          Draw calls
+        </div>
+        <div
+          style={{
+            color: hudColors.value,
+            fontWeight: 700,
+            fontSize: 14,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {drawCalls !== null ? drawCalls : "—"}
+        </div>
+      </div>
 
       {(charging && !shotInFlight && chargeHud) ||
       (inCooldown && !shotInFlight && !charging) ? (

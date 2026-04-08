@@ -7,6 +7,7 @@ import type { BiomeId } from "@/lib/game/types";
 
 import { BlockyCactus } from "./BlockyCactus";
 import { BlockyTree } from "./BlockyTree";
+import { InstancedBlockyTrees } from "./InstancedBlockyTrees";
 import { SnowPineTree } from "./SnowPineTree";
 
 /** Fairway trees: thinner on X/Z only (tee tree scales separately in `TeeCornerTree`). */
@@ -19,6 +20,11 @@ export function IslandTrees({
   islands: readonly IslandRect[];
   biome: BiomeId;
 }) {
+  /** Instanced `BlockyTree` fairway props for draw-call experiment (plain biome only). */
+  if (biome === "plain") {
+    return <InstancedBlockyTrees islands={islands} />;
+  }
+
   const TreeMesh =
     biome === "snow"
       ? SnowPineTree

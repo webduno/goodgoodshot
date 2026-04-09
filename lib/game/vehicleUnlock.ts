@@ -1,6 +1,6 @@
 import {
   DEFAULT_PLAYER_VEHICLE,
-  getVehicleByVId,
+  DEFAULT_V_ID,
   resolveVehicleFromUrlParam,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
@@ -22,13 +22,31 @@ export function isPremiumRatataVehicleId(vehicleId: string): boolean {
   return vehicleId.trim().toLowerCase() === PREMIUM_RATATA_VEHICLE_ID;
 }
 
+function isVehicleOwnedInShop(
+  vehicleId: string,
+  ownedVehicleIds: readonly string[] | undefined
+): boolean {
+  if (!ownedVehicleIds || ownedVehicleIds.length === 0) return false;
+  const needle = vehicleId.trim().toLowerCase();
+  return ownedVehicleIds.some((id) => id.trim().toLowerCase() === needle);
+}
+
+/**
+ * @param ownedVehicleIds — from `PlayerShopInventory.ownedVehicleIds` (excludes free `default`).
+ */
 export function isVehicleUnlocked(
   stats: PlayerStatsState,
-  vehicleId: string
+  vehicleId: string,
+  ownedVehicleIds?: readonly string[]
 ): boolean {
-  if (!isPremiumRatataVehicleId(vehicleId)) return true;
-  if (RATATA_PREMIUM_BETA_FREE_UNLOCK) return true;
-  return stats.gamesWon >= RATATA_UNLOCK_MIN_BATTLE_WINS;
+  const id = vehicleId.trim().toLowerCase();
+  if (id === DEFAULT_V_ID) return true;
+  if (isVehicleOwnedInShop(vehicleId, ownedVehicleIds)) return true;
+  if (isPremiumRatataVehicleId(vehicleId)) {
+    if (RATATA_PREMIUM_BETA_FREE_UNLOCK) return true;
+    return stats.gamesWon >= RATATA_UNLOCK_MIN_BATTLE_WINS;
+  }
+  return false;
 }
 
 /**
@@ -36,10 +54,11 @@ export function isVehicleUnlocked(
  */
 export function resolvePlayerVehicle(
   vehicleParam: string | null | undefined,
-  stats: PlayerStatsState
+  stats: PlayerStatsState,
+  ownedVehicleIds?: readonly string[]
 ): PlayerVehicleConfig {
   const base = resolveVehicleFromUrlParam(vehicleParam);
-  if (!isVehicleUnlocked(stats, base.id)) {
+  if (!isVehicleUnlocked(stats, base.id, ownedVehicleIds)) {
     return DEFAULT_PLAYER_VEHICLE;
   }
   return base;
@@ -47,4 +66,17 @@ export function resolvePlayerVehicle(
 
 export function shouldShowRatataBetaTag(): boolean {
   return RATATA_PREMIUM_BETA_FREE_UNLOCK;
+}
+
+/** Short hint when a vehicle row is locked in the vehicle picker. */
+export function lockedVehicleSelectionHint(
+  vehicleId: string,
+  stats: PlayerStatsState,
+  ownedVehicleIds: readonly string[]
+): string {
+  if (isVehicleUnlocked(stats, vehicleId, ownedVehicleIds)) return "";
+  if (isPremiumRatataVehicleId(vehicleId) && !RATATA_PREMIUM_BETA_FREE_UNLOCK) {
+    return "Win 1 battle or buy in the plaza shop";
+  }
+  return "Buy in the plaza shop";
 }

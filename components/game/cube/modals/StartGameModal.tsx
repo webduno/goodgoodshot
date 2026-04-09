@@ -21,6 +21,7 @@ import {
 } from "@/components/playerVehicleConfig";
 import {
   isVehicleUnlocked,
+  lockedVehicleSelectionHint,
   PREMIUM_RATATA_VEHICLE_ID,
   resolvePlayerVehicle,
   shouldShowRatataBetaTag,
@@ -373,7 +374,8 @@ export function StartGameModal({
 
   const selectedVehicle = resolvePlayerVehicle(
     searchParams.get("vehicle"),
-    stats
+    stats,
+    shopInventory.ownedVehicleIds
   );
 
   useEffect(() => {
@@ -1036,7 +1038,11 @@ export function StartGameModal({
                   >
                     {PREDETERMINED_VEHICLES.map((v) => {
                       const selected = selectedVehicle.id === v.id;
-                      const unlocked = isVehicleUnlocked(stats, v.id);
+                      const unlocked = isVehicleUnlocked(
+                        stats,
+                        v.id,
+                        shopInventory.ownedVehicleIds
+                      );
                       const betaTag =
                         shouldShowRatataBetaTag() &&
                         v.id === PREMIUM_RATATA_VEHICLE_ID;
@@ -1133,7 +1139,11 @@ export function StartGameModal({
                                   color: hudColors.muted,
                                 }}
                               >
-                                Win 1 battle to unlock
+                                {lockedVehicleSelectionHint(
+                                  v.id,
+                                  stats,
+                                  shopInventory.ownedVehicleIds
+                                )}
                               </span>
                             ) : null}
                           </span>

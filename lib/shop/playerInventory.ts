@@ -1,4 +1,5 @@
 import { INITIAL_POWERUP_CHARGES } from "@/lib/game/constants";
+import { isShopPurchasableVehicleId } from "@/lib/shop/vehicleCatalog";
 
 export const PLAYER_SHOP_INVENTORY_KEY = "goodgoodshot.playerShopInventory.v1";
 
@@ -14,6 +15,8 @@ export type PlayerShopInventory = {
   noWindCharges: number;
   ownedHats: HatId[];
   equippedHatId: HatId | null;
+  /** Lowercase `v_id` strings from `data/defaultVehicles.json` (excludes free `default`). */
+  ownedVehicleIds: string[];
 };
 
 export function defaultPlayerShopInventory(): PlayerShopInventory {
@@ -23,6 +26,7 @@ export function defaultPlayerShopInventory(): PlayerShopInventory {
     noWindCharges: INITIAL_POWERUP_CHARGES,
     ownedHats: [],
     equippedHatId: null,
+    ownedVehicleIds: [],
   };
 }
 
@@ -30,6 +34,10 @@ function isHatId(x: unknown): x is HatId {
   return (
     x === "glassPyramid" || x === "glassCube" || x === "glassSphere"
   );
+}
+
+function isValidOwnedVehicleId(x: unknown): x is string {
+  return typeof x === "string" && isShopPurchasableVehicleId(x);
 }
 
 export function loadPlayerShopInventory(): PlayerShopInventory {
@@ -71,12 +79,25 @@ export function loadPlayerShopInventory(): PlayerShopInventory {
       equippedHatId = null;
     }
 
+    let ownedVehicleIds: string[] = [];
+    if (Array.isArray(p.ownedVehicleIds)) {
+      const seen = new Set<string>();
+      for (const raw of p.ownedVehicleIds) {
+        if (!isValidOwnedVehicleId(raw)) continue;
+        const id = raw.trim().toLowerCase();
+        if (seen.has(id)) continue;
+        seen.add(id);
+        ownedVehicleIds.push(id);
+      }
+    }
+
     return {
       strengthCharges,
       noBounceCharges,
       noWindCharges,
       ownedHats,
       equippedHatId,
+      ownedVehicleIds,
     };
   } catch {
     return defaultPlayerShopInventory();

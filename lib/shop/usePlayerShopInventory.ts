@@ -126,6 +126,17 @@ export function usePlayerShopInventory() {
     [patch]
   );
 
+  const addOwnedVehicle = useCallback(
+    (vehicleId: string) => {
+      const id = vehicleId.trim().toLowerCase();
+      patch((prev) => {
+        if (prev.ownedVehicleIds.includes(id)) return prev;
+        return { ...prev, ownedVehicleIds: [...prev.ownedVehicleIds, id] };
+      });
+    },
+    [patch]
+  );
+
   const isHatOwned = useCallback(
     (id: HatId) => inventory.ownedHats.includes(id),
     [inventory.ownedHats]
@@ -139,6 +150,7 @@ export function usePlayerShopInventory() {
     setNoWindCharges,
     setEquippedHatId,
     addOwnedHat,
+    addOwnedVehicle,
     isHatOwned,
   };
 }

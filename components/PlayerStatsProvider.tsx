@@ -18,8 +18,12 @@ type PlayerStatsContextValue = {
   stats: PlayerStatsState;
   recordHoleCompleted: (payload: HoleCompletedPayload) => void;
   recordGoldCoin: () => void;
+  /** Adds `count` coins in one update. */
+  recordGoldCoins: (count: number) => void;
   /** Returns whether one coin was deducted (fails at 0 coins). */
   spendGoldCoin: () => boolean;
+  /** Deducts `count` coins in one update (fails if balance below `count`). */
+  spendGoldCoins: (count: number) => boolean;
 };
 
 const PlayerStatsContext = createContext<PlayerStatsContextValue | null>(null);
@@ -49,6 +53,16 @@ export function PlayerStatsProvider({
     });
   }, []);
 
+  const recordGoldCoins = useCallback((count: number) => {
+    const n = Math.max(0, Math.floor(count));
+    if (n <= 0) return;
+    setStats((prev) => {
+      const next = { ...prev, totalGoldCoins: prev.totalGoldCoins + n };
+      savePlayerStats(next);
+      return next;
+    });
+  }, []);
+
   const spendGoldCoin = useCallback((): boolean => {
     let spent = false;
     setStats((prev) => {
@@ -61,9 +75,37 @@ export function PlayerStatsProvider({
     return spent;
   }, []);
 
+  const spendGoldCoins = useCallback((count: number): boolean => {
+    const n = Math.max(0, Math.floor(count));
+    if (n <= 0) return true;
+    let spent = false;
+    setStats((prev) => {
+      if (prev.totalGoldCoins < n) return prev;
+      spent = true;
+      const next = { ...prev, totalGoldCoins: prev.totalGoldCoins - n };
+      savePlayerStats(next);
+      return next;
+    });
+    return spent;
+  }, []);
+
   const value = useMemo(
-    () => ({ stats, recordHoleCompleted, recordGoldCoin, spendGoldCoin }),
-    [stats, recordHoleCompleted, recordGoldCoin, spendGoldCoin]
+    () => ({
+      stats,
+      recordHoleCompleted,
+      recordGoldCoin,
+      recordGoldCoins,
+      spendGoldCoin,
+      spendGoldCoins,
+    }),
+    [
+      stats,
+      recordHoleCompleted,
+      recordGoldCoin,
+      recordGoldCoins,
+      spendGoldCoin,
+      spendGoldCoins,
+    ]
   );
 
   return (

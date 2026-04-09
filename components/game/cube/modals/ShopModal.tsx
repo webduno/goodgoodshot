@@ -8,12 +8,40 @@ import {
 } from "@/components/gameHudStyles";
 import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
 import type { HatId } from "@/lib/shop/playerInventory";
+import { VEHICLE_SHOP_CATALOG } from "@/lib/shop/vehicleCatalog";
+import { formatMsAsMmSs } from "@/lib/shop/freeShopClaims";
 import type { PowerupSlotId } from "@/lib/game/types";
 import { useCallback, useState, type CSSProperties } from "react";
 
-type ShopTab = "powerups" | "hats";
+type ShopTab = "powerups" | "hats" | "vehicles" | "free";
 
 const SHOP_GRID_SLOTS = 9;
+
+const shopItemEmojiStyle: CSSProperties = {
+  fontSize: 28,
+  lineHeight: 1,
+  textAlign: "center",
+  display: "block",
+};
+
+const LOCKED_SLOT_EMOJI = "🔒";
+
+const HAT_SHOP_EMOJI: Record<HatId, string> = {
+  glassPyramid: "🔺",
+  glassCube: "📦",
+  glassSphere: "🔮",
+};
+
+function vehicleShopEmoji(vehicleId: string): string {
+  const id = vehicleId.trim().toLowerCase();
+  const map: Record<string, string> = {
+    "scrap-crawler": "🛞",
+    "drift-sprinter": "🏎️",
+    "arc-lobber": "🎯",
+    "meshy-ratata": "🐭",
+  };
+  return map[id] ?? "🚗";
+}
 
 const shopGridStyle: CSSProperties = {
   listStyle: "none",
@@ -30,7 +58,7 @@ function lockedShopCellStyle(): CSSProperties {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 6,
     minHeight: 96,
     padding: "10px 8px",
     borderRadius: 12,
@@ -51,6 +79,12 @@ export function ShopModal({
   onBuyPowerupSlot,
   onBuyHat,
   onEquipHat,
+  ownedVehicleIds,
+  onBuyVehicle,
+  isVehicleUnlockedForPlayer,
+  canClaimFreeCoinBag,
+  freeCoinBagRemainingMs,
+  onClaimFreeCoinBag,
 }: {
   open: boolean;
   onClose: () => void;
@@ -62,6 +96,13 @@ export function ShopModal({
   onBuyPowerupSlot: (slotId: Extract<PowerupSlotId, "strength" | "noBounce">) => void;
   onBuyHat: (id: HatId) => void;
   onEquipHat: (id: HatId | null) => void;
+  ownedVehicleIds: readonly string[];
+  onBuyVehicle: (vehicleId: string) => void;
+  /** True when the player can use the vehicle (shop purchase, Ratata beta, or battle unlock). */
+  isVehicleUnlockedForPlayer: (vehicleId: string) => boolean;
+  canClaimFreeCoinBag: boolean;
+  freeCoinBagRemainingMs: number;
+  onClaimFreeCoinBag: () => void;
 }) {
   const [tab, setTab] = useState<ShopTab>("powerups");
 
@@ -70,6 +111,8 @@ export function ShopModal({
   if (!open) return null;
 
   const hatOwned = (id: HatId) => ownedHats.includes(id);
+  const vehicleOwned = (id: string) =>
+    ownedVehicleIds.includes(id.trim().toLowerCase());
 
   return (
     <div
@@ -123,6 +166,7 @@ export function ShopModal({
         <div
           style={{
             display: "flex",
+            flexWrap: "wrap",
             gap: 8,
             marginBottom: 12,
           }}
@@ -153,6 +197,32 @@ export function ShopModal({
           >
             Hats
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("vehicles")}
+            style={{
+              ...goldChipButtonStyle(),
+              boxShadow:
+                tab === "vehicles"
+                  ? "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(251, 113, 133, 0.85)"
+                  : goldChipButtonStyle().boxShadow,
+            }}
+          >
+            Vehicles
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("free")}
+            style={{
+              ...goldChipButtonStyle(),
+              boxShadow:
+                tab === "free"
+                  ? "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(251, 113, 133, 0.85)"
+                  : goldChipButtonStyle().boxShadow,
+            }}
+          >
+            Free
+          </button>
         </div>
 
         {tab === "powerups" && (
@@ -172,6 +242,9 @@ export function ShopModal({
                 boxSizing: "border-box",
               }}
             >
+              <span style={shopItemEmojiStyle} aria-hidden>
+                💪
+              </span>
               <span
                 style={{
                   fontSize: 11,
@@ -186,7 +259,7 @@ export function ShopModal({
               <button
                 type="button"
                 onClick={() => onBuyPowerupSlot("strength")}
-                style={{ ...goldChipButtonStyle(), width: "100%" }}
+                style={{ ...goldChipButtonStyle(), width: "100%", marginTop: "auto" }}
               >
                 1 coin
               </button>
@@ -206,6 +279,9 @@ export function ShopModal({
                 boxSizing: "border-box",
               }}
             >
+              <span style={shopItemEmojiStyle} aria-hidden>
+                🪨
+              </span>
               <span
                 style={{
                   fontSize: 11,
@@ -220,7 +296,7 @@ export function ShopModal({
               <button
                 type="button"
                 onClick={() => onBuyPowerupSlot("noBounce")}
-                style={{ ...goldChipButtonStyle(), width: "100%" }}
+                style={{ ...goldChipButtonStyle(), width: "100%", marginTop: "auto" }}
               >
                 1 coin
               </button>
@@ -233,6 +309,7 @@ export function ShopModal({
                   aria-hidden
                   style={lockedShopCellStyle()}
                 >
+                  <span style={shopItemEmojiStyle}>{LOCKED_SLOT_EMOJI}</span>
                   <span
                     style={{
                       fontSize: 11,
@@ -270,6 +347,9 @@ export function ShopModal({
                     boxSizing: "border-box",
                   }}
                 >
+                  <span style={shopItemEmojiStyle} aria-hidden>
+                    {HAT_SHOP_EMOJI[row.id]}
+                  </span>
                   <span
                     style={{
                       fontSize: 11,
@@ -349,6 +429,185 @@ export function ShopModal({
                   aria-hidden
                   style={lockedShopCellStyle()}
                 >
+                  <span style={shopItemEmojiStyle}>{LOCKED_SLOT_EMOJI}</span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: hudColors.muted,
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Locked
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+        )}
+
+        {tab === "vehicles" && (
+          <ul style={shopGridStyle}>
+            {VEHICLE_SHOP_CATALOG.map((row) => {
+              const purchased = vehicleOwned(row.id);
+              const playable = isVehicleUnlockedForPlayer(row.id);
+              return (
+                <li
+                  key={row.id}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "stretch",
+                    gap: 6,
+                    minHeight: 96,
+                    padding: "8px 8px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(0, 55, 95, 0.18)",
+                    background: "rgba(255,255,255,0.55)",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <span style={shopItemEmojiStyle} aria-hidden>
+                    {vehicleShopEmoji(row.id)}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: hudColors.value,
+                      lineHeight: 1.25,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      textAlign: "center",
+                    }}
+                  >
+                    {row.displayName}
+                  </span>
+                  {purchased ? (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: hudColors.muted,
+                        textAlign: "center",
+                        marginTop: "auto",
+                      }}
+                    >
+                      Owned — select in war / help
+                    </span>
+                  ) : playable ? (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: hudColors.muted,
+                        textAlign: "center",
+                        marginTop: "auto",
+                      }}
+                    >
+                      Unlocked
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onBuyVehicle(row.id)}
+                      style={{ ...goldChipButtonStyle(), width: "100%", marginTop: "auto" }}
+                    >
+                      {row.priceCoins} coins
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+            {Array.from(
+              { length: SHOP_GRID_SLOTS - VEHICLE_SHOP_CATALOG.length },
+              (_, i) => (
+                <li
+                  key={`vehicle-locked-${i}`}
+                  aria-hidden
+                  style={lockedShopCellStyle()}
+                >
+                  <span style={shopItemEmojiStyle}>{LOCKED_SLOT_EMOJI}</span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: hudColors.muted,
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Locked
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+        )}
+
+        {tab === "free" && (
+          <ul style={shopGridStyle}>
+            <li
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
+                justifyContent: "space-between",
+                gap: 8,
+                minHeight: 96,
+                padding: "8px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(0, 55, 95, 0.18)",
+                background: "rgba(255,255,255,0.55)",
+                boxSizing: "border-box",
+              }}
+            >
+              <span style={shopItemEmojiStyle} aria-hidden>
+                🎁
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#7c2d12",
+                  lineHeight: 1.25,
+                  textAlign: "center",
+                }}
+              >
+                3 coin bag
+              </span>
+              {canClaimFreeCoinBag ? (
+                <button
+                  type="button"
+                  onClick={onClaimFreeCoinBag}
+                  style={{ ...goldChipButtonStyle(), width: "100%", marginTop: "auto" }}
+                >
+                  Claim
+                </button>
+              ) : (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: hudColors.muted,
+                    textAlign: "center",
+                    marginTop: "auto",
+                  }}
+                >
+                  Next in {formatMsAsMmSs(freeCoinBagRemainingMs)}
+                </span>
+              )}
+            </li>
+            {Array.from(
+              { length: SHOP_GRID_SLOTS - 1 },
+              (_, i) => (
+                <li
+                  key={`free-locked-${i}`}
+                  aria-hidden
+                  style={lockedShopCellStyle()}
+                >
+                  <span style={shopItemEmojiStyle}>{LOCKED_SLOT_EMOJI}</span>
                   <span
                     style={{
                       fontSize: 11,

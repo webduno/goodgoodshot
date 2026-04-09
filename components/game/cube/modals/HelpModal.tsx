@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
+import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import {
   DEFAULT_V_ID,
   PREDETERMINED_VEHICLES,
@@ -25,9 +26,11 @@ import {
 import type { AimControlMode } from "@/lib/game/aimControlSettings";
 import { clearPlaySession } from "@/lib/game/playSession";
 import { clearPlayerStats } from "@/lib/playerStats/storage";
+import { clearFreeShopClaims } from "@/lib/shop/freeShopClaims";
 import { clearPlayerShopInventory } from "@/lib/shop/playerInventory";
 import {
   isVehicleUnlocked,
+  lockedVehicleSelectionHint,
   PREMIUM_RATATA_VEHICLE_ID,
   shouldShowRatataBetaTag,
 } from "@/lib/game/vehicleUnlock";
@@ -59,6 +62,7 @@ export function HelpModal({
   onAimControlModeChange: (next: AimControlMode) => void;
 }) {
   const { stats } = usePlayerStats();
+  const { inventory: shopInventory } = usePlayerShopInventory();
   if (!open) return null;
 
   const chargeSec = vehicle.secondsBeforeShotTrigger;
@@ -88,6 +92,7 @@ export function HelpModal({
     clearPlaySession();
     clearPlayerStats();
     clearPlayerShopInventory();
+    clearFreeShopClaims();
     const url = new URL(window.location.href);
     url.searchParams.delete("vehicle");
     window.location.assign(url.toString());
@@ -324,7 +329,11 @@ export function HelpModal({
           >
             {PREDETERMINED_VEHICLES.map((v) => {
               const isCurrent = v.id === vehicle.id;
-              const unlocked = isVehicleUnlocked(stats, v.id);
+              const unlocked = isVehicleUnlocked(
+                stats,
+                v.id,
+                shopInventory.ownedVehicleIds
+              );
               const betaTag =
                 shouldShowRatataBetaTag() && v.id === PREMIUM_RATATA_VEHICLE_ID;
               const mainCss = rgbTupleToCss(v.mainRgb);
@@ -341,7 +350,11 @@ export function HelpModal({
                   title={
                     unlocked
                       ? `Load ${v.name} and start a new round`
-                      : "Win 1 battle to unlock"
+                      : lockedVehicleSelectionHint(
+                          v.id,
+                          stats,
+                          shopInventory.ownedVehicleIds
+                        )
                   }
                   style={{
                     ...goldChipButtonStyle(),

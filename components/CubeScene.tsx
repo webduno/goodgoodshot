@@ -147,8 +147,9 @@ export default function CubeScene() {
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
   const playerVehicle = useMemo(
-    () => resolvePlayerVehicle(vehicleParam, stats),
-    [vehicleParam, stats]
+    () =>
+      resolvePlayerVehicle(vehicleParam, stats, shopInventory.ownedVehicleIds),
+    [vehicleParam, stats, shopInventory.ownedVehicleIds]
   );
 
   const [game, dispatch] = useReducer(

@@ -43,7 +43,7 @@ import {
   maxClicksForStrengthBarRef,
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
-import { resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
+import { isVehicleUnlocked, resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
   burstPowerupBuyConfetti,
@@ -84,7 +84,9 @@ import {
 } from "@/lib/game/math";
 import { PLAZA_HUB_ISLANDS, PLAZA_WALKABLE_HALF } from "@/lib/game/plazaHub";
 import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
+import { VEHICLE_SHOP_CATALOG } from "@/lib/shop/vehicleCatalog";
 import { isNearPlazaShop } from "@/lib/shop/plazaShopConstants";
+import { useFreeShopClaims } from "@/lib/shop/useFreeShopClaims";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import type { HatId } from "@/lib/shop/playerInventory";
 import { startWarSessionAndRedirectHome } from "@/lib/game/startWarSession";
@@ -102,22 +104,30 @@ import {
 import * as THREE from "three";
 
 export default function PlazaScene() {
-  const { spendGoldCoin, stats } = usePlayerStats();
+  const { spendGoldCoin, spendGoldCoins, recordGoldCoins, stats } =
+    usePlayerStats();
   const {
     inventory: shopInventory,
     setStrengthCharges,
     setNoBounceCharges,
     setEquippedHatId,
     addOwnedHat,
+    addOwnedVehicle,
   } = usePlayerShopInventory();
+  const {
+    canClaimThreeCoinBag,
+    threeCoinBagRemainingMs,
+    tryClaimThreeCoinBag,
+  } = useFreeShopClaims(recordGoldCoins);
   const strengthCharges = shopInventory.strengthCharges;
   const noBounceCharges = shopInventory.noBounceCharges;
   const searchParams = useSearchParams();
   const router = useRouter();
   const vehicleParam = searchParams.get("vehicle");
   const playerVehicle = useMemo(
-    () => resolvePlayerVehicle(vehicleParam, stats),
-    [vehicleParam, stats]
+    () =>
+      resolvePlayerVehicle(vehicleParam, stats, shopInventory.ownedVehicleIds),
+    [vehicleParam, stats, shopInventory.ownedVehicleIds]
   );
 
   const [spawnCenter, setSpawnCenter] = useState<Vec3>(() => [0, 0, 0]);
@@ -343,6 +353,36 @@ export default function PlazaScene() {
       pushHudToast(row ? `Bought ${row.displayName}` : "Hat purchased");
     },
     [shopInventory.ownedHats, spendGoldCoin, pushHudToast, addOwnedHat]
+  );
+
+  const onClaimFreeCoinBag = useCallback(() => {
+    if (!tryClaimThreeCoinBag()) return;
+    playSfx(SFX.coinCollect);
+    pushHudToast("+3 coins");
+  }, [tryClaimThreeCoinBag, pushHudToast]);
+
+  const buyVehicleFromShop = useCallback(
+    (vehicleId: string) => {
+      const id = vehicleId.trim().toLowerCase();
+      if (shopInventory.ownedVehicleIds.includes(id)) return;
+      const row = VEHICLE_SHOP_CATALOG.find(
+        (v) => v.id.trim().toLowerCase() === id
+      );
+      const price = row?.priceCoins ?? 0;
+      if (!spendGoldCoins(price)) {
+        pushHudToast(`Need ${price} coins`);
+        return;
+      }
+      addOwnedVehicle(id);
+      playSfx(SFX.coinCollect);
+      pushHudToast(row ? `Bought ${row.displayName}` : "Vehicle purchased");
+    },
+    [
+      shopInventory.ownedVehicleIds,
+      spendGoldCoins,
+      pushHudToast,
+      addOwnedVehicle,
+    ]
   );
 
   const onChargeHudUpdate = useCallback(
@@ -1215,6 +1255,14 @@ export default function PlazaScene() {
         onBuyPowerupSlot={buyPowerupCharge}
         onBuyHat={buyHatFromShop}
         onEquipHat={setEquippedHatId}
+        ownedVehicleIds={shopInventory.ownedVehicleIds}
+        onBuyVehicle={buyVehicleFromShop}
+        isVehicleUnlockedForPlayer={(id) =>
+          isVehicleUnlocked(stats, id, shopInventory.ownedVehicleIds)
+        }
+        canClaimFreeCoinBag={canClaimThreeCoinBag}
+        freeCoinBagRemainingMs={threeCoinBagRemainingMs}
+        onClaimFreeCoinBag={onClaimFreeCoinBag}
       />
     </div>
   );

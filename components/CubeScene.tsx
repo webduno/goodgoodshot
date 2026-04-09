@@ -461,7 +461,7 @@ export default function CubeScene() {
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
   const [noWindActive, setNoWindActive] = useState(false);
-  const [windHud, setWindHud] = useState({ x: 0, z: 0 });
+  const [windHud, setWindHud] = useState({ x: 0, y: 0, z: 0 });
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
   noWindChargesRef.current = noWindCharges;
@@ -480,7 +480,7 @@ export default function CubeScene() {
     windRef.current = stepWind();
     const w = windRef.current;
     maybeWindToast(w.x, w.z, true);
-    setWindHud({ x: w.x, z: w.z });
+    setWindHud({ x: w.x, y: 0, z: w.z });
   }, [game.goalWorldX, game.goalWorldZ, maybeWindToast]);
 
   useEffect(() => {
@@ -647,7 +647,7 @@ export default function CubeScene() {
   const onProjectileEnd = useCallback(
     (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
       setShotInFlight(false);
-      setWindHud({ x: windRef.current.x, z: windRef.current.z });
+      setWindHud({ x: windRef.current.x, y: 0, z: windRef.current.z });
       maybeWindToast(windRef.current.x, windRef.current.z, false);
       if (outcome === "penalty") {
         waterPenaltiesRoundRef.current += 1;

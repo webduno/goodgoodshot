@@ -9,6 +9,13 @@ export const PLAYER_SHOP_INVENTORY_CHANGE_EVENT =
 
 export type HatId = "glassPyramid" | "glassCube" | "glassSphere";
 
+export type FishId = "fishYellow" | "fishBlue" | "fishRed";
+
+export type AquariumId =
+  | "aquariumSmallCube"
+  | "aquariumMediumCube"
+  | "aquariumLargeCube";
+
 export type PlayerShopInventory = {
   strengthCharges: number;
   noBounceCharges: number;
@@ -17,6 +24,8 @@ export type PlayerShopInventory = {
   equippedHatId: HatId | null;
   /** Lowercase `v_id` strings from `data/defaultVehicles.json` (excludes free `default`). */
   ownedVehicleIds: string[];
+  ownedFishIds: FishId[];
+  ownedAquariumIds: AquariumId[];
 };
 
 export function defaultPlayerShopInventory(): PlayerShopInventory {
@@ -27,12 +36,26 @@ export function defaultPlayerShopInventory(): PlayerShopInventory {
     ownedHats: [],
     equippedHatId: null,
     ownedVehicleIds: [],
+    ownedFishIds: [],
+    ownedAquariumIds: [],
   };
 }
 
 function isHatId(x: unknown): x is HatId {
   return (
     x === "glassPyramid" || x === "glassCube" || x === "glassSphere"
+  );
+}
+
+function isFishId(x: unknown): x is FishId {
+  return x === "fishYellow" || x === "fishBlue" || x === "fishRed";
+}
+
+function isAquariumId(x: unknown): x is AquariumId {
+  return (
+    x === "aquariumSmallCube" ||
+    x === "aquariumMediumCube" ||
+    x === "aquariumLargeCube"
   );
 }
 
@@ -91,6 +114,28 @@ export function loadPlayerShopInventory(): PlayerShopInventory {
       }
     }
 
+    let ownedFishIds: FishId[] = [];
+    if (Array.isArray(p.ownedFishIds)) {
+      const seen = new Set<FishId>();
+      for (const raw of p.ownedFishIds) {
+        if (!isFishId(raw)) continue;
+        if (seen.has(raw)) continue;
+        seen.add(raw);
+        ownedFishIds.push(raw);
+      }
+    }
+
+    let ownedAquariumIds: AquariumId[] = [];
+    if (Array.isArray(p.ownedAquariumIds)) {
+      const seen = new Set<AquariumId>();
+      for (const raw of p.ownedAquariumIds) {
+        if (!isAquariumId(raw)) continue;
+        if (seen.has(raw)) continue;
+        seen.add(raw);
+        ownedAquariumIds.push(raw);
+      }
+    }
+
     return {
       strengthCharges,
       noBounceCharges,
@@ -98,6 +143,8 @@ export function loadPlayerShopInventory(): PlayerShopInventory {
       ownedHats,
       equippedHatId,
       ownedVehicleIds,
+      ownedFishIds,
+      ownedAquariumIds,
     };
   } catch {
     return defaultPlayerShopInventory();

@@ -10,3 +10,26 @@ export function isNearPlazaShop(wx: number, wz: number): boolean {
   const dz = wz - PLAZA_SHOP_WORLD_Z;
   return Math.hypot(dx, dz) <= PLAZA_SHOP_LAND_TRIGGER_RADIUS;
 }
+
+/**
+ * Aquarium center relative to the plaza hub island origin — must stay in sync with
+ * `PlazaFrutigerAeroDecor` (`aquCx` / `aquCz`).
+ */
+export const PLAZA_AQUARIUM_ISLAND_OFFSET_X = 17;
+export const PLAZA_AQUARIUM_ISLAND_OFFSET_Z = -11;
+
+/** Same radius idea as the main shop: ball settles near the aquarium footprint. */
+export const PLAZA_AQUARIUM_SHOP_LAND_TRIGGER_RADIUS = 4.2;
+
+export function isNearPlazaAquariumShop(
+  wx: number,
+  wz: number,
+  islandWorldX: number,
+  islandWorldZ: number
+): boolean {
+  const cx = islandWorldX + PLAZA_AQUARIUM_ISLAND_OFFSET_X;
+  const cz = islandWorldZ + PLAZA_AQUARIUM_ISLAND_OFFSET_Z;
+  const dx = wx - cx;
+  const dz = wz - cz;
+  return Math.hypot(dx, dz) <= PLAZA_AQUARIUM_SHOP_LAND_TRIGGER_RADIUS;
+}

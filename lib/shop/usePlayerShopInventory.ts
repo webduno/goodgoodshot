@@ -9,7 +9,12 @@ import {
   type SetStateAction,
 } from "react";
 
-import type { HatId, PlayerShopInventory } from "@/lib/shop/playerInventory";
+import type {
+  AquariumId,
+  FishId,
+  HatId,
+  PlayerShopInventory,
+} from "@/lib/shop/playerInventory";
 import {
   PLAYER_SHOP_INVENTORY_CHANGE_EVENT,
   PLAYER_SHOP_INVENTORY_KEY,
@@ -137,6 +142,26 @@ export function usePlayerShopInventory() {
     [patch]
   );
 
+  const addOwnedFish = useCallback(
+    (id: FishId) => {
+      patch((prev) => {
+        if (prev.ownedFishIds.includes(id)) return prev;
+        return { ...prev, ownedFishIds: [...prev.ownedFishIds, id] };
+      });
+    },
+    [patch]
+  );
+
+  const addOwnedAquarium = useCallback(
+    (id: AquariumId) => {
+      patch((prev) => {
+        if (prev.ownedAquariumIds.includes(id)) return prev;
+        return { ...prev, ownedAquariumIds: [...prev.ownedAquariumIds, id] };
+      });
+    },
+    [patch]
+  );
+
   const isHatOwned = useCallback(
     (id: HatId) => inventory.ownedHats.includes(id),
     [inventory.ownedHats]
@@ -151,6 +176,8 @@ export function usePlayerShopInventory() {
     setEquippedHatId,
     addOwnedHat,
     addOwnedVehicle,
+    addOwnedFish,
+    addOwnedAquarium,
     isHatOwned,
   };
 }

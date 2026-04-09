@@ -4,6 +4,7 @@ import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
+import { AquariumShopModal } from "@/components/game/cube/modals/AquariumShopModal";
 import { ShopModal } from "@/components/game/cube/modals/ShopModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { AimPadHud } from "@/components/game/cube/hud/AimPadHud";
@@ -83,12 +84,19 @@ import {
   wrapYawRad,
 } from "@/lib/game/math";
 import { PLAZA_HUB_ISLANDS, PLAZA_WALKABLE_HALF } from "@/lib/game/plazaHub";
+import {
+  AQUARIUM_SHOP_ITEMS,
+  FISH_SHOP_ITEMS,
+} from "@/lib/shop/aquariumCatalog";
 import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
 import { VEHICLE_SHOP_CATALOG } from "@/lib/shop/vehicleCatalog";
-import { isNearPlazaShop } from "@/lib/shop/plazaShopConstants";
+import {
+  isNearPlazaAquariumShop,
+  isNearPlazaShop,
+} from "@/lib/shop/plazaShopConstants";
 import { useFreeShopClaims } from "@/lib/shop/useFreeShopClaims";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
-import type { HatId } from "@/lib/shop/playerInventory";
+import type { AquariumId, FishId, HatId } from "@/lib/shop/playerInventory";
 import { startWarSessionAndRedirectHome } from "@/lib/game/startWarSession";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { type PowerupSlotId, type Vec3 } from "@/lib/game/types";
@@ -114,6 +122,8 @@ export default function PlazaScene() {
     setEquippedHatId,
     addOwnedHat,
     addOwnedVehicle,
+    addOwnedFish,
+    addOwnedAquarium,
   } = usePlayerShopInventory();
   const {
     canClaimThreeCoinBag,
@@ -168,6 +178,7 @@ export default function PlazaScene() {
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showShopModal, setShowShopModal] = useState(false);
+  const [showAquariumShopModal, setShowAquariumShopModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -412,6 +423,43 @@ export default function PlazaScene() {
     ]
   );
 
+  const buyFishFromAquariumShop = useCallback(
+    (id: FishId) => {
+      if (shopInventory.ownedFishIds.includes(id)) return;
+      const row = FISH_SHOP_ITEMS.find((f) => f.id === id);
+      const price = row?.priceCoins ?? 1;
+      if (!spendGoldCoins(price)) {
+        pushHudToast(`Need ${price} coin${price === 1 ? "" : "s"}`);
+        return;
+      }
+      addOwnedFish(id);
+      playSfx(SFX.coinCollect);
+      pushHudToast(row ? `Bought ${row.label}` : "Fish purchased");
+    },
+    [shopInventory.ownedFishIds, spendGoldCoins, pushHudToast, addOwnedFish]
+  );
+
+  const buyAquariumFromShop = useCallback(
+    (id: AquariumId) => {
+      if (shopInventory.ownedAquariumIds.includes(id)) return;
+      const row = AQUARIUM_SHOP_ITEMS.find((a) => a.id === id);
+      const price = row?.priceCoins ?? 1;
+      if (!spendGoldCoins(price)) {
+        pushHudToast(`Need ${price} coins`);
+        return;
+      }
+      addOwnedAquarium(id);
+      playSfx(SFX.coinCollect);
+      pushHudToast(row ? `Bought ${row.label}` : "Aquarium purchased");
+    },
+    [
+      shopInventory.ownedAquariumIds,
+      spendGoldCoins,
+      pushHudToast,
+      addOwnedAquarium,
+    ]
+  );
+
   const onChargeHudUpdate = useCallback(
     (next: { remainingMs: number; clicks: number } | null) => {
       setChargeHud(next);
@@ -464,8 +512,18 @@ export default function PlazaScene() {
         setSpawnCenter(snapBlockCenterToGrid(prev));
       } else if (outcome === "miss" && landing) {
         setSpawnCenter(snapBlockCenterToGrid(landing));
+        const hub = PLAZA_HUB_ISLANDS[0]!;
         if (isNearPlazaShop(landing[0], landing[2])) {
           setShowShopModal(true);
+        } else if (
+          isNearPlazaAquariumShop(
+            landing[0],
+            landing[2],
+            hub.worldX,
+            hub.worldZ
+          )
+        ) {
+          setShowAquariumShopModal(true);
         }
       } else if (outcome === "hit" || outcome === "enemy_loss") {
         setSpawnCenter(
@@ -529,11 +587,21 @@ export default function PlazaScene() {
   }, [showShopModal]);
 
   useEffect(() => {
+    if (!showAquariumShopModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowAquariumShopModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showAquariumShopModal]);
+
+  useEffect(() => {
     if (
       shotInFlight ||
       showHelpModal ||
       showProfileModal ||
-      showShopModal
+      showShopModal ||
+      showAquariumShopModal
     ) {
       return;
     }
@@ -644,6 +712,7 @@ export default function PlazaScene() {
     showHelpModal,
     showProfileModal,
     showShopModal,
+    showAquariumShopModal,
     inCooldown,
     chargeHud,
     activatePowerup,
@@ -697,9 +766,11 @@ export default function PlazaScene() {
     (chargeHud !== null && !shotInFlight) ||
     (inCooldownActive && !shotInFlight && chargeHud === null);
 
-  const roundLocked = showHelpModal || showProfileModal || showShopModal;
+  const roundLocked =
+    showHelpModal || showProfileModal || showShopModal || showAquariumShopModal;
 
-  const modalBlocksHud = showHelpModal || showProfileModal || showShopModal;
+  const modalBlocksHud =
+    showHelpModal || showProfileModal || showShopModal || showAquariumShopModal;
 
   return (
     <div
@@ -773,6 +844,7 @@ export default function PlazaScene() {
           wz={islands[0]!.worldZ}
           walk={islands[0]!.walkableHalfX ?? islands[0]!.halfX}
           outer={islands[0]!.halfX}
+          onPointerDownAquariumShop={() => setShowAquariumShopModal(true)}
         />
         <PlazaShopBuilding onPointerDownOpen={() => setShowShopModal(true)} />
         <PlazaPortalTorus
@@ -1292,6 +1364,15 @@ export default function PlazaScene() {
         canClaimFreeCoinBag={canClaimThreeCoinBag}
         freeCoinBagRemainingMs={threeCoinBagRemainingMs}
         onClaimFreeCoinBag={onClaimFreeCoinBag}
+      />
+      <AquariumShopModal
+        open={showAquariumShopModal}
+        onClose={() => setShowAquariumShopModal(false)}
+        goldCoins={stats.totalGoldCoins}
+        ownedFishIds={shopInventory.ownedFishIds}
+        ownedAquariumIds={shopInventory.ownedAquariumIds}
+        onBuyFish={buyFishFromAquariumShop}
+        onBuyAquarium={buyAquariumFromShop}
       />
     </div>
   );

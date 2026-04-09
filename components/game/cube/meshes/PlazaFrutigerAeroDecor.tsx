@@ -5,6 +5,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { TURF_TOP_Y } from "@/lib/game/constants";
+import {
+  PLAZA_AQUARIUM_ISLAND_OFFSET_X,
+  PLAZA_AQUARIUM_ISLAND_OFFSET_Z,
+} from "@/lib/shop/plazaShopConstants";
 import { addMultiplicativeWhiteVertexColors } from "@/lib/game/threeInstancing";
 
 /** Main white plaza towers — height vs character (2–3× original). */
@@ -132,11 +136,14 @@ export function PlazaFrutigerAeroDecor({
   wz,
   walk,
   outer,
+  onPointerDownAquariumShop,
 }: {
   wx: number;
   wz: number;
   walk: number;
   outer: number;
+  /** Opens the aquarium shop modal (plaza hub). */
+  onPointerDownAquariumShop?: () => void;
 }) {
   const bubbleGlassRef = useRef<THREE.InstancedMesh>(null);
   const bubbleOpaqueRef = useRef<THREE.InstancedMesh>(null);
@@ -217,8 +224,8 @@ export function PlazaFrutigerAeroDecor({
     const aquW = 7.2;
     const aquD = 5.8;
     const aquH = 3.6;
-    const aquCx = wx + 17;
-    const aquCz = wz - 11;
+    const aquCx = wx + PLAZA_AQUARIUM_ISLAND_OFFSET_X;
+    const aquCz = wz + PLAZA_AQUARIUM_ISLAND_OFFSET_Z;
     const aquarium = {
       cx: aquCx,
       cz: aquCz,
@@ -795,6 +802,14 @@ export function PlazaFrutigerAeroDecor({
           receiveShadow
           material={waterMat}
           renderOrder={-1}
+          onPointerDown={
+            onPointerDownAquariumShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownAquariumShop();
+                }
+              : undefined
+          }
         >
           <boxGeometry args={[innerW, innerH, innerD]} />
         </mesh>
@@ -803,6 +818,14 @@ export function PlazaFrutigerAeroDecor({
           castShadow={false}
           receiveShadow
           material={glassMat}
+          onPointerDown={
+            onPointerDownAquariumShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownAquariumShop();
+                }
+              : undefined
+          }
         >
           <boxGeometry args={[aquarium.w, aquarium.h, wallT]} />
         </mesh>
@@ -811,6 +834,14 @@ export function PlazaFrutigerAeroDecor({
           castShadow={false}
           receiveShadow
           material={glassMat}
+          onPointerDown={
+            onPointerDownAquariumShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownAquariumShop();
+                }
+              : undefined
+          }
         >
           <boxGeometry args={[aquarium.w, aquarium.h, wallT]} />
         </mesh>
@@ -819,6 +850,14 @@ export function PlazaFrutigerAeroDecor({
           castShadow={false}
           receiveShadow
           material={glassMat}
+          onPointerDown={
+            onPointerDownAquariumShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownAquariumShop();
+                }
+              : undefined
+          }
         >
           <boxGeometry args={[wallT, aquarium.h, aquarium.d]} />
         </mesh>
@@ -827,10 +866,29 @@ export function PlazaFrutigerAeroDecor({
           castShadow={false}
           receiveShadow
           material={glassMat}
+          onPointerDown={
+            onPointerDownAquariumShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownAquariumShop();
+                }
+              : undefined
+          }
         >
           <boxGeometry args={[wallT, aquarium.h, aquarium.d]} />
         </mesh>
-        <mesh position={[0, wallT / 2, 0]} receiveShadow>
+        <mesh
+          position={[0, wallT / 2, 0]}
+          receiveShadow
+          onPointerDown={
+            onPointerDownAquariumShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownAquariumShop();
+                }
+              : undefined
+          }
+        >
           <boxGeometry args={[aquarium.w, wallT, aquarium.d]} />
           <meshStandardMaterial
             color="#d8e8f4"

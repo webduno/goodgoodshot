@@ -1,9 +1,18 @@
 "use client";
 
-import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 
 import type { HatId, PlayerShopInventory } from "@/lib/shop/playerInventory";
 import {
+  PLAYER_SHOP_INVENTORY_CHANGE_EVENT,
+  PLAYER_SHOP_INVENTORY_KEY,
   loadPlayerShopInventory,
   savePlayerShopInventory,
 } from "@/lib/shop/playerInventory";
@@ -21,6 +30,29 @@ export function usePlayerShopInventory() {
   const [inventory, setInventoryState] = useState<PlayerShopInventory>(() =>
     loadPlayerShopInventory()
   );
+
+  /** SSR uses defaults; after mount read real values from localStorage. */
+  useLayoutEffect(() => {
+    setInventoryState(loadPlayerShopInventory());
+  }, []);
+
+  useEffect(() => {
+    const syncFromStorage = (e: StorageEvent) => {
+      if (e.key !== null && e.key !== PLAYER_SHOP_INVENTORY_KEY) return;
+      setInventoryState(loadPlayerShopInventory());
+    };
+    const syncFromLocalEvent = () =>
+      setInventoryState(loadPlayerShopInventory());
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener(PLAYER_SHOP_INVENTORY_CHANGE_EVENT, syncFromLocalEvent);
+    return () => {
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener(
+        PLAYER_SHOP_INVENTORY_CHANGE_EVENT,
+        syncFromLocalEvent
+      );
+    };
+  }, []);
 
   const patch = useCallback(
     (fn: (prev: PlayerShopInventory) => PlayerShopInventory) => {

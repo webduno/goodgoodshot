@@ -54,9 +54,9 @@ function outcomeSubtitle(
   battleWon: boolean,
   lossReason: "par" | "enemy"
 ): string {
-  if (battleWon) return "At or under coin budget.";
+  if (battleWon) return "You won! 🎉 Congratulations! You reached the goal under the shot limit.";
   if (lossReason === "enemy") return "An Enemy Virus attacked your vehicle.";
-  return "Over the coin shot budget.";
+  return "You lost! 😭 Sorry, you reached the goal over the shot limit.";
 }
 
 export function FinishGameModal({
@@ -228,7 +228,7 @@ export function FinishGameModal({
               Shots:{" "}
               <strong style={{ color: hudColors.value }}>{sessionShots}</strong>
               {" · "}
-              Budget (coins):{" "}
+              Shot limit:{" "}
               <strong style={{ color: hudColors.value }}>{par}</strong>
             </div>
             <hr style={{ margin: "14px 0 32px 0", opacity: 0.2 }} />

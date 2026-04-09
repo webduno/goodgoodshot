@@ -283,9 +283,11 @@ export function HelpModal({
                   effects on the ball for that shot (the wind value still updates
                   for the next shot).{" "}
                   <strong style={{ color: hudColors.value }}>Wind</strong> drifts
-                  the ball horizontally; it changes every shot and is shown in the
-                  stats panel (arrow: direction the wind comes from, meteorological
-                  convention).
+                  the ball horizontally; it changes every shot. The circular
+                  readout on the right shows strength (%) and an 8-point compass
+                  for <strong style={{ color: hudColors.value }}>drift direction</strong>{" "}
+                  (where the ball is pushed; +Z is toward the goal), not
+                  meteorological wind-from.
                 </li>
                 <li style={{ marginBottom: 6, opacity: 0.85 }}>
                   <strong style={{ color: hudColors.value }}>Time</strong> (clock

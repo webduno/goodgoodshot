@@ -113,7 +113,7 @@ export function TeeHoleSign({ biome, goalLength, coinCount }: TeeHoleSignProps) 
         anchorX="center"
         anchorY="middle"
       >
-        Coins available: {coinCount}
+        Shot count limit: {coinCount}
       </Text>
       <Text
         position={[0, 0.24, -(SIGN_DEPTH / 2 + 0.015)]}
@@ -144,7 +144,7 @@ export function TeeHoleSign({ biome, goalLength, coinCount }: TeeHoleSignProps) 
         anchorX="center"
         anchorY="middle"
       >
-        Coins available: {coinCount}
+        Shot count limit: {coinCount}
       </Text>
     </group>
   );

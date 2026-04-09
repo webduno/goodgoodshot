@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
+import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import {
   goldPillButtonStyle,
   helpModalCard,
@@ -17,6 +18,7 @@ export function ProfileModal({
   onClose: () => void;
 }) {
   const { stats } = usePlayerStats();
+  const { inventory: shopInventory } = usePlayerShopInventory();
 
   if (!open) return null;
 
@@ -86,6 +88,45 @@ export function ProfileModal({
             }}
           >
             {stats.totalGoldCoins}
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "8px 10px",
+            borderRadius: 12,
+            border: "1px solid rgba(0, 114, 188, 0.2)",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240, 248, 255, 0.85) 100%)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: hudColors.muted,
+              marginBottom: 4,
+            }}
+          >
+            Power-up charges (this device)
+          </div>
+          <div
+            style={{
+              color: hudColors.value,
+              fontWeight: 600,
+              fontSize: 12,
+              lineHeight: 1.5,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            Strength {shopInventory.strengthCharges}
+            <span style={{ opacity: 0.35, margin: "0 6px" }}>·</span>
+            No-bounce {shopInventory.noBounceCharges}
+            <span style={{ opacity: 0.35, margin: "0 6px" }}>·</span>
+            No-wind {shopInventory.noWindCharges}
           </div>
         </div>
 

@@ -2,6 +2,10 @@ import { INITIAL_POWERUP_CHARGES } from "@/lib/game/constants";
 
 export const PLAYER_SHOP_INVENTORY_KEY = "goodgoodshot.playerShopInventory.v1";
 
+/** Dispatched on `window` after writes so all listeners reload from localStorage (same tab). */
+export const PLAYER_SHOP_INVENTORY_CHANGE_EVENT =
+  "goodgoodshot:playerShopInventory";
+
 export type HatId = "glassPyramid" | "glassCube" | "glassSphere";
 
 export type PlayerShopInventory = {
@@ -83,6 +87,7 @@ export function savePlayerShopInventory(state: PlayerShopInventory): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(PLAYER_SHOP_INVENTORY_KEY, JSON.stringify(state));
+    window.dispatchEvent(new Event(PLAYER_SHOP_INVENTORY_CHANGE_EVENT));
   } catch {
     /* ignore quota / private mode */
   }
@@ -92,6 +97,7 @@ export function clearPlayerShopInventory(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(PLAYER_SHOP_INVENTORY_KEY);
+    window.dispatchEvent(new Event(PLAYER_SHOP_INVENTORY_CHANGE_EVENT));
   } catch {
     /* ignore */
   }

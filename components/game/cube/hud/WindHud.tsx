@@ -6,8 +6,8 @@ import { WIND_ACCEL_MAX } from "@/lib/game/wind";
 /** Shared with map toggle so the wind gauge and map button match. */
 export const WIND_HUD_CIRCLE_PX = 56;
 
-/** 8-point compass: North matches +Z (sun / farthest goal). */
-const WIND_FROM_CARDINAL_8 = [
+/** 8-point compass: North matches +Z (sun / farthest goal). Label = horizontal drift (acceleration), not meteorological “wind from”. */
+const WIND_DRIFT_CARDINAL_8 = [
   "N",
   "NE",
   "E",
@@ -22,25 +22,22 @@ export function WindHud({ windHud }: { windHud: { x: number; z: number } }) {
   const windMag = Math.hypot(windHud.x, windHud.z);
   const windPercentOfMax =
     WIND_ACCEL_MAX > 0 ? (windMag / WIND_ACCEL_MAX) * 100 : 0;
-  /** Meteorological convention: direction the wind comes from (opposite to acceleration). */
-  const fromX = -windHud.x;
-  const fromZ = -windHud.z;
-  /** Bearing from +Z (north) clockwise in the XZ plane; undefined when calm. */
-  const windFromBearingDeg =
+  /** Bearing of horizontal drift (+Z = toward goal) clockwise in the XZ plane; undefined when calm. */
+  const windDriftBearingDeg =
     windMag < 1e-6
       ? undefined
-      : ((Math.atan2(fromX, fromZ) * 180) / Math.PI + 360) % 360;
-  const windFromLabel =
-    windFromBearingDeg === undefined
+      : ((Math.atan2(windHud.x, windHud.z) * 180) / Math.PI + 360) % 360;
+  const windDriftLabel =
+    windDriftBearingDeg === undefined
       ? "Calm"
-      : WIND_FROM_CARDINAL_8[
-          Math.floor((windFromBearingDeg + 22.5) / 45) % 8
+      : WIND_DRIFT_CARDINAL_8[
+          Math.floor((windDriftBearingDeg + 22.5) / 45) % 8
         ];
 
   return (
     <div
       role="img"
-      aria-label={`Wind ${windPercentOfMax.toFixed(0)}% of max from the ${windFromLabel} (${windFromBearingDeg?.toFixed(0) ?? "—"}° bearing, +Z is north); world XZ X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)}`}
+      aria-label={`Wind ${windPercentOfMax.toFixed(0)}% of max, drift toward ${windDriftLabel} (${windDriftBearingDeg?.toFixed(0) ?? "—"}° from +Z toward goal); world XZ X ${windHud.x.toFixed(2)}, Z ${windHud.z.toFixed(2)}`}
       style={{
         ...hudMiniPanel,
         ...hudFont,
@@ -77,12 +74,12 @@ export function WindHud({ windHud }: { windHud: { x: number; z: number } }) {
           color: hudColors.value,
           flexShrink: 0,
           fontWeight: 700,
-          fontSize: windFromLabel.length > 2 ? 9 : 11,
+          fontSize: windDriftLabel.length > 2 ? 9 : 11,
           lineHeight: 1,
           letterSpacing: "-0.02em",
         }}
       >
-        {windFromLabel}
+        {windDriftLabel}
       </span>
       <span
         style={{

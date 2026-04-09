@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
+import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import {
   goldPillButtonStyle,
   hudColors,
@@ -24,7 +25,6 @@ import {
   resolvePlayerVehicle,
   shouldShowRatataBetaTag,
 } from "@/lib/game/vehicleUnlock";
-import { INITIAL_POWERUP_CHARGES } from "@/lib/game/constants";
 import { burstVehicleStartConfetti } from "@/lib/game/confetti";
 import {
   formatSessionScoreHud,
@@ -342,6 +342,7 @@ export function StartGameModal({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { stats } = usePlayerStats();
+  const { inventory: shopInventory } = usePlayerShopInventory();
   const [newSessionStep, setNewSessionStep] = useState(0);
   /** Optional vehicle / controls / power-ups wizard; default is a short overview only. */
   const [gameConfigOpen, setGameConfigOpen] = useState(false);
@@ -422,7 +423,7 @@ export function StartGameModal({
   const title = (() => {
     if (inProgress && hasStartedBattles) return "Continue war";
     if (inProgress) return "Welcome back";
-    return "Welcome";
+    return "Welcome to GG-Shot";
   })();
 
   const showStandardWarPick = !isFirstVisitWelcome || gameConfigOpen;
@@ -718,6 +719,26 @@ export function StartGameModal({
               </div>
             </div>
             <div style={startModalActionsAnchor}>
+              <div style={{ 
+                display: "flex", justifyContent: "center"
+                 }}>
+              <button
+                type="button"
+                onClick={goToPlaza}
+                style={{
+                  ...plazaHubButtonStyle({
+                    // variant: "full",
+                    // fullWidth: false,
+                  }),
+                  width: "60%",
+                  padding: "12px 18px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                Go to Plaza 🌳
+              </button>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -730,7 +751,7 @@ export function StartGameModal({
                 style={{
                   ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
                   padding: "15px 20px",
-                  fontSize: 17,
+                  fontSize: 22,
                   fontWeight: 800,
                   letterSpacing: "0.04em",
                   boxShadow: [
@@ -740,22 +761,7 @@ export function StartGameModal({
                   ].join(", "),
                 }}
               >
-                Continue
-              </button>
-              <button
-                type="button"
-                onClick={goToPlaza}
-                style={{
-                  ...plazaHubButtonStyle({
-                    variant: "full",
-                    fullWidth: true,
-                  }),
-                  padding: "12px 18px",
-                  fontSize: 14,
-                  fontWeight: 700,
-                }}
-              >
-                Go to plaza
+                Continue Battle ⚔️
               </button>
             </div>
           </div>
@@ -1190,8 +1196,20 @@ export function StartGameModal({
                     }}
                   >
                     Colors match the Power-ups dock. Tap a slot before your first
-                    click on a shot (while not charging). You start with{" "}
-                    {INITIAL_POWERUP_CHARGES} charges per implemented type.
+                    click on a shot (while not charging). Your saved charges (this
+                    device): strength{" "}
+                    <strong style={{ color: hudColors.value }}>
+                      {shopInventory.strengthCharges}
+                    </strong>
+                    , no-bounce{" "}
+                    <strong style={{ color: hudColors.value }}>
+                      {shopInventory.noBounceCharges}
+                    </strong>
+                    , no-wind{" "}
+                    <strong style={{ color: hudColors.value }}>
+                      {shopInventory.noWindCharges}
+                    </strong>
+                    .
                   </p>
                   <PowerupLegendRow slot="strength" title="Strength (orange)">
                     Each tap multiplies launch strength by 2 for that shot and

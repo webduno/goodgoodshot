@@ -101,6 +101,14 @@ export function PowerupSlotRow({
         ...hudFont,
       }}
     >
+      <div
+      style={{
+        fontSize: 9,
+        color: "#777777",
+        textAlign: "center",
+        marginBottom: 4,
+      }}
+      >Buy them at the plaza!</div>
       {POWERUP_SLOTS.filter(
         (s) => s.implemented && (!omitNoWind || s.id !== "nowind")
       ).map((slot) => {
@@ -140,7 +148,7 @@ export function PowerupSlotRow({
               gap: 2,
             }}
           >
-            <button
+            {/* <button
               type="button"
               aria-label={`Buy +1 ${slot.name} charge for 1 gold coin`}
               title={
@@ -157,7 +165,7 @@ export function PowerupSlotRow({
               style={buyChipStyle}
             >
               Buy
-            </button>
+            </button> */}
             <button
               type="button"
               aria-label={`${slot.name}: ${ariaDetail}`}

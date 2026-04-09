@@ -667,7 +667,7 @@ export function ProfileModal({
               color: hudColors.muted,
             }}
           >
-            Last completed hole
+            Last completed battle
           </h3>
           {!last ? (
             <p

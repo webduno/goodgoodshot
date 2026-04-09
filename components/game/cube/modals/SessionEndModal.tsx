@@ -711,7 +711,7 @@ export function SessionEndModal({
                 color: hudColors.value,
               }}
             >
-              Last completed hole
+              Last completed battle
             </h3>
             {!last ? (
               <p

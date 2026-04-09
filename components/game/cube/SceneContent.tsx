@@ -29,6 +29,7 @@ import { TeeHoleSign } from "@/components/game/cube/meshes/TeeHoleSign";
 import { ShootTriggerCube } from "@/components/game/cube/meshes/ShootTriggerCube";
 import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
+import { VehicleGlassHat } from "@/components/game/cube/meshes/VehicleGlassHat";
 import { VehicleObjMesh } from "@/components/game/cube/meshes/VehicleObjMesh";
 import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
 import {
@@ -64,6 +65,7 @@ import {
   type Vec3,
 } from "@/lib/game/types";
 import { TerrainTextured } from "../TerrainTextured";
+import type { HatId } from "@/lib/shop/playerInventory";
 import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
 import { POWERUP_SLOT_ACCENT } from "@/components/gameHudStyles";
 import { EarthTextured } from "../EarthTextured";
@@ -309,6 +311,7 @@ export function SceneContent({
   /** Hub / town: no tee, goal block, lane coins, or messengers — only vehicle + ball on islands. */
   hubMode = false,
   onEnemyLossAnimatingChange,
+  equippedHatId = null,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -372,6 +375,8 @@ export function SceneContent({
   onEnemyKillReward: () => void;
   /** While the enemy-touch sink plays, parent should lock HUD / keyboard aim. */
   onEnemyLossAnimatingChange?: (active: boolean) => void;
+  /** Cosmetic glass hat from the plaza shop (local player). */
+  equippedHatId?: HatId | null;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -643,8 +648,8 @@ export function SceneContent({
     () =>
       hubMode
         ? []
-        : coinCentersForIslands(islands, INITIAL_LANE_ORIGIN[1]),
-    [islands, hubMode]
+        : coinCentersForIslands(islands, INITIAL_LANE_ORIGIN[1], goalCenter),
+    [islands, hubMode, goalCenter]
   );
 
   const goalLength = useMemo(() => {
@@ -874,6 +879,7 @@ export function SceneContent({
             noBounceActive={noBounceActive}
             noWindActive={noWindActive}
           />
+          <VehicleGlassHat hatId={equippedHatId} />
         </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}

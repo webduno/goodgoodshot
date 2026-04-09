@@ -1,16 +1,30 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { TURF_TOP_Y } from "@/lib/game/constants";
+import { addMultiplicativeWhiteVertexColors } from "@/lib/game/threeInstancing";
 
-/** Unlit bubbles — avoids “black sphere” look under directional-only lighting. */
+/** Main white plaza towers — height vs character (2–3× original). */
+const PLAZA_CENTRAL_TOWER_HEIGHT_SCALE = 2.5;
+
+/** Floating bubbles: split by material (glass / opaque / brushed metal / bright accents). */
 const BUBBLE_COUNT = 72;
+const BUBBLE_GLASS_COUNT = 24;
+const BUBBLE_OPAQUE_COUNT = 24;
+const BUBBLE_METAL_COUNT = 16;
+const BUBBLE_BRIGHT_COUNT = 8;
+/** A few oversized floaters (radius × `BUBBLE_MEGA_RADIUS_SCALE`). */
+const BUBBLE_MEGA_COUNT = 3;
+const BUBBLE_MEGA_RADIUS_SCALE = 4;
 const ORB_COUNT = 28;
 const FISH_COUNT = 42;
 const BUILDING_COUNT = 6;
+/** Smaller “city block” cubes beside each tower; split opaque vs glass (Frutiger Aero). */
+const SATELLITE_OPAQUE_COUNT = 12;
+const SATELLITE_GLASS_COUNT = 6;
 
 const BUBBLE_PALETTE = [
   "#e8ffff",
@@ -30,7 +44,16 @@ const ORB_PALETTE = [
   "#68e8d8",
 ] as const;
 
-const FISH_COLORS = ["#ff9858", "#ffffff", "#ff7848", "#fff0e8"] as const;
+const FISH_COLORS = [
+  "#ff1493",
+  "#00e5ff",
+  "#ffea00",
+  "#ff6b00",
+  "#7cff00",
+  "#b026ff",
+  "#ff3355",
+  "#00ffaa",
+] as const;
 
 type BubbleSpec = {
   x: number;
@@ -60,11 +83,47 @@ type FishSpec = {
   wobble: number;
 };
 
+type SatelliteSpec = {
+  x: number;
+  z: number;
+  w: number;
+  h: number;
+  d: number;
+};
+
 function seededRand(seed: number): () => number {
   return () => {
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
   };
+}
+
+/** Grayscale noise for metal roughness (no external assets; SSR-safe). */
+function createBrushedRoughnessDataTexture(): THREE.DataTexture {
+  const w = 64;
+  const h = 64;
+  const data = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const n =
+        Math.sin(x * 0.31) * Math.cos(y * 0.27) * 0.5 +
+        Math.sin((x + y) * 0.11) * 0.25 +
+        0.5;
+      const streak = 0.72 + (x / w) * 0.28;
+      const v = Math.min(255, Math.floor(255 * n * streak));
+      data[i] = v;
+      data[i + 1] = v;
+      data[i + 2] = v;
+      data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h);
+  tex.needsUpdate = true;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.NoColorSpace;
+  return tex;
 }
 
 /** Frutiger Aero layer: bright bubbles, water, glass aquarium, fish (one `useFrame`), instanced towers. */
@@ -79,30 +138,66 @@ export function PlazaFrutigerAeroDecor({
   walk: number;
   outer: number;
 }) {
-  const bubbleRef = useRef<THREE.InstancedMesh>(null);
+  const bubbleGlassRef = useRef<THREE.InstancedMesh>(null);
+  const bubbleOpaqueRef = useRef<THREE.InstancedMesh>(null);
+  const bubbleMetalRef = useRef<THREE.InstancedMesh>(null);
+  const bubbleBrightRef = useRef<THREE.InstancedMesh>(null);
   const orbRef = useRef<THREE.InstancedMesh>(null);
   const fishRef = useRef<THREE.InstancedMesh>(null);
   const buildingRef = useRef<THREE.InstancedMesh>(null);
+  const satelliteOpaqueRef = useRef<THREE.InstancedMesh>(null);
+  const satelliteGlassRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const color = useMemo(() => new THREE.Color(), []);
 
   const rInner = walk + 2.8;
   const rOuter = outer - 1.35;
 
-  const { bubbles, orbs, fishSpecs, aquarium, buildings } = useMemo(() => {
+  const {
+    bubblesGlass,
+    bubblesOpaque,
+    bubblesMetal,
+    bubblesBright,
+    orbs,
+    fishSpecs,
+    aquarium,
+    buildings,
+    satelliteOpaque,
+    satelliteGlass,
+  } = useMemo(() => {
     const rand = seededRand(90210);
-    const bubbles: BubbleSpec[] = [];
+    const bubblesGlass: BubbleSpec[] = [];
+    const bubblesOpaque: BubbleSpec[] = [];
+    const bubblesMetal: BubbleSpec[] = [];
+    const bubblesBright: BubbleSpec[] = [];
+    const megaIndices = new Set<number>();
+    const megaPick = seededRand(90211);
+    while (megaIndices.size < BUBBLE_MEGA_COUNT) {
+      megaIndices.add(Math.floor(megaPick() * BUBBLE_COUNT));
+    }
     for (let i = 0; i < BUBBLE_COUNT; i++) {
       const th = rand() * Math.PI * 2;
       const rad = rInner + rand() * Math.max(0.4, rOuter - rInner);
-      bubbles.push({
+      const baseR = 0.24 + rand() * 0.34;
+      const mega = megaIndices.has(i);
+      const r = baseR * (mega ? BUBBLE_MEGA_RADIUS_SCALE : 1);
+      let y0 = TURF_TOP_Y + 0.95 + rand() * 3.8;
+      if (mega) {
+        y0 = Math.max(y0, TURF_TOP_Y + r + 0.28);
+      }
+      const spec: BubbleSpec = {
         x: wx + Math.cos(th) * rad,
         z: wz + Math.sin(th) * rad,
-        y0: TURF_TOP_Y + 0.95 + rand() * 3.8,
+        y0,
         ph: rand() * Math.PI * 2,
         sp: 0.5 + rand() * 0.95,
-        r: 0.24 + rand() * 0.34,
-      });
+        r,
+      };
+      const slot = i % 9;
+      if (slot < 3) bubblesGlass.push(spec);
+      else if (slot < 6) bubblesOpaque.push(spec);
+      else if (slot < 8) bubblesMetal.push(spec);
+      else bubblesBright.push(spec);
     }
 
     const orbs: OrbSpec[] = [];
@@ -119,9 +214,9 @@ export function PlazaFrutigerAeroDecor({
       });
     }
 
-    const aquW = 4.2;
-    const aquD = 3.4;
-    const aquH = 2.35;
+    const aquW = 7.2;
+    const aquD = 5.8;
+    const aquH = 3.6;
     const aquCx = wx + 17;
     const aquCz = wz - 11;
     const aquarium = {
@@ -147,6 +242,7 @@ export function PlazaFrutigerAeroDecor({
       });
     }
 
+    const towerH = PLAZA_CENTRAL_TOWER_HEIGHT_SCALE;
     const bldgLayout: {
       ox: number;
       oz: number;
@@ -154,12 +250,12 @@ export function PlazaFrutigerAeroDecor({
       bh: number;
       bd: number;
     }[] = [
-      { ox: 23, oz: 13, bw: 3.8, bh: 10.5, bd: 3.4 },
-      { ox: -21, oz: 15, bw: 4.4, bh: 12, bd: 3.8 },
-      { ox: -18, oz: -20, bw: 3.6, bh: 9, bd: 4.2 },
-      { ox: 20, oz: -17, bw: 4.8, bh: 11, bd: 3.2 },
-      { ox: 8, oz: 26, bw: 3.2, bh: 8, bd: 3 },
-      { ox: -11, oz: 24, bw: 3.5, bh: 9.5, bd: 3.6 },
+      { ox: 23, oz: 13, bw: 3.8, bh: 10.5 * towerH, bd: 3.4 },
+      { ox: -21, oz: 15, bw: 4.4, bh: 12 * towerH, bd: 3.8 },
+      { ox: -18, oz: -20, bw: 3.6, bh: 9 * towerH, bd: 4.2 },
+      { ox: 20, oz: -17, bw: 4.8, bh: 11 * towerH, bd: 3.2 },
+      { ox: 8, oz: 26, bw: 3.2, bh: 8 * towerH, bd: 3 },
+      { ox: -11, oz: 24, bw: 3.5, bh: 9.5 * towerH, bd: 3.6 },
     ];
     const buildings = bldgLayout.map((b) => ({
       x: wx + b.ox,
@@ -169,25 +265,165 @@ export function PlazaFrutigerAeroDecor({
       d: b.bd,
     }));
 
-    return { bubbles, orbs, fishSpecs, aquarium, buildings };
+    /** Local offsets from each tower center — short opaque blocks + one glass slab per tower. */
+    const companions: {
+      dx: number;
+      dz: number;
+      bw: number;
+      bh: number;
+      bd: number;
+      glass: boolean;
+    }[][] = [
+      [
+        { dx: 3.15, dz: 0.2, bw: 1.65, bh: 4.4 * towerH, bd: 1.35, glass: false },
+        { dx: -2.85, dz: 1.95, bw: 1.25, bh: 3.6 * towerH, bd: 1.15, glass: false },
+        { dx: 0.35, dz: -2.75, bw: 1.35, bh: 6.8 * towerH, bd: 1.05, glass: true },
+      ],
+      [
+        { dx: -3.2, dz: -0.25, bw: 1.7, bh: 5.1 * towerH, bd: 1.4, glass: false },
+        { dx: 2.6, dz: 2.1, bw: 1.3, bh: 4.0 * towerH, bd: 1.2, glass: false },
+        { dx: 0.5, dz: -3.0, bw: 1.15, bh: 7.2 * towerH, bd: 1.0, glass: true },
+      ],
+      [
+        { dx: 2.9, dz: -1.8, bw: 1.55, bh: 3.8 * towerH, bd: 1.3, glass: false },
+        { dx: -2.5, dz: -2.4, bw: 1.4, bh: 4.6 * towerH, bd: 1.25, glass: false },
+        { dx: -0.4, dz: 3.05, bw: 1.2, bh: 6.5 * towerH, bd: 0.95, glass: true },
+      ],
+      [
+        { dx: -3.05, dz: 1.5, bw: 1.75, bh: 4.9 * towerH, bd: 1.45, glass: false },
+        { dx: 2.4, dz: -1.6, bw: 1.35, bh: 3.4 * towerH, bd: 1.1, glass: false },
+        { dx: 0.2, dz: 2.95, bw: 1.1, bh: 7.0 * towerH, bd: 1.0, glass: true },
+      ],
+      [
+        { dx: 2.75, dz: 2.2, bw: 1.5, bh: 4.2 * towerH, bd: 1.25, glass: false },
+        { dx: -2.65, dz: -0.3, bw: 1.45, bh: 5.0 * towerH, bd: 1.3, glass: false },
+        { dx: 0.6, dz: -2.9, bw: 1.2, bh: 6.2 * towerH, bd: 0.9, glass: true },
+      ],
+      [
+        { dx: -3.1, dz: 1.1, bw: 1.6, bh: 4.5 * towerH, bd: 1.35, glass: false },
+        { dx: 2.5, dz: -2.0, bw: 1.3, bh: 3.7 * towerH, bd: 1.15, glass: false },
+        { dx: -0.2, dz: 2.85, bw: 1.15, bh: 6.6 * towerH, bd: 0.95, glass: true },
+      ],
+    ];
+
+    const satelliteOpaque: SatelliteSpec[] = [];
+    const satelliteGlass: SatelliteSpec[] = [];
+    for (let ti = 0; ti < bldgLayout.length; ti++) {
+      const base = bldgLayout[ti]!;
+      const bx = wx + base.ox;
+      const bz = wz + base.oz;
+      for (const c of companions[ti]!) {
+        const spec: SatelliteSpec = {
+          x: bx + c.dx,
+          z: bz + c.dz,
+          w: c.bw,
+          h: c.bh,
+          d: c.bd,
+        };
+        if (c.glass) satelliteGlass.push(spec);
+        else satelliteOpaque.push(spec);
+      }
+    }
+
+    return {
+      bubblesGlass,
+      bubblesOpaque,
+      bubblesMetal,
+      bubblesBright,
+      orbs,
+      fishSpecs,
+      aquarium,
+      buildings,
+      satelliteOpaque,
+      satelliteGlass,
+    };
   }, [wx, wz, rInner, rOuter]);
 
-  const bubbleGeo = useMemo(() => new THREE.SphereGeometry(1, 10, 8), []);
-  const orbGeo = useMemo(() => new THREE.SphereGeometry(1, 8, 6), []);
-  const fishGeo = useMemo(
-    () => new THREE.ConeGeometry(0.14, 0.52, 5, 1, false),
-    []
-  );
+  const bubbleGeo = useMemo(() => {
+    const g = new THREE.SphereGeometry(1, 10, 8);
+    addMultiplicativeWhiteVertexColors(g);
+    return g;
+  }, []);
+  const orbGeo = useMemo(() => {
+    const g = new THREE.SphereGeometry(1, 8, 6);
+    addMultiplicativeWhiteVertexColors(g);
+    return g;
+  }, []);
+  const fishGeo = useMemo(() => {
+    const g = new THREE.ConeGeometry(0.14, 0.52, 5, 1, false);
+    /** Per-vertex white so `vertexColors` + `setColorAt` multiply to instance colors (no attr ⇒ black). */
+    const n = g.attributes.position.count;
+    const colors = new Float32Array(n * 3);
+    colors.fill(1);
+    g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    return g;
+  }, []);
   const buildingGeo = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
 
-  const bubbleMat = useMemo(
+  const metalRoughnessTex = useMemo(() => createBrushedRoughnessDataTexture(), []);
+  useEffect(() => {
+    return () => {
+      metalRoughnessTex.dispose();
+    };
+  }, [metalRoughnessTex]);
+
+  const bubbleGlassMat = useMemo(
     () =>
-      new THREE.MeshBasicMaterial({
-        vertexColors: true,
+      new THREE.MeshPhysicalMaterial({
+        color: "#d8f8ff",
         transparent: true,
-        opacity: 0.78,
-        toneMapped: false,
+        opacity: 0.55,
+        roughness: 0.06,
+        metalness: 0.12,
+        transmission: 0.72,
+        thickness: 0.55,
+        ior: 1.35,
+        attenuationColor: new THREE.Color("#b8e8ff"),
+        attenuationDistance: 1.2,
+        emissive: "#7ec8f8",
+        emissiveIntensity: 0.12,
         depthWrite: false,
+        clearcoat: 0.55,
+        clearcoatRoughness: 0.08,
+      }),
+    []
+  );
+
+  const bubbleOpaqueMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffffff",
+        vertexColors: true,
+        roughness: 0.38,
+        metalness: 0.06,
+        emissive: "#c8e4f8",
+        emissiveIntensity: 0.22,
+      }),
+    []
+  );
+
+  const bubbleMetalMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#f2f7fc",
+        roughness: 0.38,
+        metalness: 0.82,
+        roughnessMap: metalRoughnessTex,
+        emissive: "#c8dcf0",
+        emissiveIntensity: 0.58,
+      }),
+    [metalRoughnessTex]
+  );
+
+  const bubbleBrightMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffffff",
+        vertexColors: true,
+        roughness: 0.22,
+        metalness: 0.18,
+        emissive: "#000000",
+        emissiveIntensity: 0,
       }),
     []
   );
@@ -206,6 +442,7 @@ export function PlazaFrutigerAeroDecor({
   const fishMat = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
+        color: "#ffffff",
         vertexColors: true,
         toneMapped: false,
       }),
@@ -220,6 +457,35 @@ export function PlazaFrutigerAeroDecor({
         metalness: 0.35,
         emissive: "#c8e0f8",
         emissiveIntensity: 0.08,
+      }),
+    []
+  );
+
+  const satelliteOpaqueMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffffff",
+        roughness: 0.26,
+        metalness: 0.28,
+        emissive: "#dceaf8",
+        emissiveIntensity: 0.055,
+      }),
+    []
+  );
+
+  /** Frosted glass towers — distinct from aquarium panes, reads as built volume. */
+  const satelliteGlassBuildingMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#eef6ff",
+        transparent: true,
+        opacity: 0.34,
+        roughness: 0.14,
+        metalness: 0.38,
+        emissive: "#c4dcf8",
+        emissiveIntensity: 0.09,
+        depthWrite: false,
+        side: THREE.DoubleSide,
       }),
     []
   );
@@ -241,13 +507,15 @@ export function PlazaFrutigerAeroDecor({
   const waterMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#4a9ecc",
-        roughness: 0.06,
-        metalness: 0.08,
+        color: "#0a7fd4",
+        roughness: 0.12,
+        metalness: 0.04,
         transparent: true,
-        opacity: 0.9,
-        emissive: "#88ccff",
-        emissiveIntensity: 0.22,
+        opacity: 0.42,
+        emissive: "#38b4ff",
+        emissiveIntensity: 0.55,
+        depthWrite: false,
+        side: THREE.DoubleSide,
       }),
     []
   );
@@ -267,24 +535,74 @@ export function PlazaFrutigerAeroDecor({
   );
 
   useLayoutEffect(() => {
-    const bMesh = bubbleRef.current;
+    const bgMesh = bubbleGlassRef.current;
+    const boMesh = bubbleOpaqueRef.current;
+    const bmMesh = bubbleMetalRef.current;
+    const bbMesh = bubbleBrightRef.current;
     const oMesh = orbRef.current;
     const fMesh = fishRef.current;
     const blMesh = buildingRef.current;
-    if (!bMesh || !oMesh || !fMesh || !blMesh) return;
+    const soMesh = satelliteOpaqueRef.current;
+    const sgMesh = satelliteGlassRef.current;
+    if (
+      !bgMesh ||
+      !boMesh ||
+      !bmMesh ||
+      !bbMesh ||
+      !oMesh ||
+      !fMesh ||
+      !blMesh ||
+      !soMesh ||
+      !sgMesh
+    ) {
+      return;
+    }
 
-    for (let i = 0; i < BUBBLE_COUNT; i++) {
-      const b = bubbles[i]!;
+    for (let i = 0; i < BUBBLE_GLASS_COUNT; i++) {
+      const b = bubblesGlass[i]!;
       dummy.position.set(b.x, b.y0, b.z);
       dummy.scale.setScalar(b.r);
       dummy.rotation.set(0, 0, 0);
       dummy.updateMatrix();
-      bMesh.setMatrixAt(i, dummy.matrix);
-      color.set(BUBBLE_PALETTE[i % BUBBLE_PALETTE.length]!);
-      bMesh.setColorAt(i, color);
+      bgMesh.setMatrixAt(i, dummy.matrix);
     }
-    bMesh.instanceMatrix.needsUpdate = true;
-    if (bMesh.instanceColor) bMesh.instanceColor.needsUpdate = true;
+    bgMesh.instanceMatrix.needsUpdate = true;
+
+    for (let i = 0; i < BUBBLE_OPAQUE_COUNT; i++) {
+      const b = bubblesOpaque[i]!;
+      dummy.position.set(b.x, b.y0, b.z);
+      dummy.scale.setScalar(b.r);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      boMesh.setMatrixAt(i, dummy.matrix);
+      color.set(BUBBLE_PALETTE[i % BUBBLE_PALETTE.length]!);
+      boMesh.setColorAt(i, color);
+    }
+    boMesh.instanceMatrix.needsUpdate = true;
+    if (boMesh.instanceColor) boMesh.instanceColor.needsUpdate = true;
+
+    for (let i = 0; i < BUBBLE_METAL_COUNT; i++) {
+      const b = bubblesMetal[i]!;
+      dummy.position.set(b.x, b.y0, b.z);
+      dummy.scale.setScalar(b.r);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      bmMesh.setMatrixAt(i, dummy.matrix);
+    }
+    bmMesh.instanceMatrix.needsUpdate = true;
+
+    for (let i = 0; i < BUBBLE_BRIGHT_COUNT; i++) {
+      const b = bubblesBright[i]!;
+      dummy.position.set(b.x, b.y0, b.z);
+      dummy.scale.setScalar(b.r);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      bbMesh.setMatrixAt(i, dummy.matrix);
+      color.set(ORB_PALETTE[i % ORB_PALETTE.length]!);
+      bbMesh.setColorAt(i, color);
+    }
+    bbMesh.instanceMatrix.needsUpdate = true;
+    if (bbMesh.instanceColor) bbMesh.instanceColor.needsUpdate = true;
 
     for (let i = 0; i < ORB_COUNT; i++) {
       const o = orbs[i]!;
@@ -325,17 +643,51 @@ export function PlazaFrutigerAeroDecor({
       blMesh.setMatrixAt(i, dummy.matrix);
     }
     blMesh.instanceMatrix.needsUpdate = true;
-  }, [bubbles, orbs, fishSpecs, buildings, dummy, color]);
+
+    for (let i = 0; i < SATELLITE_OPAQUE_COUNT; i++) {
+      const s = satelliteOpaque[i]!;
+      dummy.position.set(s.x, TURF_TOP_Y + s.h / 2, s.z);
+      dummy.scale.set(s.w, s.h, s.d);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      soMesh.setMatrixAt(i, dummy.matrix);
+    }
+    soMesh.instanceMatrix.needsUpdate = true;
+
+    for (let i = 0; i < SATELLITE_GLASS_COUNT; i++) {
+      const s = satelliteGlass[i]!;
+      dummy.position.set(s.x, TURF_TOP_Y + s.h / 2, s.z);
+      dummy.scale.set(s.w, s.h, s.d);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      sgMesh.setMatrixAt(i, dummy.matrix);
+    }
+    sgMesh.instanceMatrix.needsUpdate = true;
+  }, [
+    bubblesGlass,
+    bubblesOpaque,
+    bubblesMetal,
+    bubblesBright,
+    orbs,
+    fishSpecs,
+    buildings,
+    satelliteOpaque,
+    satelliteGlass,
+    dummy,
+    color,
+  ]);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
-    const bMesh = bubbleRef.current;
+    const bgMesh = bubbleGlassRef.current;
+    const boMesh = bubbleOpaqueRef.current;
+    const bmMesh = bubbleMetalRef.current;
+    const bbMesh = bubbleBrightRef.current;
     const oMesh = orbRef.current;
     const fMesh = fishRef.current;
-    if (!bMesh || !oMesh || !fMesh) return;
+    if (!bgMesh || !boMesh || !bmMesh || !bbMesh || !oMesh || !fMesh) return;
 
-    for (let i = 0; i < BUBBLE_COUNT; i++) {
-      const b = bubbles[i]!;
+    const bobble = (b: BubbleSpec) => {
       const bob = Math.sin(t * b.sp + b.ph) * 0.34;
       const sway = Math.sin(t * 0.33 + b.ph * 0.5) * 0.1;
       dummy.position.set(
@@ -346,9 +698,31 @@ export function PlazaFrutigerAeroDecor({
       dummy.scale.setScalar(b.r);
       dummy.rotation.set(0, 0, 0);
       dummy.updateMatrix();
-      bMesh.setMatrixAt(i, dummy.matrix);
+    };
+
+    for (let i = 0; i < BUBBLE_GLASS_COUNT; i++) {
+      bobble(bubblesGlass[i]!);
+      bgMesh.setMatrixAt(i, dummy.matrix);
     }
-    bMesh.instanceMatrix.needsUpdate = true;
+    bgMesh.instanceMatrix.needsUpdate = true;
+
+    for (let i = 0; i < BUBBLE_OPAQUE_COUNT; i++) {
+      bobble(bubblesOpaque[i]!);
+      boMesh.setMatrixAt(i, dummy.matrix);
+    }
+    boMesh.instanceMatrix.needsUpdate = true;
+
+    for (let i = 0; i < BUBBLE_METAL_COUNT; i++) {
+      bobble(bubblesMetal[i]!);
+      bmMesh.setMatrixAt(i, dummy.matrix);
+    }
+    bmMesh.instanceMatrix.needsUpdate = true;
+
+    for (let i = 0; i < BUBBLE_BRIGHT_COUNT; i++) {
+      bobble(bubblesBright[i]!);
+      bbMesh.setMatrixAt(i, dummy.matrix);
+    }
+    bbMesh.instanceMatrix.needsUpdate = true;
 
     for (let i = 0; i < ORB_COUNT; i++) {
       const o = orbs[i]!;
@@ -379,6 +753,10 @@ export function PlazaFrutigerAeroDecor({
   const hw = aquarium.w / 2;
   const hd = aquarium.d / 2;
   const hyLocal = aquarium.h / 2;
+  const innerW = aquarium.w - 2 * wallT - 0.08;
+  const innerD = aquarium.d - 2 * wallT - 0.08;
+  const innerH = aquarium.h - wallT - 0.08;
+  const waterCenterY = wallT + innerH / 2;
 
   const waterPools = useMemo(
     () => [
@@ -404,8 +782,21 @@ export function PlazaFrutigerAeroDecor({
       ))}
 
       <group position={[aquarium.cx, aquarium.baseY, aquarium.cz]}>
-        <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} material={waterMat}>
-          <planeGeometry args={[aquarium.w - 0.35, aquarium.d - 0.35]} />
+        <pointLight
+          position={[0, aquarium.h + 0.55, 0]}
+          color="#d4efff"
+          intensity={5}
+          distance={Math.max(aquarium.w, aquarium.d) * 2.8}
+          decay={2}
+        />
+        <mesh
+          position={[0, waterCenterY, 0]}
+          castShadow={false}
+          receiveShadow
+          material={waterMat}
+          renderOrder={-1}
+        >
+          <boxGeometry args={[innerW, innerH, innerD]} />
         </mesh>
         <mesh
           position={[0, hyLocal, -hd + wallT / 2]}
@@ -457,8 +848,46 @@ export function PlazaFrutigerAeroDecor({
         castShadow
         receiveShadow
       />
+      <instancedMesh
+        ref={satelliteOpaqueRef}
+        args={[buildingGeo, satelliteOpaqueMat, SATELLITE_OPAQUE_COUNT]}
+        castShadow
+        receiveShadow
+      />
+      <instancedMesh
+        ref={satelliteGlassRef}
+        args={[buildingGeo, satelliteGlassBuildingMat, SATELLITE_GLASS_COUNT]}
+        castShadow={false}
+        receiveShadow
+        renderOrder={2}
+      />
 
-      <instancedMesh ref={bubbleRef} args={[bubbleGeo, bubbleMat, BUBBLE_COUNT]} />
+      <instancedMesh
+        ref={bubbleGlassRef}
+        args={[bubbleGeo, bubbleGlassMat, BUBBLE_GLASS_COUNT]}
+        castShadow={false}
+        receiveShadow
+        renderOrder={3}
+      />
+      <instancedMesh
+        ref={bubbleOpaqueRef}
+        args={[bubbleGeo, bubbleOpaqueMat, BUBBLE_OPAQUE_COUNT]}
+        castShadow
+        receiveShadow
+      />
+      <instancedMesh
+        ref={bubbleMetalRef}
+        args={[bubbleGeo, bubbleMetalMat, BUBBLE_METAL_COUNT]}
+        castShadow
+        receiveShadow
+      />
+      <instancedMesh
+        ref={bubbleBrightRef}
+        args={[bubbleGeo, bubbleBrightMat, BUBBLE_BRIGHT_COUNT]}
+        castShadow
+        receiveShadow
+        renderOrder={2}
+      />
       <instancedMesh ref={orbRef} args={[orbGeo, orbMat, ORB_COUNT]} />
       <instancedMesh
         ref={fishRef}

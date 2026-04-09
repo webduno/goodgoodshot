@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import * as THREE from "three";
 
 import { TURF_TOP_Y } from "@/lib/game/constants";
 import type { IslandRect } from "@/lib/game/islands";
 
 import {
   PlazaInstancedVoxelHouses,
+  type PlazaVoxelHouseKind,
   type PlazaVoxelHouseSpec,
 } from "@/components/game/cube/meshes/PlazaInstancedVoxelHouses";
 
@@ -19,30 +22,39 @@ const STONE_WARM = "#faf6f0";
 const GRASS_TRIM = "#7ee0a8";
 const GRASS_TRIM_DARK = "#58c888";
 
-/** Pastel village accents (still opaque, but light). */
+/** Lit “porcelain” — `kind: normal`. */
+const NEUTRAL_WALL = "#e4ebf4";
+const NEUTRAL_ROOF = "#d4dde8";
+
+/** Saturated — `kind: colored`. */
 const WALL_PALETTE = [
-  "#c8e8f8",
-  "#f8d0e8",
-  "#b8f0d8",
-  "#e8d8f8",
-  "#ffe8c8",
-  "#d0e8ff",
-  "#ffd0d8",
-  "#d8f8c8",
-  "#f0d8f0",
-  "#c8f8f0",
+  "#ff1493",
+  "#00e5ff",
+  "#ffea00",
+  "#76ff03",
+  "#ff5722",
+  "#e040fb",
+  "#00e676",
+  "#ffd600",
+  "#ff4d9a",
+  "#ffffff",
 ] as const;
 
 const ROOF_PALETTE = [
-  "#e89888",
-  "#98a8e0",
-  "#88c898",
-  "#c8a888",
-  "#b898d8",
-  "#e0c078",
+  "#ff1744",
+  "#2979ff",
+  "#00e676",
+  "#ffc400",
+  "#d500f9",
+  "#00b0ff",
+  "#ff6d00",
+  "#aa00ff",
 ] as const;
 
 const PORTAL_EXCLUSION_R = 4.6;
+
+/** Voxel decoration houses — scale vs character / plaza (footprint + height + cluster spacing). */
+const DECOR_HOUSE_SCALE = 3;
 
 function clearOfPortals(
   lx: number,
@@ -74,75 +86,237 @@ function hashPick<T>(seed: string, arr: readonly T[]): T {
   return arr[Math.abs(h) % arr.length]!;
 }
 
-/** One stepped terrace: several horizontal slabs, smaller as they rise (decorative). */
-function TerraceStack({
-  cx,
-  cz,
-  baseHalfW,
-  baseHalfD,
-  baseY,
-  levels,
-  stoneColor,
-  capGrass,
-}: {
+/** Deterministic tight offsets for clumped placement. */
+function jitter2(seed: string, i: number): [number, number] {
+  const s = `${seed}|${i}`;
+  let h = 2166136261;
+  for (let k = 0; k < s.length; k++) {
+    h ^= s.charCodeAt(k);
+    h = Math.imul(h, 16777619);
+  }
+  const h1 = (h >>> 0) / 4294967296;
+  const h2 = (Math.imul(h, 1103515245) >>> 0) / 4294967296;
+  return [(h1 - 0.5) * 1.45, (h2 - 0.5) * 1.45];
+}
+
+function hashUnit01(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 10001) / 10000;
+}
+
+type TerraceLevelSpec = { halfScale: number; thickness: number };
+
+type TerraceTier = {
+  cy: number;
+  topY: number;
+  hw: number;
+  hd: number;
+  thickness: number;
+  i: number;
+};
+
+function getTerraceTiers(
+  baseY: number,
+  baseHalfW: number,
+  baseHalfD: number,
+  levels: readonly TerraceLevelSpec[]
+): TerraceTier[] {
+  return levels.reduce<TerraceTier[]>((acc, L, i) => {
+    const prevTop = acc.length === 0 ? baseY : acc[acc.length - 1]!.topY;
+    const cy = prevTop + L.thickness / 2;
+    const topY = prevTop + L.thickness;
+    return [
+      ...acc,
+      {
+        cy,
+        topY,
+        hw: baseHalfW * L.halfScale,
+        hd: baseHalfD * L.halfScale,
+        thickness: L.thickness,
+        i,
+      },
+    ];
+  }, []);
+}
+
+function pushColoredBox(
+  list: THREE.BufferGeometry[],
+  cx: number,
+  cy: number,
+  cz: number,
+  fullW: number,
+  fullH: number,
+  fullD: number,
+  hexColor: string
+): void {
+  const g = new THREE.BoxGeometry(fullW, fullH, fullD);
+  const matrix = new THREE.Matrix4().compose(
+    new THREE.Vector3(cx, cy, cz),
+    new THREE.Quaternion(),
+    new THREE.Vector3(1, 1, 1)
+  );
+  g.applyMatrix4(matrix);
+  const n = g.attributes.position.count;
+  const colors = new Float32Array(n * 3);
+  const color = new THREE.Color(hexColor);
+  for (let i = 0; i < n; i++) {
+    colors[i * 3] = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  list.push(g);
+}
+
+type TerraceSpecForMerge = {
   cx: number;
   cz: number;
   baseHalfW: number;
   baseHalfD: number;
-  baseY: number;
-  levels: readonly { halfScale: number; thickness: number }[];
+  levels: readonly TerraceLevelSpec[];
   stoneColor: string;
   capGrass: boolean;
-}) {
-  const tiers = useMemo(() => {
-    type Tier = {
-      cy: number;
-      topY: number;
-      hw: number;
-      hd: number;
-      thickness: number;
-      i: number;
-    };
-    return levels.reduce<Tier[]>((acc, L, i) => {
-      const prevTop = acc.length === 0 ? baseY : acc[acc.length - 1]!.topY;
-      const cy = prevTop + L.thickness / 2;
-      const topY = prevTop + L.thickness;
-      return [
-        ...acc,
-        {
-          cy,
-          topY,
-          hw: baseHalfW * L.halfScale,
-          hd: baseHalfD * L.halfScale,
-          thickness: L.thickness,
-          i,
-        },
-      ];
-    }, []);
-  }, [levels, baseY, baseHalfW, baseHalfD]);
+};
 
-  return (
-    <group position={[cx, 0, cz]}>
-      {tiers.map((t) => {
-        const isTop = t.i === levels.length - 1;
-        return (
-          <mesh
-            key={`ter-${t.i}-${t.hw}-${t.hd}`}
-            position={[0, t.cy, 0]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[t.hw * 2, t.thickness, t.hd * 2]} />
-            <meshStandardMaterial
-              color={isTop && capGrass ? GRASS_TRIM : stoneColor}
-              roughness={isTop && capGrass ? 0.42 : 0.28}
-              metalness={isTop && capGrass ? 0.08 : 0.22}
-            />
-          </mesh>
-        );
-      })}
-    </group>
+function mergeTerraceGeometries(
+  specs: readonly TerraceSpecForMerge[]
+): { stone: THREE.BufferGeometry | null; grass: THREE.BufferGeometry | null } {
+  const stoneParts: THREE.BufferGeometry[] = [];
+  const grassParts: THREE.BufferGeometry[] = [];
+  const baseY = TURF_TOP_Y;
+
+  for (const t of specs) {
+    const tiers = getTerraceTiers(baseY, t.baseHalfW, t.baseHalfD, t.levels);
+    for (const tier of tiers) {
+      const isTop = tier.i === t.levels.length - 1;
+      const isGrass = isTop && t.capGrass;
+      const { cx, cz } = t;
+      const { cy, hw, hd, thickness } = tier;
+      const w = hw * 2;
+      const d = hd * 2;
+      if (isGrass) {
+        pushColoredBox(grassParts, cx, cy, cz, w, thickness, d, GRASS_TRIM);
+      } else {
+        pushColoredBox(stoneParts, cx, cy, cz, w, thickness, d, t.stoneColor);
+      }
+    }
+  }
+
+  const stone =
+    stoneParts.length > 0 ? mergeGeometries(stoneParts) : null;
+  const grass =
+    grassParts.length > 0 ? mergeGeometries(grassParts) : null;
+  for (const g of stoneParts) g.dispose();
+  for (const g of grassParts) g.dispose();
+  return { stone, grass };
+}
+
+function mergeRingRetainingLipGeometries(
+  wx: number,
+  wz: number,
+  walk: number
+): { stone: THREE.BufferGeometry | null; grass: THREE.BufferGeometry | null } {
+  const h = 0.22;
+  const cy = TURF_TOP_Y + h / 2;
+  const span = walk + 0.85;
+  const thick = 0.55;
+  const gy = TURF_TOP_Y + h + 0.04;
+  const stoneParts: THREE.BufferGeometry[] = [];
+  const grassParts: THREE.BufferGeometry[] = [];
+
+  pushColoredBox(
+    stoneParts,
+    wx,
+    cy,
+    wz + walk + thick / 2,
+    span * 2,
+    h,
+    thick,
+    STONE_DARK
   );
+  pushColoredBox(
+    stoneParts,
+    wx,
+    cy,
+    wz - walk - thick / 2,
+    span * 2,
+    h,
+    thick,
+    STONE_DARK
+  );
+  pushColoredBox(
+    stoneParts,
+    wx + walk + thick / 2,
+    cy,
+    wz,
+    thick,
+    h,
+    span * 2,
+    STONE_DARK
+  );
+  pushColoredBox(
+    stoneParts,
+    wx - walk - thick / 2,
+    cy,
+    wz,
+    thick,
+    h,
+    span * 2,
+    STONE_DARK
+  );
+
+  pushColoredBox(
+    grassParts,
+    wx,
+    gy,
+    wz + walk + thick / 2,
+    span * 2 - 0.3,
+    0.08,
+    thick - 0.08,
+    GRASS_TRIM_DARK
+  );
+  pushColoredBox(
+    grassParts,
+    wx,
+    gy,
+    wz - walk - thick / 2,
+    span * 2 - 0.3,
+    0.08,
+    thick - 0.08,
+    GRASS_TRIM_DARK
+  );
+  pushColoredBox(
+    grassParts,
+    wx + walk + thick / 2,
+    gy,
+    wz,
+    thick - 0.08,
+    0.08,
+    span * 2 - 0.3,
+    GRASS_TRIM_DARK
+  );
+  pushColoredBox(
+    grassParts,
+    wx - walk - thick / 2,
+    gy,
+    wz,
+    thick - 0.08,
+    0.08,
+    span * 2 - 0.3,
+    GRASS_TRIM_DARK
+  );
+
+  const stone =
+    stoneParts.length > 0 ? mergeGeometries(stoneParts) : null;
+  const grass =
+    grassParts.length > 0 ? mergeGeometries(grassParts) : null;
+  for (const g of stoneParts) g.dispose();
+  for (const g of grassParts) g.dispose();
+  return { stone, grass };
 }
 
 /**
@@ -158,60 +332,61 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
   const ringOuter = outer - 0.35;
   const midR = (ringInner + ringOuter) / 2;
 
-  const terraceSpecs: {
-    key: string;
-    cx: number;
-    cz: number;
-    baseHalfW: number;
-    baseHalfD: number;
-    capGrass: boolean;
-    levels: readonly { halfScale: number; thickness: number }[];
-    stoneColor: string;
-  }[] = [];
+  const terraceSpecs = useMemo(() => {
+    const specs: {
+      key: string;
+      cx: number;
+      cz: number;
+      baseHalfW: number;
+      baseHalfD: number;
+      capGrass: boolean;
+      levels: readonly { halfScale: number; thickness: number }[];
+      stoneColor: string;
+    }[] = [];
 
-  const pushTerrace = (
-    key: string,
-    lx: number,
-    lz: number,
-    baseHalfW: number,
-    baseHalfD: number,
-    capGrass: boolean,
-    tall: boolean,
-    opts?: {
-      levels?: readonly { halfScale: number; thickness: number }[];
-      stoneColor?: string;
-    }
-  ) => {
-    if (!clearOfPortals(lx, lz, wx, wz, walk)) return;
-    const levels =
-      opts?.levels ??
-      (tall
-        ? [
-            { halfScale: 1, thickness: 0.42 },
-            { halfScale: 0.78, thickness: 0.38 },
-            { halfScale: 0.55, thickness: 0.36 },
-            { halfScale: 0.38, thickness: 0.32 },
-          ]
-        : [
-            { halfScale: 1, thickness: 0.38 },
-            { halfScale: 0.72, thickness: 0.34 },
-            { halfScale: 0.5, thickness: 0.3 },
-          ]);
-    terraceSpecs.push({
-      key,
-      cx: lx,
-      cz: lz,
-      baseHalfW,
-      baseHalfD,
-      capGrass,
-      levels,
-      stoneColor: opts?.stoneColor ?? STONE,
-    });
-  };
+    const pushTerrace = (
+      key: string,
+      lx: number,
+      lz: number,
+      baseHalfW: number,
+      baseHalfD: number,
+      capGrass: boolean,
+      tall: boolean,
+      opts?: {
+        levels?: readonly { halfScale: number; thickness: number }[];
+        stoneColor?: string;
+      }
+    ) => {
+      if (!clearOfPortals(lx, lz, wx, wz, walk)) return;
+      const levels =
+        opts?.levels ??
+        (tall
+          ? [
+              { halfScale: 1, thickness: 0.42 },
+              { halfScale: 0.78, thickness: 0.38 },
+              { halfScale: 0.55, thickness: 0.36 },
+              { halfScale: 0.38, thickness: 0.32 },
+            ]
+          : [
+              { halfScale: 1, thickness: 0.38 },
+              { halfScale: 0.72, thickness: 0.34 },
+              { halfScale: 0.5, thickness: 0.3 },
+            ]);
+      specs.push({
+        key,
+        cx: lx,
+        cz: lz,
+        baseHalfW,
+        baseHalfD,
+        capGrass,
+        levels,
+        stoneColor: opts?.stoneColor ?? STONE,
+      });
+    };
 
-  /** Asymmetric corners — no longer four identical stacks. */
-  const ro = ringOuter;
-  pushTerrace(
+    /** Asymmetric corners — no longer four identical stacks. */
+    const ro = ringOuter;
+    pushTerrace(
     "corner-ne",
     wx + ro - 0.35,
     wz + ro - 0.35,
@@ -311,6 +486,28 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
     });
   }
 
+    return specs;
+  }, [wx, wz, walk, outer]);
+
+  const mergedTerraceGeoms = useMemo(
+    () => mergeTerraceGeometries(terraceSpecs),
+    [terraceSpecs]
+  );
+
+  const mergedRingLipGeoms = useMemo(
+    () => mergeRingRetainingLipGeometries(wx, wz, walk),
+    [wx, wz, walk]
+  );
+
+  useEffect(() => {
+    return () => {
+      mergedTerraceGeoms.stone?.dispose();
+      mergedTerraceGeoms.grass?.dispose();
+      mergedRingLipGeoms.stone?.dispose();
+      mergedRingLipGeoms.grass?.dispose();
+    };
+  }, [mergedTerraceGeoms, mergedRingLipGeoms]);
+
   const cornerFloors = TURF_TOP_Y + 1.52;
 
   const houseSpecs = useMemo((): PlazaVoxelHouseSpec[] => {
@@ -330,13 +527,32 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
       const k = `${lx.toFixed(2)},${lz.toFixed(2)},${floorY.toFixed(2)}`;
       if (houseKeys.has(k)) return;
       houseKeys.add(k);
-      const wall = hashPick(seed, WALL_PALETTE);
-      const roof = hashPick(seed + "r", ROOF_PALETTE);
+      const roll = hashUnit01(`${seed}kind`);
+      let kind: PlazaVoxelHouseKind;
+      let wall: string;
+      let roof: string;
+      if (roll < 0.34) {
+        kind = "normal";
+        wall = NEUTRAL_WALL;
+        roof = NEUTRAL_ROOF;
+      } else if (roll < 0.72) {
+        kind = "colored";
+        wall = hashPick(seed, WALL_PALETTE);
+        roof = hashPick(seed + "r", ROOF_PALETTE);
+      } else if (roll < 0.86) {
+        kind = "glassWhite";
+        wall = "#eef2f8";
+        roof = "#e8edf5";
+      } else {
+        kind = "glassBlue";
+        wall = "#b8dcfc";
+        roof = "#98ccf8";
+      }
       const h0 = Math.abs(
         seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0)
       );
-      const s = 0.62 + (h0 % 4) * 0.12;
-      const bodyH = 0.72 + (hi % 4) * 0.14;
+      const s = (0.62 + (h0 % 4) * 0.12) * DECOR_HOUSE_SCALE;
+      const bodyH = (0.72 + (hi % 4) * 0.14) * DECOR_HOUSE_SCALE;
       specs.push({
         lx,
         lz,
@@ -346,30 +562,58 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
         bodyW: s,
         bodyD: s * (0.92 + (hi % 3) * 0.04),
         bodyH,
+        kind,
       });
       hi += 1;
     };
 
-    const tMax = Math.ceil(outer + 0.5);
-    const stepN = 2.15;
-    for (let t = -tMax; t <= tMax; t += stepN) {
-      tryHouse(wx + t, wz + (ringOuter - 0.55), TURF_TOP_Y, `N${t}`);
-      tryHouse(wx + t, wz - (ringOuter - 0.55), TURF_TOP_Y, `S${t}`);
-    }
-    const tMaxE = Math.ceil(outer * 0.72);
-    for (let t = -tMaxE; t <= tMaxE; t += 2.75) {
-      tryHouse(wx + (ringOuter - 0.55), wz + t, TURF_TOP_Y, `E${t}`);
-      tryHouse(wx - (ringOuter - 0.55), wz + t, TURF_TOP_Y, `W${t}`);
+    const innerRow = ringInner + 1.15;
+    const rMin = ringInner + 0.62;
+    const rMax = ringOuter - 0.42;
+
+    /** Spread clusters around the ring + radius; 2–3 homes touching-ish per cluster. */
+    const dS = DECOR_HOUSE_SCALE;
+    const ringClusters = 28;
+    for (let c = 0; c < ringClusters; c++) {
+      const t = (c + 0.41) / ringClusters;
+      const angle = t * Math.PI * 2 + 0.22 * Math.sin(c * 1.17);
+      const rJ = rMin + hashUnit01(`rj-${c}`) * (rMax - rMin);
+      const cx = wx + Math.cos(angle) * rJ;
+      const cz = wz + Math.sin(angle) * rJ;
+      const mates = 2 + (Math.floor(hashUnit01(`mates-${c}`) * 2) % 2);
+      const gap = 0.44 * dS;
+      const ux = -Math.sin(angle);
+      const uz = Math.cos(angle);
+      for (let m = 0; m < mates; m++) {
+        const along = (m - (mates - 1) / 2) * gap;
+        const [jx, jz] = jitter2(`rg-${c}`, m);
+        const lx = cx + ux * along + jx * 0.38 * dS;
+        const lz = cz + uz * along + jz * 0.38 * dS;
+        tryHouse(lx, lz, TURF_TOP_Y, `rg-${c}-${m}`);
+      }
     }
 
-    const innerRow = ringInner + 1.15;
-    for (let t = -tMax + 3; t <= tMax - 3; t += 3.05) {
-      tryHouse(wx + t, wz + innerRow, TURF_TOP_Y + 0.28, `N2${t}`);
-      tryHouse(wx + t, wz - innerRow, TURF_TOP_Y + 0.28, `S2${t}`);
-    }
-    for (let t = -tMaxE + 2; t <= tMaxE - 2; t += 3.55) {
-      tryHouse(wx + innerRow, wz + t, TURF_TOP_Y + 0.28, `E2${t}`);
-      tryHouse(wx - innerRow, wz + t, TURF_TOP_Y + 0.28, `W2${t}`);
+    const innerClusters = 10;
+    for (let c = 0; c < innerClusters; c++) {
+      const angle = (c / innerClusters) * Math.PI * 2 + 0.73;
+      const rJ =
+        innerRow + (hashUnit01(`irj-${c}`) - 0.5) * 0.62;
+      const cx = wx + Math.cos(angle) * rJ;
+      const cz = wz + Math.sin(angle) * rJ;
+      const mates = 2;
+      const gap = 0.4 * dS;
+      const ux = -Math.sin(angle);
+      const uz = Math.cos(angle);
+      for (let m = 0; m < mates; m++) {
+        const along = (m - 0.5) * gap;
+        const [jx, jz] = jitter2(`ig-${c}`, m);
+        tryHouse(
+          cx + ux * along + jx * 0.32 * dS,
+          cz + uz * along + jz * 0.32 * dS,
+          TURF_TOP_Y + 0.28,
+          `ig-${c}-${m}`
+        );
+      }
     }
 
     const cornerOffsetsLocal: [string, number, number][] = [
@@ -379,8 +623,24 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
       ["sw", -ringOuter + 0.4, -ringOuter + 0.55],
     ];
     for (const [key, ox, oz] of cornerOffsetsLocal) {
-      tryHouse(wx + ox + 0.55, wz + oz + 0.45, cornerFloors, `CHa${key}`);
-      tryHouse(wx + ox - 0.5, wz + oz - 0.4, cornerFloors, `CHb${key}`);
+      const bx = wx + ox;
+      const bz = wz + oz;
+      const ang = Math.atan2(oz, ox);
+      const ux = -Math.sin(ang);
+      const uz = Math.cos(ang);
+      const [jx, jz] = jitter2(`ch-${key}`, 0);
+      tryHouse(
+        bx + ux * 0.22 * dS + jx * 0.25 * dS,
+        bz + uz * 0.22 * dS + jz * 0.25 * dS,
+        cornerFloors,
+        `CHa-${key}`
+      );
+      tryHouse(
+        bx - ux * 0.38 * dS - jx * 0.2 * dS,
+        bz - uz * 0.38 * dS - jz * 0.2 * dS,
+        cornerFloors,
+        `CHb-${key}`
+      );
     }
 
     return specs;
@@ -388,103 +648,47 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
 
   return (
     <group>
-      {terraceSpecs.map((t) => (
-        <TerraceStack
-          key={t.key}
-          cx={t.cx}
-          cz={t.cz}
-          baseHalfW={t.baseHalfW}
-          baseHalfD={t.baseHalfD}
-          baseY={TURF_TOP_Y}
-          levels={t.levels}
-          stoneColor={t.stoneColor}
-          capGrass={t.capGrass}
-        />
-      ))}
-      <RingRetainingLip wx={wx} wz={wz} walk={walk} />
+      {mergedTerraceGeoms.stone && (
+        <mesh geometry={mergedTerraceGeoms.stone} castShadow receiveShadow>
+          <meshStandardMaterial
+            vertexColors
+            color="#ffffff"
+            roughness={0.28}
+            metalness={0.22}
+          />
+        </mesh>
+      )}
+      {mergedTerraceGeoms.grass && (
+        <mesh geometry={mergedTerraceGeoms.grass} castShadow receiveShadow>
+          <meshStandardMaterial
+            vertexColors
+            color="#ffffff"
+            roughness={0.42}
+            metalness={0.08}
+          />
+        </mesh>
+      )}
+      {mergedRingLipGeoms.stone && (
+        <mesh geometry={mergedRingLipGeoms.stone} castShadow receiveShadow>
+          <meshStandardMaterial
+            vertexColors
+            color="#ffffff"
+            roughness={0.35}
+            metalness={0.18}
+          />
+        </mesh>
+      )}
+      {mergedRingLipGeoms.grass && (
+        <mesh geometry={mergedRingLipGeoms.grass} castShadow receiveShadow>
+          <meshStandardMaterial
+            vertexColors
+            color="#ffffff"
+            roughness={0.4}
+            metalness={0.1}
+          />
+        </mesh>
+      )}
       <PlazaInstancedVoxelHouses houses={houseSpecs} />
-    </group>
-  );
-}
-
-/** Short stepped blocks hugging the walkable border (pure decoration). */
-function RingRetainingLip({
-  wx,
-  wz,
-  walk,
-}: {
-  wx: number;
-  wz: number;
-  walk: number;
-}) {
-  const h = 0.22;
-  const cy = TURF_TOP_Y + h / 2;
-  const span = walk + 0.85;
-  const thick = 0.55;
-  const mat = (
-    <meshStandardMaterial
-      color={STONE_DARK}
-      roughness={0.35}
-      metalness={0.18}
-    />
-  );
-  const grassCap = (
-    <meshStandardMaterial
-      color={GRASS_TRIM_DARK}
-      roughness={0.4}
-      metalness={0.1}
-    />
-  );
-  return (
-    <group>
-      <mesh position={[wx, cy, wz + walk + thick / 2]} castShadow receiveShadow>
-        <boxGeometry args={[span * 2, h, thick]} />
-        {mat}
-      </mesh>
-      <mesh position={[wx, cy, wz - walk - thick / 2]} castShadow receiveShadow>
-        <boxGeometry args={[span * 2, h, thick]} />
-        {mat}
-      </mesh>
-      <mesh position={[wx + walk + thick / 2, cy, wz]} castShadow receiveShadow>
-        <boxGeometry args={[thick, h, span * 2]} />
-        {mat}
-      </mesh>
-      <mesh position={[wx - walk - thick / 2, cy, wz]} castShadow receiveShadow>
-        <boxGeometry args={[thick, h, span * 2]} />
-        {mat}
-      </mesh>
-      <mesh
-        position={[wx, TURF_TOP_Y + h + 0.04, wz + walk + thick / 2]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[span * 2 - 0.3, 0.08, thick - 0.08]} />
-        {grassCap}
-      </mesh>
-      <mesh
-        position={[wx, TURF_TOP_Y + h + 0.04, wz - walk - thick / 2]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[span * 2 - 0.3, 0.08, thick - 0.08]} />
-        {grassCap}
-      </mesh>
-      <mesh
-        position={[wx + walk + thick / 2, TURF_TOP_Y + h + 0.04, wz]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[thick - 0.08, 0.08, span * 2 - 0.3]} />
-        {grassCap}
-      </mesh>
-      <mesh
-        position={[wx - walk - thick / 2, TURF_TOP_Y + h + 0.04, wz]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[thick - 0.08, 0.08, span * 2 - 0.3]} />
-        {grassCap}
-      </mesh>
     </group>
   );
 }

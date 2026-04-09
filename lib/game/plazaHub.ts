@@ -1,9 +1,9 @@
 import type { IslandRect } from "@/lib/game/types";
 
 /** Outer plaza footprint half-extent; includes wide edge ring + plinths. */
-export const PLAZA_OUTER_HALF = 36;
+export const PLAZA_OUTER_HALF = 54;
 /** Flat walkable turf half-extent; ball stays inside this inner square. */
-export const PLAZA_WALKABLE_HALF = 22;
+export const PLAZA_WALKABLE_HALF = 40;
 
 /** Light porcelain / sky-mist tones for the outer ring (Frutiger Aero; not physics). */
 export const PLAZA_HUB_RING_SLAB = "#d4e6f0";

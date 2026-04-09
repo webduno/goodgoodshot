@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useRef, type PointerEvent } from "react";
+import {
+  useCallback,
+  useId,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+} from "react";
 
 import {
   maxClicksForStrengthBarRef,
@@ -37,6 +44,13 @@ export function GuidelinePreviewPowerSlider({
 }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
+  const [powerBarVisible, setPowerBarVisible] = useState(true);
+  const trackId = useId();
+
+  const togglePowerBar = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setPowerBarVisible((v) => !v);
+  }, []);
 
   const maxC = maxClicksForStrengthBarRef(vehicle);
   const value = Math.min(maxC, Math.max(1, Math.round(clicks)));
@@ -106,7 +120,16 @@ export function GuidelinePreviewPowerSlider({
         ...hudFont,
       }}
     >
-      <div
+      <button
+        type="button"
+        onClick={togglePowerBar}
+        aria-expanded={powerBarVisible}
+        aria-controls={trackId}
+        aria-label={
+          powerBarVisible
+            ? "Hide guideline power bar"
+            : "Show guideline power bar"
+        }
         style={{
           fontSize: 8,
           fontWeight: 700,
@@ -119,13 +142,19 @@ export function GuidelinePreviewPowerSlider({
           backgroundColor: "#fff",
           padding: "3px 6px",
           borderRadius: 3,
+          border: "none",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          pointerEvents: "auto",
         }}
       >
         Guide
         <br />
         power
-      </div>
+      </button>
+      {powerBarVisible && (
       <div
+        id={trackId}
         ref={trackRef}
         role="slider"
         aria-valuemin={1}
@@ -185,6 +214,7 @@ export function GuidelinePreviewPowerSlider({
           }}
         />
       </div>
+      )}
     </div>
   );
 }

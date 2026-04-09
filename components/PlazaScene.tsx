@@ -4,6 +4,7 @@ import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
+import { ShopModal } from "@/components/game/cube/modals/ShopModal";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
 import { AimPadHud } from "@/components/game/cube/hud/AimPadHud";
 import { PowerupSlotRow } from "@/components/game/cube/hud/PowerupSlotRow";
@@ -11,6 +12,8 @@ import { GuidelinePreviewPowerSlider } from "@/components/game/cube/hud/Guidelin
 import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
+import { PlazaShopBuilding } from "@/components/game/cube/meshes/PlazaShopBuilding";
+import { PlazaHubRoads } from "@/components/game/cube/meshes/PlazaHubRoads";
 import { PlazaFrutigerAeroDecor } from "@/components/game/cube/meshes/PlazaFrutigerAeroDecor";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
@@ -54,7 +57,6 @@ import {
   AIM_YAW_STEP_RAD,
   CHARGE_HOLD_REPEAT_MS,
   SKY_GRADIENT_CSS,
-  INITIAL_POWERUP_CHARGES,
   PLAZA_FAKE_GOAL_CENTER,
   PLAZA_WAR_PORTAL_BATTLE_COUNT,
 } from "@/lib/game/constants";
@@ -77,9 +79,14 @@ import {
   clampYawDeltaToPadArc,
   hudAimYawToWorldYawRad,
   snapAimAngleRad,
+  snapBlockCenterToGrid,
   wrapYawRad,
 } from "@/lib/game/math";
 import { PLAZA_HUB_ISLANDS, PLAZA_WALKABLE_HALF } from "@/lib/game/plazaHub";
+import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
+import { isNearPlazaShop } from "@/lib/shop/plazaShopConstants";
+import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
+import type { HatId } from "@/lib/shop/playerInventory";
 import { startWarSessionAndRedirectHome } from "@/lib/game/startWarSession";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { type PowerupSlotId, type Vec3 } from "@/lib/game/types";
@@ -96,6 +103,15 @@ import * as THREE from "three";
 
 export default function PlazaScene() {
   const { spendGoldCoin, stats } = usePlayerStats();
+  const {
+    inventory: shopInventory,
+    setStrengthCharges,
+    setNoBounceCharges,
+    setEquippedHatId,
+    addOwnedHat,
+  } = usePlayerShopInventory();
+  const strengthCharges = shopInventory.strengthCharges;
+  const noBounceCharges = shopInventory.noBounceCharges;
   const searchParams = useSearchParams();
   const router = useRouter();
   const vehicleParam = searchParams.get("vehicle");
@@ -104,7 +120,11 @@ export default function PlazaScene() {
     [vehicleParam, stats]
   );
 
-  const spawnCenter = useMemo((): Vec3 => [0, 0, 0], []);
+  const [spawnCenter, setSpawnCenter] = useState<Vec3>(() => [0, 0, 0]);
+  const spawnCenterRef = useRef<Vec3>(spawnCenter);
+  spawnCenterRef.current = spawnCenter;
+  /** Spawn before the current shot (for penalty revert / hit row), matching main `CubeScene`. */
+  const spawnBeforeShotRef = useRef<Vec3>([0, 0, 0]);
   const goalCenter = useMemo(
     (): Vec3 => [
       PLAZA_FAKE_GOAL_CENTER[0],
@@ -135,6 +155,7 @@ export default function PlazaScene() {
   const [guidelineEnabled, setGuidelineEnabled] = useState(true);
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showShopModal, setShowShopModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -213,16 +234,10 @@ export default function PlazaScene() {
 
   const powerupStackRef = useRef(0);
   const noBounceRef = useRef(false);
-  const strengthChargesRef = useRef(INITIAL_POWERUP_CHARGES);
-  const noBounceChargesRef = useRef(INITIAL_POWERUP_CHARGES);
+  const strengthChargesRef = useRef(strengthCharges);
+  const noBounceChargesRef = useRef(noBounceCharges);
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
-  const [strengthCharges, setStrengthCharges] = useState(
-    INITIAL_POWERUP_CHARGES
-  );
-  const [noBounceCharges, setNoBounceCharges] = useState(
-    INITIAL_POWERUP_CHARGES
-  );
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
   const inCooldown = cooldownUntil !== null;
@@ -292,7 +307,7 @@ export default function PlazaScene() {
         return;
       }
     },
-    [pushHudToast, shotInFlight]
+    [pushHudToast, shotInFlight, setStrengthCharges, setNoBounceCharges]
   );
 
   const buyPowerupCharge = useCallback(
@@ -312,7 +327,22 @@ export default function PlazaScene() {
         burstPowerupBuyConfetti("noBounce");
       }
     },
-    [spendGoldCoin, pushHudToast]
+    [spendGoldCoin, pushHudToast, setStrengthCharges, setNoBounceCharges]
+  );
+
+  const buyHatFromShop = useCallback(
+    (id: HatId) => {
+      if (shopInventory.ownedHats.includes(id)) return;
+      const row = HAT_CATALOG.find((h) => h.id === id);
+      if (!spendGoldCoin()) {
+        pushHudToast("Need 1 coin");
+        return;
+      }
+      addOwnedHat(id);
+      playSfx(SFX.coinCollect);
+      pushHudToast(row ? `Bought ${row.displayName}` : "Hat purchased");
+    },
+    [shopInventory.ownedHats, spendGoldCoin, pushHudToast, addOwnedHat]
   );
 
   const onChargeHudUpdate = useCallback(
@@ -335,6 +365,7 @@ export default function PlazaScene() {
   }, []);
 
   const onShootStart = useCallback(() => {
+    spawnBeforeShotRef.current = [...spawnCenterRef.current] as Vec3;
     setShotInFlight(true);
     burstShotGreyConfetti();
     setSessionShots((n) => n + 1);
@@ -358,14 +389,25 @@ export default function PlazaScene() {
   }, []);
 
   const onProjectileEnd = useCallback(
-    (outcome: "hit" | "miss" | "penalty" | "enemy_loss", _landing?: Vec3) => {
+    (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
       setShotInFlight(false);
+      const prev = spawnBeforeShotRef.current;
       if (outcome === "penalty") {
-        pushHudToast("Void death");
+        pushHudToast("Out of bounds");
+        setSpawnCenter(snapBlockCenterToGrid(prev));
+      } else if (outcome === "miss" && landing) {
+        setSpawnCenter(snapBlockCenterToGrid(landing));
+        if (isNearPlazaShop(landing[0], landing[2])) {
+          setShowShopModal(true);
+        }
+      } else if (outcome === "hit" || outcome === "enemy_loss") {
+        setSpawnCenter(
+          snapBlockCenterToGrid([prev[0], prev[1], goalCenter[2]])
+        );
       }
       setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
     },
-    [playerVehicle, pushHudToast]
+    [goalCenter, playerVehicle, pushHudToast]
   );
 
   useEffect(() => {
@@ -411,10 +453,20 @@ export default function PlazaScene() {
   }, [showProfileModal]);
 
   useEffect(() => {
+    if (!showShopModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowShopModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showShopModal]);
+
+  useEffect(() => {
     if (
       shotInFlight ||
       showHelpModal ||
-      showProfileModal
+      showProfileModal ||
+      showShopModal
     ) {
       return;
     }
@@ -467,16 +519,27 @@ export default function PlazaScene() {
         return;
       }
       if (k === "w" || k === "W" || k === "ArrowUp") {
-        setAimPitchOffsetRad((p) =>
-          clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD)
-        );
+        setAimPitchOffsetRad((p) => {
+          const next = clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD);
+          if (guidelineAdjusting && next === p) {
+            const m = maxClicksForStrengthBarRef(playerVehicle);
+            setGuidelinePreviewClicks((c) =>
+              Math.min(m, Math.max(1, c) + 1)
+            );
+          }
+          return next;
+        });
         if (k === "ArrowUp") e.preventDefault();
         return;
       }
       if (k === "s" || k === "S" || k === "ArrowDown") {
-        setAimPitchOffsetRad((p) =>
-          clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD)
-        );
+        setAimPitchOffsetRad((p) => {
+          const next = clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD);
+          if (guidelineAdjusting && next === p) {
+            setGuidelinePreviewClicks((c) => Math.max(1, c - 1));
+          }
+          return next;
+        });
         if (k === "ArrowDown") e.preventDefault();
         return;
       }
@@ -511,6 +574,7 @@ export default function PlazaScene() {
     shotInFlight,
     showHelpModal,
     showProfileModal,
+    showShopModal,
     inCooldown,
     chargeHud,
     activatePowerup,
@@ -564,9 +628,9 @@ export default function PlazaScene() {
     (chargeHud !== null && !shotInFlight) ||
     (inCooldownActive && !shotInFlight && chargeHud === null);
 
-  const roundLocked = showHelpModal || showProfileModal;
+  const roundLocked = showHelpModal || showProfileModal || showShopModal;
 
-  const modalBlocksHud = showHelpModal || showProfileModal;
+  const modalBlocksHud = showHelpModal || showProfileModal || showShopModal;
 
   return (
     <div
@@ -630,15 +694,18 @@ export default function PlazaScene() {
             onEnemyKillReward={onEnemyKillReward}
             goalEnemies={[]}
             hubMode
+            equippedHatId={shopInventory.equippedHatId}
           />
         </TeleportOrbitRig>
         <InitialFieldGround islands={islands} biome="plain" />
+        <PlazaHubRoads />
         <PlazaFrutigerAeroDecor
           wx={islands[0]!.worldX}
           wz={islands[0]!.worldZ}
           walk={islands[0]!.walkableHalfX ?? islands[0]!.halfX}
           outer={islands[0]!.halfX}
         />
+        <PlazaShopBuilding onPointerDownOpen={() => setShowShopModal(true)} />
         <PlazaPortalTorus
           worldX={0}
           worldZ={PLAZA_WALKABLE_HALF}
@@ -1136,6 +1203,18 @@ export default function PlazaScene() {
       <ProfileModal
         open={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+      />
+      <ShopModal
+        open={showShopModal}
+        onClose={() => setShowShopModal(false)}
+        goldCoins={stats.totalGoldCoins}
+        strengthCharges={strengthCharges}
+        noBounceCharges={noBounceCharges}
+        ownedHats={shopInventory.ownedHats}
+        equippedHatId={shopInventory.equippedHatId}
+        onBuyPowerupSlot={buyPowerupCharge}
+        onBuyHat={buyHatFromShop}
+        onEquipHat={setEquippedHatId}
       />
     </div>
   );

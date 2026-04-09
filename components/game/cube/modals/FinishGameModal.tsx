@@ -8,6 +8,7 @@ import {
   hudColors,
   hudFont,
   modalBackdrop,
+  plazaHubButtonStyle,
 } from "@/components/gameHudStyles";
 import { burstFinishBattleConfetti } from "@/lib/game/confetti";
 
@@ -54,7 +55,7 @@ function outcomeSubtitle(
   lossReason: "par" | "enemy"
 ): string {
   if (battleWon) return "At or under coin budget.";
-  if (lossReason === "enemy") return "Messenger tagged your vehicle.";
+  if (lossReason === "enemy") return "An Enemy Virus attacked your vehicle.";
   return "Over the coin shot budget.";
 }
 
@@ -65,6 +66,7 @@ export function FinishGameModal({
   battleWon,
   lossReason = "par",
   onContinue,
+  onGoToPlaza,
   onOpenHelp,
 }: {
   open: boolean;
@@ -73,6 +75,7 @@ export function FinishGameModal({
   battleWon: boolean;
   lossReason?: "par" | "enemy";
   onContinue: () => void;
+  onGoToPlaza?: () => void;
   onOpenHelp?: () => void;
 }) {
   useEffect(() => {
@@ -173,13 +176,13 @@ export function FinishGameModal({
           </button>
         ) : null}
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              paddingBottom: 72,
-            }}
-          >
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                paddingBottom: onGoToPlaza ? 132 : 72,
+              }}
+            >
             <h2
               id="finish-title"
               style={{
@@ -228,6 +231,7 @@ export function FinishGameModal({
               Budget (coins):{" "}
               <strong style={{ color: hudColors.value }}>{par}</strong>
             </div>
+            <hr style={{ margin: "14px 0 32px 0", opacity: 0.2 }} />
             <div style={finishActionsAnchor}>
               <button
                 type="button"
@@ -245,8 +249,46 @@ export function FinishGameModal({
                   ].join(", "),
                 }}
               >
-                Continue
+                Continue Next Battle
               </button>
+              
+            <div
+              style={{
+                width: "100%",
+                overflow: "hidden",
+              }}
+            >
+              <img
+                src="/textures/plaza1.png"
+                alt=""
+                width={520}
+                height={320}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "auto",
+                }}
+              />
+            </div>
+              {onGoToPlaza ? (
+                <button
+                  type="button"
+                  onClick={onGoToPlaza}
+                  style={{
+                    ...plazaHubButtonStyle({
+                      variant: "full",
+                      fullWidth: true,
+                    }),
+                    marginTop: 0,
+                    padding: "14px 20px",
+                    fontSize: 16,
+                    fontWeight: 800,
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  Go to Plaza Town
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

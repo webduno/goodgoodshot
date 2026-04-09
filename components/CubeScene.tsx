@@ -51,6 +51,7 @@ import {
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
 import { resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
+import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
   burstMessengerKillConfetti,
@@ -65,7 +66,6 @@ import {
   AIM_YAW_STEP_RAD,
   CHARGE_HOLD_REPEAT_MS,
   SKY_GRADIENT_CSS,
-  INITIAL_POWERUP_CHARGES,
 } from "@/lib/game/constants";
 import {
   createInitialGameState,
@@ -134,6 +134,15 @@ import * as THREE from "three";
 export default function CubeScene() {
   const { recordHoleCompleted, recordGoldCoin, spendGoldCoin, stats } =
     usePlayerStats();
+  const {
+    inventory: shopInventory,
+    setStrengthCharges,
+    setNoBounceCharges,
+    setNoWindCharges,
+  } = usePlayerShopInventory();
+  const strengthCharges = shopInventory.strengthCharges;
+  const noBounceCharges = shopInventory.noBounceCharges;
+  const noWindCharges = shopInventory.noWindCharges;
   const router = useRouter();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
@@ -156,8 +165,8 @@ export default function CubeScene() {
 
   const islands = game.islands;
   const holePar = useMemo(
-    () => parCoinCountForIslands(islands, INITIAL_LANE_ORIGIN[1]),
-    [islands]
+    () => parCoinCountForIslands(islands, INITIAL_LANE_ORIGIN[1], goalCenter),
+    [islands, goalCenter]
   );
   const gameSpawnRef = useRef<Vec3>(game.spawnCenter);
   gameSpawnRef.current = game.spawnCenter;
@@ -357,6 +366,17 @@ export default function CubeScene() {
     router.push(qs ? `/plaza?${qs}` : "/plaza");
   }, [router, searchParams]);
 
+  const onFinishBattleGoToPlaza = useCallback(() => {
+    setShowFinishModal(false);
+    clearSessionBattleMaps();
+    clearPlaySession();
+    const p = new URLSearchParams();
+    const v = searchParams.get("vehicle");
+    if (v) p.set("vehicle", v);
+    const qs = p.toString();
+    router.push(qs ? `/plaza?${qs}` : "/plaza");
+  }, [router, searchParams]);
+
   const prevWindMagRef = useRef<number | null>(null);
   const maybeWindToast = useCallback(
     (wx: number, wz: number, resetHole: boolean) => {
@@ -435,16 +455,13 @@ export default function CubeScene() {
   const noWindRef = useRef(false);
   const windRef = useRef({ x: 0, z: 0 });
   /** Kept in sync with state each render for reliable guards in handlers. */
-  const strengthChargesRef = useRef(INITIAL_POWERUP_CHARGES);
-  const noBounceChargesRef = useRef(INITIAL_POWERUP_CHARGES);
-  const noWindChargesRef = useRef(INITIAL_POWERUP_CHARGES);
+  const strengthChargesRef = useRef(strengthCharges);
+  const noBounceChargesRef = useRef(noBounceCharges);
+  const noWindChargesRef = useRef(noWindCharges);
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
   const [noWindActive, setNoWindActive] = useState(false);
   const [windHud, setWindHud] = useState({ x: 0, z: 0 });
-  const [strengthCharges, setStrengthCharges] = useState(INITIAL_POWERUP_CHARGES);
-  const [noBounceCharges, setNoBounceCharges] = useState(INITIAL_POWERUP_CHARGES);
-  const [noWindCharges, setNoWindCharges] = useState(INITIAL_POWERUP_CHARGES);
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
   noWindChargesRef.current = noWindCharges;
@@ -591,7 +608,14 @@ export default function CubeScene() {
         burstPowerupBuyConfetti("nowind");
       }
     },
-    [spendGoldCoin, pushHudToast, enemyLossAnimating]
+    [
+      spendGoldCoin,
+      pushHudToast,
+      enemyLossAnimating,
+      setStrengthCharges,
+      setNoBounceCharges,
+      setNoWindCharges,
+    ]
   );
 
   const onChargeHudUpdate = useCallback(
@@ -627,7 +651,7 @@ export default function CubeScene() {
       maybeWindToast(windRef.current.x, windRef.current.z, false);
       if (outcome === "penalty") {
         waterPenaltiesRoundRef.current += 1;
-        pushHudToast("Void death");
+        pushHudToast("Out of bounds");
         dispatch({
           type: "PROJECTILE_END",
           outcome: "penalty",
@@ -639,7 +663,12 @@ export default function CubeScene() {
           const g = gameRef.current;
           const par = parCoinCountForIslands(
             g.islands,
-            INITIAL_LANE_ORIGIN[1]
+            INITIAL_LANE_ORIGIN[1],
+            [
+              g.goalWorldX,
+              INITIAL_LANE_ORIGIN[1],
+              g.goalWorldZ,
+            ] as Vec3
           );
           const shots = sessionShotsRef.current;
           const battleWon =
@@ -837,16 +866,27 @@ export default function CubeScene() {
         return;
       }
       if (k === "w" || k === "W" || k === "ArrowUp") {
-        setAimPitchOffsetRad((p) =>
-          clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD)
-        );
+        setAimPitchOffsetRad((p) => {
+          const next = clampAimPitchOffsetRad(p + AIM_PITCH_STEP_RAD);
+          if (guidelineAdjusting && next === p) {
+            const m = maxClicksForStrengthBarRef(playerVehicle);
+            setGuidelinePreviewClicks((c) =>
+              Math.min(m, Math.max(1, c) + 1)
+            );
+          }
+          return next;
+        });
         if (k === "ArrowUp") e.preventDefault();
         return;
       }
       if (k === "s" || k === "S" || k === "ArrowDown") {
-        setAimPitchOffsetRad((p) =>
-          clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD)
-        );
+        setAimPitchOffsetRad((p) => {
+          const next = clampAimPitchOffsetRad(p - AIM_PITCH_STEP_RAD);
+          if (guidelineAdjusting && next === p) {
+            setGuidelinePreviewClicks((c) => Math.max(1, c - 1));
+          }
+          return next;
+        });
         if (k === "ArrowDown") e.preventDefault();
         return;
       }
@@ -1014,6 +1054,7 @@ export default function CubeScene() {
             onEnemyKillReward={onEnemyKillReward}
             goalEnemies={game.goalEnemies}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
+            equippedHatId={shopInventory.equippedHatId}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
@@ -1571,6 +1612,7 @@ export default function CubeScene() {
         battleWon={finishBattleWon}
         lossReason={finishLossReason}
         onContinue={onFinishBattleContinue}
+        onGoToPlaza={onFinishBattleGoToPlaza}
         onOpenHelp={() => setShowHelpModal(true)}
       />
       <SessionEndModal

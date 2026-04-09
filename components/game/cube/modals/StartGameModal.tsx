@@ -243,7 +243,7 @@ function WelcomePitchBlurb() {
             aria-hidden
             style={{
               flexShrink: 0,
-              fontSize: 34,
+              fontSize: 28,
               lineHeight: 1,
               filter: "drop-shadow(0 2px 2px rgba(0,60,100,0.2))",
             }}
@@ -253,7 +253,7 @@ function WelcomePitchBlurb() {
           <p
             style={{
               margin: 0,
-              fontSize: 17,
+              fontSize: 14,
               fontWeight: 700,
               letterSpacing: "-0.02em",
               lineHeight: 1.35,
@@ -767,7 +767,7 @@ export function StartGameModal({
                   style={{
                     position: "relative",
                     width: "100%",
-                    paddingBottom: 148,
+                    paddingBottom:108,
                   }}
                 >
                   <div
@@ -777,6 +777,27 @@ export function StartGameModal({
                     }}
                   >
                     <WelcomePitchBlurb />
+                    <div
+                      style={{
+                        margin: "10px 0 0",
+                        fontSize: 11,
+                        lineHeight: 1.4,
+                        color: hudColors.muted,
+                        paddingTop: 10,
+                        borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGameConfigOpen(true);
+                          setNewSessionStep(0);
+                        }}
+                        style={{ ...linkButtonStyle, display: "inline", fontSize: 11 }}
+                      >
+                        Change Game Config
+                      </button>
+                    </div>
                   </div>
                   <div style={startModalActionsAnchor}>
                     <p
@@ -847,35 +868,6 @@ export function StartGameModal({
                         </button>
                       ))}
                     </div>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 11,
-                        lineHeight: 1.4,
-                        color: hudColors.muted,
-                        paddingTop: 6,
-                        borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
-                        textAlign: "left",
-                      }}
-                    >
-                      Tap <strong style={{ color: hudColors.value }}>i</strong>{" "}
-                      for full rules and controls.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGameConfigOpen(true);
-                        setNewSessionStep(0);
-                      }}
-                      style={{
-                        ...linkButtonStyle,
-                        display: "block",
-                        width: "100%",
-                        textAlign: "left",
-                      }}
-                    >
-                      Change game config
-                    </button>
                     <button
                       type="button"
                       onClick={goToPlaza}
@@ -1367,6 +1359,16 @@ export function StartGameModal({
                       </button>
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    onClick={goToPlaza}
+                    style={plazaHubButtonStyle({
+                      variant: "full",
+                      fullWidth: true,
+                    })}
+                  >
+                    Go to plaza
+                  </button>
                 </div>
               </div>
             ) : null}

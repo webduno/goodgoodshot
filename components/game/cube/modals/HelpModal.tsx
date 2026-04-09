@@ -25,6 +25,7 @@ import {
 import type { AimControlMode } from "@/lib/game/aimControlSettings";
 import { clearPlaySession } from "@/lib/game/playSession";
 import { clearPlayerStats } from "@/lib/playerStats/storage";
+import { clearPlayerShopInventory } from "@/lib/shop/playerInventory";
 import {
   isVehicleUnlocked,
   PREMIUM_RATATA_VEHICLE_ID,
@@ -86,6 +87,7 @@ export function HelpModal({
     }
     clearPlaySession();
     clearPlayerStats();
+    clearPlayerShopInventory();
     const url = new URL(window.location.href);
     url.searchParams.delete("vehicle");
     window.location.assign(url.toString());

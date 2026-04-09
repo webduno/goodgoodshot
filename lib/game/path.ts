@@ -3,7 +3,6 @@ import {
   LANE_MARKER_COUNT_PER_SIDE,
   LANE_MARKER_SIDE_OFFSET_X,
 } from "./constants";
-import { randomIntInclusive } from "./math";
 import type { Vec3 } from "./types";
 
 /** Stable id for a 1×1×1 grid coin cell (lane bonus pickup). */
@@ -12,28 +11,63 @@ export function coinCellKey(center: Vec3): string {
 }
 
 /**
+ * Deterministic offset in [0 … COIN_MAX_HEIGHT_ABOVE_FLOOR] from hole goal + coin grid cell.
+ * (`game.islands` is re-cloned after each shot; Math.random would reshuffle Y every time.)
+ *
+ * Per-island variation uses raw grid integers: `mix()` quantizes to values divisible by 16,
+ * which left `h % 16` stuck after the goal mixes (every coin at max Y).
+ */
+function coinHeightOffsetAboveFloor(
+  laneY: number,
+  goalCenter: Vec3,
+  gridX: number,
+  gridZ: number
+): number {
+  let h = 2166136261 >>> 0;
+  const mix = (v: number) => {
+    const x = Math.floor(v * 1e6 + 1024) >>> 0;
+    h ^= x;
+    h = Math.imul(h, 16777619) >>> 0;
+  };
+  mix(laneY);
+  mix(goalCenter[0]);
+  mix(goalCenter[2]);
+  h ^= Math.imul(gridX | 0, 374761393) >>> 0;
+  h = Math.imul(h, 16777619) >>> 0;
+  h ^= Math.imul(gridZ | 0, 668265263) >>> 0;
+  h = Math.imul(h, 2246822519) >>> 0;
+  h ^= h >>> 13;
+  const range = COIN_MAX_HEIGHT_ABOVE_FLOOR + 1;
+  return (h >>> 0) % range;
+}
+
+/**
  * One coin per island, snapped to integer block centers on XZ (same convention as `snapBlockCenterToGrid`).
- * Y is randomized from floor (`laneY`) up to `laneY + COIN_MAX_HEIGHT_ABOVE_FLOOR`.
+ * Y is pseudo-random from floor (`laneY`) up to `laneY + COIN_MAX_HEIGHT_ABOVE_FLOOR`, stable for this hole.
  */
 export function coinCentersForIslands(
   islands: readonly { worldX: number; worldZ: number }[],
-  laneY: number
+  laneY: number,
+  goalCenter: Vec3
 ): Vec3[] {
-  return islands.map(
-    (is): Vec3 => [
-      Math.round(is.worldX),
-      laneY + randomIntInclusive(0, COIN_MAX_HEIGHT_ABOVE_FLOOR),
-      Math.round(is.worldZ),
-    ]
-  );
+  return islands.map((is): Vec3 => {
+    const gx = Math.round(is.worldX);
+    const gz = Math.round(is.worldZ);
+    return [
+      gx,
+      laneY + coinHeightOffsetAboveFloor(laneY, goalCenter, gx, gz),
+      gz,
+    ];
+  });
 }
 
 /** Par for the hole: same count as lane bonus coins (one per island). */
 export function parCoinCountForIslands(
   islands: readonly { worldX: number; worldZ: number }[],
-  laneY: number
+  laneY: number,
+  goalCenter: Vec3
 ): number {
-  return coinCentersForIslands(islands, laneY).length;
+  return coinCentersForIslands(islands, laneY, goalCenter).length;
 }
 
 /** Axis-aligned grid steps from lane origin to goal (Z first, then X); includes goal as last point. */

@@ -4,6 +4,7 @@ import {
   goldChipButtonStyle,
   helpModalCard,
   hudColors,
+  hudFont,
   modalBackdrop,
 } from "@/components/gameHudStyles";
 import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
@@ -14,6 +15,49 @@ import type { PowerupSlotId } from "@/lib/game/types";
 import { useCallback, useState, type CSSProperties } from "react";
 
 type ShopTab = "powerups" | "hats" | "vehicles" | "free";
+
+const SHOP_CATEGORY_TABS: { id: ShopTab; label: string }[] = [
+  { id: "powerups", label: "Power-ups" },
+  { id: "hats", label: "Hats" },
+  { id: "vehicles", label: "Vehicles" },
+  { id: "free", label: "Free" },
+];
+
+const shopTabBarStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 4,
+  padding: 4,
+  borderRadius: 14,
+  background: "linear-gradient(180deg, rgba(0, 72, 120, 0.07) 0%, rgba(0, 55, 95, 0.1) 100%)",
+  border: "1px solid rgba(0, 114, 188, 0.14)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
+};
+
+function shopCategoryTabStyle(active: boolean): CSSProperties {
+  return {
+    ...hudFont,
+    flex: 1,
+    minWidth: 72,
+    padding: "0.55rem 0.4rem",
+    fontSize: 11,
+    fontWeight: active ? 800 : 600,
+    letterSpacing: "0.03em",
+    borderRadius: 10,
+    border: active
+      ? "1px solid rgba(0, 114, 188, 0.22)"
+      : "1px solid transparent",
+    color: active ? hudColors.value : hudColors.muted,
+    background: active
+      ? "linear-gradient(180deg, #ffffff 0%, rgba(232, 246, 255, 0.94) 100%)"
+      : "transparent",
+    boxShadow: active
+      ? "0 2px 6px rgba(0, 55, 95, 0.12), inset 0 1px 0 rgba(255,255,255,0.95)"
+      : "none",
+    cursor: "pointer",
+    transition: "color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
+  };
+}
 
 const SHOP_GRID_SLOTS = 9;
 
@@ -144,85 +188,49 @@ export function ShopModal({
           }}
         >
           Shop
-        </h2>
-        <p
+        <span
           style={{
-            margin: "0 0 12px",
+            margin: "0 0 12px 16px",
             fontSize: 12,
             fontWeight: 600,
             color: hudColors.muted,
+            background: "#eeeeee",
+            borderRadius: 10,
+            padding: "4px 8px",
           }}
         >
-          Coins:{" "}
+          {/* single coin emoji */}
+          🪙 Coins:{" "}
           <span style={{ color: hudColors.accent, fontWeight: 800 }}>
             {goldCoins}
           </span>
-          {" · "}
-          Strength charges: {strengthCharges}
-          {" · "}
-          No-bounce: {noBounceCharges}
-        </p>
+        </span>
+        </h2>
 
         <div
+          role="tablist"
+          aria-label="Shop categories"
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
+            ...shopTabBarStyle,
             marginBottom: 12,
           }}
         >
-          <button
-            type="button"
-            onClick={() => setTab("powerups")}
-            style={{
-              ...goldChipButtonStyle(),
-              boxShadow:
-                tab === "powerups"
-                  ? "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(251, 113, 133, 0.85)"
-                  : goldChipButtonStyle().boxShadow,
-            }}
-          >
-            Power-ups
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("hats")}
-            style={{
-              ...goldChipButtonStyle(),
-              boxShadow:
-                tab === "hats"
-                  ? "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(251, 113, 133, 0.85)"
-                  : goldChipButtonStyle().boxShadow,
-            }}
-          >
-            Hats
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("vehicles")}
-            style={{
-              ...goldChipButtonStyle(),
-              boxShadow:
-                tab === "vehicles"
-                  ? "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(251, 113, 133, 0.85)"
-                  : goldChipButtonStyle().boxShadow,
-            }}
-          >
-            Vehicles
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("free")}
-            style={{
-              ...goldChipButtonStyle(),
-              boxShadow:
-                tab === "free"
-                  ? "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(251, 113, 133, 0.85)"
-                  : goldChipButtonStyle().boxShadow,
-            }}
-          >
-            Free
-          </button>
+          {SHOP_CATEGORY_TABS.map(({ id, label }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                id={`shop-tab-${id}`}
+                onClick={() => setTab(id)}
+                style={shopCategoryTabStyle(active)}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {tab === "powerups" && (

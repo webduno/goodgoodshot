@@ -581,7 +581,7 @@ export const helpModalCard: CSSProperties = {
   ...panelBlur,
   maxWidth: 380,
   width: "min(94vw, 380px)",
-  maxHeight: "min(78vh, 480px)",
+  maxHeight: "min(78vh, 520px)",
   overflow: "auto",
   padding: "16px 16px 14px",
   borderRadius: 22,

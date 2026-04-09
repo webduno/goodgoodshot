@@ -84,22 +84,47 @@ const battleLengthButtonCss = `
   }
 `;
 
+/** Frutiger Aero: soft glass, specular bands, asymmetric “bubble” corners (not a plain square). */
 const startModalShell: CSSProperties = {
   ...hudFont,
-  backdropFilter: "blur(14px)",
-  WebkitBackdropFilter: "blur(14px)",
-  maxWidth: 352,
-  width: "min(92vw, 352px)",
-  padding: "20px 18px 18px",
-  borderRadius: 22,
-  border: "1px solid rgba(255,255,255,0.92)",
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.65), 0 22px 56px rgba(0, 55, 100, 0.32), 0 0 0 1px rgba(0, 174, 239, 0.12)",
+  position: "relative",
+  isolation: "isolate",
+  /** Lets `position:absolute` + `transform` sit on the rim without clipping. */
+  overflow: "visible",
+  backdropFilter: "blur(18px) saturate(1.15)",
+  WebkitBackdropFilter: "blur(18px) saturate(1.15)",
+  maxWidth: 364,
+  width: "min(92vw, 364px)",
+  padding: "24px 20px 40px",
+  borderRadius: "38px 30px 42px 34px",
+  border: "1px solid rgba(255,255,255,0.95)",
+  boxShadow: [
+    "inset 0 2px 8px rgba(255,255,255,0.9)",
+    "inset 0 -18px 36px rgba(0, 185, 230, 0.07)",
+    "0 8px 0 rgba(255,255,255,0.35) inset",
+    "0 28px 70px rgba(0, 45, 95, 0.3)",
+    "0 0 0 1px rgba(0, 210, 255, 0.22)",
+  ].join(", "),
   textAlign: "left",
   backgroundImage: [
-    "radial-gradient(ellipse 130% 90% at 50% -15%, rgba(255,255,255,0.98) 0%, transparent 52%)",
-    "linear-gradient(168deg, rgba(255,255,255,0.96) 0%, rgba(215, 244, 255, 0.9) 42%, rgba(170, 228, 255, 0.85) 100%)",
+    "radial-gradient(ellipse 125% 90% at 50% -18%, rgba(255,255,255,0.99) 0%, transparent 55%)",
+    "radial-gradient(ellipse 70% 55% at 92% 8%, rgba(180, 255, 255, 0.45) 0%, transparent 58%)",
+    "radial-gradient(ellipse 55% 45% at 4% 96%, rgba(0, 230, 255, 0.14) 0%, transparent 52%)",
+    "linear-gradient(162deg, rgba(255,255,255,0.97) 0%, rgba(220, 248, 255, 0.93) 40%, rgba(150, 225, 255, 0.88) 100%)",
   ].join(", "),
+};
+
+/** Bottom CTAs: anchor to wrapper bottom, then `translateY(50%)` to straddle the rim. */
+const startModalActionsAnchor: CSSProperties = {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  transform: "translateY(50%)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+  zIndex: 2,
 };
 
 const rulesPanel: CSSProperties = {
@@ -115,12 +140,12 @@ const rulesPanel: CSSProperties = {
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85)",
 };
 
-/** Welcome overview — slightly richer surface + room for segmented rules. */
+/** Welcome overview — short pitch + room for big type / icons. */
 const rulesWelcomePanel: CSSProperties = (() => {
   const { background: _omitBg, ...rulesRest } = rulesPanel;
   return {
     ...rulesRest,
-    padding: "12px 12px 11px",
+    padding: "14px 14px 12px",
     backgroundImage: [
       "radial-gradient(ellipse 95% 80% at 100% 0%, rgba(0, 174, 239, 0.09) 0%, transparent 55%)",
       "radial-gradient(ellipse 70% 55% at 0% 100%, rgba(0, 114, 188, 0.06) 0%, transparent 50%)",
@@ -132,48 +157,6 @@ const rulesWelcomePanel: CSSProperties = (() => {
   };
 })();
 
-const welcomeRuleRow: CSSProperties = {
-  display: "flex",
-  gap: 10,
-  alignItems: "flex-start",
-  marginBottom: 10,
-};
-
-const welcomeRuleBadge: CSSProperties = {
-  flexShrink: 0,
-  width: 22,
-  height: 22,
-  marginTop: 1,
-  borderRadius: 999,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: 11,
-  fontWeight: 800,
-  color: "#ffffff",
-  textShadow: "0 1px 2px rgba(0, 35, 70, 0.45)",
-  backgroundImage:
-    "linear-gradient(155deg, #5ecfff 0%, #00aeef 45%, #0072bc 100%)",
-  border: "1px solid rgba(255,255,255,0.65)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.45), 0 2px 6px rgba(0, 82, 130, 0.22)",
-};
-
-const welcomeRuleTitle: CSSProperties = {
-  fontSize: 11.5,
-  fontWeight: 800,
-  letterSpacing: "0.02em",
-  color: hudColors.value,
-  marginBottom: 3,
-  lineHeight: 1.25,
-};
-
-const welcomeRuleBody: CSSProperties = {
-  fontSize: 12,
-  lineHeight: 1.5,
-  color: hudColors.label,
-  margin: 0,
-};
-
 const statLabel: CSSProperties = {
   color: hudColors.muted,
   fontSize: 9,
@@ -182,6 +165,44 @@ const statLabel: CSSProperties = {
   textTransform: "uppercase",
   marginBottom: 6,
 };
+
+/** Continue-war: glossy inset panel; asymmetric corners; warm rim when progress exists. */
+function continueWarProgressCardStyle(hasSavedProgress: boolean): CSSProperties {
+  return {
+    position: "relative",
+    overflow: "hidden",
+    marginBottom: 18,
+    padding: "16px 14px 14px",
+    borderRadius: "26px 22px 28px 24px",
+    textAlign: "center",
+    ...hudFont,
+    ...(hasSavedProgress
+      ? {
+          backgroundImage: [
+            "radial-gradient(ellipse 100% 75% at 50% 0%, rgba(255, 220, 140, 0.5) 0%, transparent 60%)",
+            "linear-gradient(168deg, rgba(255,255,255,0.98) 0%, rgba(255, 238, 210, 0.78) 50%, rgba(255, 224, 185, 0.62) 100%)",
+          ].join(", "),
+          border: "1px solid rgba(230, 175, 90, 0.5)",
+          boxShadow: [
+            "inset 0 2px 0 rgba(255,255,255,0.95)",
+            "inset 0 -10px 24px rgba(200, 130, 40, 0.08)",
+            "0 8px 22px rgba(140, 90, 30, 0.12)",
+          ].join(", "),
+        }
+      : {
+          backgroundImage: [
+            "radial-gradient(ellipse 95% 70% at 50% 0%, rgba(120, 230, 255, 0.22) 0%, transparent 58%)",
+            "linear-gradient(175deg, rgba(255,255,255,0.96) 0%, rgba(210, 246, 255, 0.82) 100%)",
+          ].join(", "),
+          border: "1px solid rgba(0, 160, 220, 0.22)",
+          boxShadow: [
+            "inset 0 2px 0 rgba(255,255,255,0.92)",
+            "inset 0 -8px 20px rgba(0, 170, 220, 0.06)",
+            "0 6px 18px rgba(0, 82, 130, 0.1)",
+          ].join(", "),
+        }),
+  };
+}
 
 const linkButtonStyle: CSSProperties = {
   ...hudFont,
@@ -199,66 +220,52 @@ const linkButtonStyle: CSSProperties = {
 
 const newSessionIntroSteps = 4;
 
-function WelcomeRulesOverview() {
+/** ~5 words per line — artillery / vehicle battles (Gunbound-style), not golf. */
+function WelcomePitchBlurb() {
+  const lines: { icon: string; text: string }[] = [
+    { icon: "🎯", text: "Aim angle and power, then shoot." },
+    { icon: "⚔️", text: "Win more battles than losses." },
+    { icon: "🚀", text: "Pick war length below to start." },
+  ];
   return (
-    <>
-      <div
-        style={{
-          ...welcomeRuleRow,
-          paddingBottom: 10,
-          marginBottom: 10,
-          borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
-        }}
-      >
-        <span aria-hidden style={welcomeRuleBadge}>
-          1
-        </span>
-        <div style={{ minWidth: 0 }}>
-          <div style={welcomeRuleTitle}>Win the battle</div>
-          <p style={welcomeRuleBody}>
-            Reach the goal at or under{" "}
-            <strong style={{ color: hudColors.value }}>par</strong> — strokes ≤
-            lane coins on the hole.
+    <div>
+      {lines.map((row, i) => (
+        <div
+          key={row.text}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: i < lines.length - 1 ? 14 : 0,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              flexShrink: 0,
+              fontSize: 34,
+              lineHeight: 1,
+              filter: "drop-shadow(0 2px 2px rgba(0,60,100,0.2))",
+            }}
+          >
+            {row.icon}
+          </span>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 17,
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.35,
+              color: hudColors.value,
+              textShadow: "0 1px 0 rgba(255,255,255,0.9)",
+            }}
+          >
+            {row.text}
           </p>
         </div>
-      </div>
-      <div
-        style={{
-          ...welcomeRuleRow,
-          paddingBottom: 10,
-          marginBottom: 10,
-          borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
-        }}
-      >
-        <span aria-hidden style={welcomeRuleBadge}>
-          2
-        </span>
-        <div style={{ minWidth: 0 }}>
-          <div style={welcomeRuleTitle}>Win the war</div>
-          <p style={welcomeRuleBody}>
-            Your{" "}
-            <strong style={{ color: hudColors.value }}>battle wins</strong>{" "}
-            should be at least your{" "}
-            <strong style={{ color: hudColors.value }}>battle losses</strong>{" "}
-            (ties count).
-          </p>
-        </div>
-      </div>
-      <div style={{ ...welcomeRuleRow, marginBottom: 12 }}>
-        <span aria-hidden style={welcomeRuleBadge}>
-          3
-        </span>
-        <div style={{ minWidth: 0 }}>
-          <div style={welcomeRuleTitle}>Start playing</div>
-          <p style={welcomeRuleBody}>
-            Pick a war length below —{" "}
-            <strong style={{ color: hudColors.accent }}>3</strong>,{" "}
-            <strong style={{ color: hudColors.accent }}>5</strong>, or{" "}
-            <strong style={{ color: hudColors.accent }}>9</strong> battles.
-          </p>
-        </div>
-      </div>
-    </>
+      ))}
+    </div>
   );
 }
 
@@ -318,6 +325,7 @@ export function StartGameModal({
   session,
   onContinue,
   onStartSession,
+  onOpenHelp,
 }: {
   open: boolean;
   sessionReady: boolean;
@@ -327,6 +335,8 @@ export function StartGameModal({
     battleCount: SessionBattleCount,
     biomeChoice: SessionBiomeChoice
   ) => void;
+  /** Shown on continue-war; opens in-game help / how to play. */
+  onOpenHelp?: () => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -335,7 +345,6 @@ export function StartGameModal({
   const [newSessionStep, setNewSessionStep] = useState(0);
   /** Optional vehicle / controls / power-ups wizard; default is a short overview only. */
   const [gameConfigOpen, setGameConfigOpen] = useState(false);
-  const [welcomeGameInfoOpen, setWelcomeGameInfoOpen] = useState(false);
   const [biomeChoice, setBiomeChoice] =
     useState<SessionBiomeChoice>("random");
 
@@ -370,7 +379,6 @@ export function StartGameModal({
     if (open) {
       setNewSessionStep(0);
       setGameConfigOpen(false);
-      setWelcomeGameInfoOpen(false);
       setBiomeChoice("random");
     }
   }, [open]);
@@ -408,11 +416,14 @@ export function StartGameModal({
     session !== null && roundsDone < session.targetBattles;
   const hasStartedBattles = roundsDone > 0;
 
-  const title =
-    inProgress && hasStartedBattles ? "Continue war" : "Welcome";
-
   const isFirstVisitWelcome =
     stats.totalShotsLifetime === 0 && stats.lastCompletedGame === null;
+
+  const title = (() => {
+    if (inProgress && hasStartedBattles) return "Continue war";
+    if (inProgress) return "Welcome back";
+    return "Welcome";
+  })();
 
   const showStandardWarPick = !isFirstVisitWelcome || gameConfigOpen;
 
@@ -431,24 +442,120 @@ export function StartGameModal({
       style={modalBackdrop}
     >
       <div style={startModalShell}>
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            borderRadius: "inherit",
+            overflow: "hidden",
+            zIndex: 0,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: "-20%",
+              left: "-14%",
+              width: "58%",
+              height: "44%",
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 40% 40%, rgba(160, 250, 255, 0.52) 0%, transparent 68%)",
+              filter: "blur(36px)",
+              opacity: 0.92,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "-14%",
+              right: "-10%",
+              width: "54%",
+              height: "42%",
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 55% 45%, rgba(0, 215, 255, 0.26) 0%, transparent 72%)",
+              filter: "blur(32px)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "6%",
+              right: "-4%",
+              width: "46%",
+              height: "22%",
+              borderRadius: "50%",
+              background:
+                "linear-gradient(108deg, transparent 0%, rgba(255,255,255,0.62) 48%, transparent 78%)",
+              filter: "blur(10px)",
+              opacity: 0.88,
+            }}
+          />
+        </div>
+        {onOpenHelp ? (
+          <button
+            type="button"
+            aria-label="How to play"
+            onClick={onOpenHelp}
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 12,
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              zIndex: 3,
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transform: "translate(36%, -40%)",
+              background:
+                "radial-gradient(circle at 38% 30%, rgba(255,255,255,0.98) 0%, rgba(140, 235, 255, 0.78) 40%, rgba(0, 175, 225, 0.55) 100%)",
+              border: "1px solid rgba(255,255,255,0.92)",
+              boxShadow:
+                "inset 0 2px 0 rgba(255,255,255,0.75), 0 6px 18px rgba(0, 82, 130, 0.32)",
+              ...hudFont,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                fontStyle: "italic",
+                lineHeight: 1,
+                color: hudColors.value,
+                textShadow: "0 1px 0 rgba(255,255,255,0.85)",
+              }}
+            >
+              i
+            </span>
+          </button>
+        ) : null}
+        <div style={{ position: "relative", zIndex: 1 }}>
         <style dangerouslySetInnerHTML={{ __html: battleLengthButtonCss }} />
         <div
           style={{
             marginBottom: 14,
             paddingBottom: 12,
-            borderBottom: "1px solid rgba(0, 114, 188, 0.12)",
+            borderBottom: "1px solid rgba(0, 150, 200, 0.14)",
           }}
         >
           <h2
             id="start-game-title"
             style={{
               margin: 0,
-              fontSize: 24,
+              fontSize: 25,
               fontWeight: 800,
-              letterSpacing: "-0.02em",
-              lineHeight: 1.15,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.12,
               color: hudColors.value,
-              textShadow: "0 1px 0 rgba(255,255,255,0.9)",
+              textShadow:
+                "0 1px 0 rgba(255,255,255,0.95), 0 0 24px rgba(180, 240, 255, 0.5)",
             }}
           >
             {title}
@@ -456,67 +563,144 @@ export function StartGameModal({
           <div
             aria-hidden
             style={{
-              marginTop: 10,
-              height: 3,
-              width: 48,
-              borderRadius: 999,
+              marginTop: 11,
+              height: 5,
+              width: "min(72%, 220px)",
+              borderRadius: "999px 999px 4px 999px",
               background:
-                "linear-gradient(90deg, #00aeef 0%, #0072bc 55%, rgba(0,180,255,0.35) 100%)",
-              boxShadow: "0 1px 4px rgba(0, 114, 188, 0.35)",
+                "linear-gradient(92deg, #5ce1ff 0%, #00aeef 28%, #0072bc 62%, rgba(120, 230, 255, 0.35) 100%)",
+              boxShadow:
+                "0 2px 8px rgba(0, 160, 220, 0.45), inset 0 1px 0 rgba(255,255,255,0.75)",
             }}
           />
         </div>
 
         {inProgress && session ? (
-          <>
-            <div style={rulesPanel}>
-              Win a battle — hit the goal at or under par (strokes ≤ coins on the
-              hole). The war is a win if your battle wins are at least your
-              battle losses (ties count).
-            </div>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              paddingBottom: 92,
+            }}
+          >
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-                marginBottom: 16,
+                ...continueWarProgressCardStyle(hasStartedBattles),
+                marginBottom: 0,
               }}
             >
               <div
+                aria-hidden
                 style={{
-                  padding: "12px 10px",
-                  textAlign: "center",
-                  ...hudMiniPanel,
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 5,
+                  borderRadius: "26px 22px 0 0",
+                  background:
+                    "linear-gradient(90deg, rgba(120, 240, 255, 0.95) 0%, #00c8ff 35%, #00aeef 70%, rgba(180, 255, 255, 0.4) 100%)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85)",
                 }}
-              >
-                <div style={statLabel}>Battle progress</div>
+              />
+              {hasStartedBattles ? (
                 <div
                   style={{
-                    color: hudColors.value,
+                    position: "absolute",
+                    top: 8,
+                    left: 8,
+                    padding: "3px 8px",
+                    borderRadius: 999,
+                    fontSize: 9,
                     fontWeight: 800,
-                    fontSize: 26,
-                    fontVariantNumeric: "tabular-nums",
-                    lineHeight: 1.1,
-                    letterSpacing: "-0.02em",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: "#6b4810",
+                    background:
+                      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255, 230, 170, 0.95) 100%)",
+                    border: "1px solid rgba(210, 160, 70, 0.5)",
+                    boxShadow:
+                      "inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 6px rgba(160, 100, 30, 0.15)",
+                    transform: "translate(20%, -45%)",
+                    zIndex: 1,
                   }}
                 >
-                  {roundsDone}
-                  <span
-                    style={{
-                      fontWeight: 600,
-                      fontSize: 18,
-                      opacity: 0.75,
-                    }}
-                  >
-                    {" "}
-                    / {session.targetBattles}
-                  </span>
+                  Current Stats
                 </div>
-                <div
+              ) : null}
+              <div
+                style={{
+                  paddingTop: 10,
+                  color: hudColors.value,
+                  fontWeight: 800,
+                  fontSize: 36,
+                  fontVariantNumeric: "tabular-nums",
+                  lineHeight: 1.05,
+                  letterSpacing: "-0.03em",
+                  textShadow:
+                    "0 1px 0 rgba(255,255,255,0.9), 0 0 20px rgba(160, 235, 255, 0.35)",
+                }}
+              >
+                {roundsDone}
+                <span
                   style={{
-                    marginTop: 8,
-                    fontSize: 11,
-                    fontWeight: 600,
+                    fontWeight: 700,
+                    fontSize: 23,
+                    opacity: 0.72,
+                  }}
+                >
+                  {" "}
+                  / {session.targetBattles} Battles
+                </span> 
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "5px 12px",
+                    borderRadius: 999,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    letterSpacing: "0.03em",
+                    color: hudColors.value,
+                    background: hasStartedBattles
+                      ? "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255, 248, 225, 0.92) 100%)"
+                      : "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(220, 244, 255, 0.75) 100%)",
+                    border: hasStartedBattles
+                      ? "1px solid rgba(215, 170, 80, 0.42)"
+                      : "1px solid rgba(0, 150, 200, 0.22)",
+                    boxShadow:
+                      "inset 0 2px 0 rgba(255,255,255,0.95), 0 3px 10px rgba(0, 90, 130, 0.08)",
+                  }}
+                >
+                  {formatSessionScoreHud(session, 0)}
+                </span>
+                <span
+                  aria-hidden
+                  style={{
+                    opacity: 0.35,
+                    fontWeight: 800,
+                    color: hudColors.accent,
+                  }}
+                >
+                  ·
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 800,
                     color: hudColors.label,
                     fontVariantNumeric: "tabular-nums",
                   }}
@@ -524,42 +708,16 @@ export function StartGameModal({
                   <span style={{ color: hudColors.accent }}>
                     {session.battlesWon}
                   </span>
-                  {" won · "}
+                  <span style={{ fontSize: 10, opacity: 0.75, marginLeft: 3 }}>Win(s)</span>
+                  <span style={{ margin: "0 3px", opacity: 0.35 }}>·</span>
                   <span style={{ color: hudColors.muted }}>
                     {session.battlesLost}
                   </span>
-                  {" lost"}
-                </div>
-              </div>
-              <div
-                style={{
-                  padding: "12px 10px",
-                  textAlign: "center",
-                  ...hudMiniPanel,
-                }}
-              >
-                <div style={statLabel}>War score</div>
-                <div
-                  style={{
-                    color: hudColors.value,
-                    fontWeight: 800,
-                    fontSize: 17,
-                    fontVariantNumeric: "tabular-nums",
-                    lineHeight: 1.25,
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {formatSessionScoreHud(session, 0)}
-                </div>
+                  <span style={{ fontSize: 10, opacity: 0.75, marginLeft: 3 }}>Loss(es)</span>
+                </span>
               </div>
             </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
+            <div style={startModalActionsAnchor}>
               <button
                 type="button"
                 onClick={() => {
@@ -569,72 +727,66 @@ export function StartGameModal({
                   );
                   onContinue();
                 }}
-                style={goldPillButtonStyle({ disabled: false, fullWidth: true })}
+                style={{
+                  ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
+                  padding: "15px 20px",
+                  fontSize: 17,
+                  fontWeight: 800,
+                  letterSpacing: "0.04em",
+                  boxShadow: [
+                    "inset 0 1px 0 rgba(255,255,255,0.65)",
+                    "0 4px 0 rgba(0, 60, 100, 0.22)",
+                    "0 14px 28px rgba(0, 82, 130, 0.38)",
+                  ].join(", "),
+                }}
               >
                 Continue
               </button>
               <button
                 type="button"
                 onClick={goToPlaza}
-                style={plazaHubButtonStyle({
-                  variant: "compact",
-                  fullWidth: true,
-                })}
+                style={{
+                  ...plazaHubButtonStyle({
+                    variant: "full",
+                    fullWidth: true,
+                  }),
+                  padding: "12px 18px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
               >
                 Go to plaza
               </button>
             </div>
-          </>
+          </div>
         ) : (
           <>
             {!gameConfigOpen ? (
               isFirstVisitWelcome ? (
-                <>
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    paddingBottom: 148,
+                  }}
+                >
                   <div
                     style={{
                       ...rulesWelcomePanel,
-                      marginBottom: 14,
+                      marginBottom: 0,
                     }}
                   >
-                    <div style={{ ...statLabel, marginBottom: 10 }}>
-                      Play solo
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setWelcomeGameInfoOpen((openInfo) => !openInfo)
-                      }
-                      aria-expanded={welcomeGameInfoOpen}
-                      style={{
-                        ...linkButtonStyle,
-                        display: "block",
-                        width: "100%",
-                        textAlign: "left",
-                        marginBottom: welcomeGameInfoOpen ? 10 : 0,
-                      }}
-                    >
-                      {welcomeGameInfoOpen
-                        ? "Hide game info"
-                        : "How the game works (rules)"}
-                    </button>
-                    {welcomeGameInfoOpen ? (
-                      <div
-                        style={{
-                          marginBottom: 10,
-                          paddingBottom: 4,
-                          borderBottom: "1px solid rgba(0, 114, 188, 0.1)",
-                        }}
-                      >
-                        <WelcomeRulesOverview />
-                      </div>
-                    ) : null}
+                    <WelcomePitchBlurb />
+                  </div>
+                  <div style={startModalActionsAnchor}>
                     <p
                       style={{
-                        margin: "0 0 12px",
+                        margin: 0,
                         fontSize: 12,
                         fontWeight: 600,
                         color: hudColors.label,
                         lineHeight: 1.45,
+                        textAlign: "left",
                       }}
                     >
                       New war — pick length
@@ -644,7 +796,6 @@ export function StartGameModal({
                         display: "flex",
                         flexDirection: "row",
                         gap: 8,
-                        marginBottom: 4,
                       }}
                     >
                       {BATTLE_OPTIONS.map((battleCount) => (
@@ -698,16 +849,17 @@ export function StartGameModal({
                     </div>
                     <p
                       style={{
-                        margin: "10px 0 8px",
+                        margin: 0,
                         fontSize: 11,
-                        lineHeight: 1.45,
+                        lineHeight: 1.4,
                         color: hudColors.muted,
                         paddingTop: 6,
                         borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
+                        textAlign: "left",
                       }}
                     >
-                      Optional: change vehicle or read extra help if you want to
-                      tweak your setup.
+                      Tap <strong style={{ color: hudColors.value }}>i</strong>{" "}
+                      for full rules and controls.
                     </p>
                     <button
                       type="button"
@@ -715,48 +867,53 @@ export function StartGameModal({
                         setGameConfigOpen(true);
                         setNewSessionStep(0);
                       }}
-                      style={{ ...linkButtonStyle, display: "inline" }}
+                      style={{
+                        ...linkButtonStyle,
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                      }}
                     >
                       Change game config
                     </button>
+                    <button
+                      type="button"
+                      onClick={goToPlaza}
+                      style={plazaHubButtonStyle({
+                        variant: "full",
+                        fullWidth: true,
+                      })}
+                    >
+                      Tutorial plaza
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={goToPlaza}
-                    style={plazaHubButtonStyle({
-                      variant: "full",
-                      fullWidth: true,
-                    })}
-                  >
-                    Tutorial plaza
-                  </button>
-                </>
+                </div>
               ) : (
-              <div style={rulesWelcomePanel}>
-                <WelcomeRulesOverview />
-                <p
+              <div style={{ ...rulesWelcomePanel, marginBottom: 14 }}>
+                <WelcomePitchBlurb />
+                <div
                   style={{
-                    margin: "0 0 8px",
+                    margin: "10px 0 0",
                     fontSize: 11,
-                    lineHeight: 1.45,
+                    lineHeight: 1.4,
                     color: hudColors.muted,
-                    paddingTop: 2,
+                    paddingTop: 10,
                     borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
                   }}
                 >
-                  Optional: change vehicle or read extra help if you want to tweak
-                  your setup.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGameConfigOpen(true);
-                    setNewSessionStep(0);
-                  }}
-                  style={{ ...linkButtonStyle, display: "inline" }}
-                >
-                  Change game config
-                </button>
+                  Tap <strong style={{ color: hudColors.value }}>i</strong> for
+                  full rules — or{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGameConfigOpen(true);
+                      setNewSessionStep(0);
+                    }}
+                    style={{ ...linkButtonStyle, display: "inline", fontSize: 11 }}
+                  >
+                    change game config
+                  </button>
+                </div>
               </div>
               )
             ) : (
@@ -1133,79 +1290,89 @@ export function StartGameModal({
             )}
 
             {showStandardWarPick ? (
-              <>
-                <p
-                  style={{
-                    margin: "0 0 12px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: hudColors.label,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  New war — pick length
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    gap: 8,
-                    marginBottom: 4,
-                  }}
-                >
-                  {BATTLE_OPTIONS.map((battleCount) => (
-                    <button
-                      key={battleCount}
-                      type="button"
-                      className="ggsBattleLenBtn"
-                      onClick={() => {
-                        burstVehicleStartConfetti(
-                          selectedVehicle.mainRgb,
-                          selectedVehicle.accentRgb
-                        );
-                        onStartSession(battleCount, biomeChoice);
-                      }}
-                      style={{
-                        ...goldPillButtonStyle({
-                          disabled: false,
-                          fullWidth: true,
-                        }),
-                        flex: 1,
-                        minWidth: 0,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 2,
-                        padding: "10px 6px",
-                      }}
-                    >
-                      <span
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  marginTop: 8,
+                  paddingBottom: 96,
+                }}
+              >
+                <div style={startModalActionsAnchor}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: hudColors.label,
+                      lineHeight: 1.45,
+                      textAlign: "left",
+                    }}
+                  >
+                    New war — pick length
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      gap: 8,
+                    }}
+                  >
+                    {BATTLE_OPTIONS.map((battleCount) => (
+                      <button
+                        key={battleCount}
+                        type="button"
+                        className="ggsBattleLenBtn"
+                        onClick={() => {
+                          burstVehicleStartConfetti(
+                            selectedVehicle.mainRgb,
+                            selectedVehicle.accentRgb
+                          );
+                          onStartSession(battleCount, biomeChoice);
+                        }}
                         style={{
-                          fontSize: 20,
-                          fontWeight: 800,
-                          lineHeight: 1,
+                          ...goldPillButtonStyle({
+                            disabled: false,
+                            fullWidth: true,
+                          }),
+                          flex: 1,
+                          minWidth: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 2,
+                          padding: "10px 6px",
                         }}
                       >
-                        {battleCount}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 700,
-                          opacity: 0.92,
-                          letterSpacing: "0.04em",
-                        }}
-                      >
-                        battles
-                      </span>
-                    </button>
-                  ))}
+                        <span
+                          style={{
+                            fontSize: 20,
+                            fontWeight: 800,
+                            lineHeight: 1,
+                          }}
+                        >
+                          {battleCount}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 700,
+                            opacity: 0.92,
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          battles
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </>
+              </div>
             ) : null}
           </>
         )}
+        </div>
       </div>
     </div>
   );

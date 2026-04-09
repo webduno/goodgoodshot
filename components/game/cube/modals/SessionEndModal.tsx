@@ -12,6 +12,7 @@ import {
   hudFont,
   hudMiniPanel,
   modalBackdrop,
+  plazaHubButtonStyle,
 } from "@/components/gameHudStyles";
 import { PREDETERMINED_VEHICLES } from "@/components/playerVehicleConfig";
 import type { SessionBattleCount } from "@/lib/game/playSession";
@@ -44,8 +45,11 @@ const sessionEndShell: CSSProperties = {
 /** Step 1: brighter frame, subtle stripe, chunky depth — casual game feel. */
 const sessionEndShellGame: CSSProperties = {
   ...sessionEndShell,
-  padding: "22px 18px 20px",
-  borderRadius: 26,
+  position: "relative",
+  isolation: "isolate",
+  overflow: "visible",
+  padding: "24px 20px 40px",
+  borderRadius: "34px 28px 38px 30px",
   border: "3px solid rgba(255,255,255,0.98)",
   boxShadow: [
     "inset 0 3px 0 rgba(255,255,255,0.95)",
@@ -59,6 +63,19 @@ const sessionEndShellGame: CSSProperties = {
     "radial-gradient(ellipse 120% 80% at 50% -20%, rgba(255,255,255,0.99) 0%, transparent 55%)",
     "linear-gradient(168deg, rgba(255,255,255,0.97) 0%, rgba(200, 248, 255, 0.92) 45%, rgba(140, 230, 255, 0.88) 100%)",
   ].join(", "),
+};
+
+/** Anchor primary CTAs to the bottom rim (half in / half out via translateY). */
+const sessionEndActionsAnchor: CSSProperties = {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  transform: "translateY(50%)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+  zIndex: 2,
 };
 
 const rulesPanel: CSSProperties = {
@@ -185,6 +202,8 @@ export function SessionEndModal({
   battlesLost,
   onDone,
   onStartNewSession,
+  onGoToPlaza,
+  onOpenHelp,
 }: {
   open: boolean;
   totalStrokes: number;
@@ -196,6 +215,10 @@ export function SessionEndModal({
   onDone: () => void;
   /** Begin a fresh war with the chosen length; parent should close this modal. */
   onStartNewSession: (battleCount: SessionBattleCount) => void;
+  /** Leave play and open the plaza hub (e.g. after war complete). */
+  onGoToPlaza: () => void;
+  /** Opens in-game help / how to play (same as Menu). */
+  onOpenHelp?: () => void;
 }) {
   const [page, setPage] = useState<1 | 2>(1);
   const [orangeCtaPressed, setOrangeCtaPressed] = useState(false);
@@ -264,221 +287,335 @@ export function SessionEndModal({
           }}
         >
           <div
+            aria-hidden
             style={{
-              marginBottom: 14,
-              paddingBottom: 12,
-              borderBottom: "2px solid rgba(0, 160, 220, 0.18)",
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              borderRadius: "inherit",
+              overflow: "hidden",
+              zIndex: 0,
             }}
           >
-            <p
-              style={{
-                margin: "0 0 8px",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "#0072bc",
-                textShadow: "0 1px 0 rgba(255,255,255,0.9)",
-              }}
-            >
-              ★ War complete
-            </p>
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  fontSize: 40,
-                  lineHeight: 1,
-                  filter: "drop-shadow(0 3px 2px rgba(0,60,100,0.25))",
-                }}
-              >
-                {sessionWon ? "🏆" : "⚔️"}
-              </span>
-              <h2
-                id="war-end-title"
-                style={{
-                  margin: 0,
-                  fontSize: 28,
-                  fontWeight: 700,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.1,
-                  color: hudColors.value,
-                  textShadow: [
-                    "0 2px 0 rgba(255,255,255,0.95)",
-                    "0 3px 0 rgba(0, 80, 120, 0.15)",
-                    "0 8px 18px rgba(0, 120, 180, 0.2)",
-                  ].join(", "),
-                }}
-              >
-                {title}{" "}
-                <span
-                  style={{
-                    fontSize: "0.78em",
-                    fontWeight: 700,
-                    fontVariantNumeric: "tabular-nums",
-                    letterSpacing: "-0.02em",
-                    color: hudColors.label,
-                  }}
-                >
-                  ({battlesWon}/{targetBattles})
-                </span>
-              </h2>
-            </div>
-            <div
-              aria-hidden
-              style={{
-                marginTop: 12,
-                height: 5,
-                width: 72,
-                borderRadius: 999,
+                position: "absolute",
+                top: "-20%",
+                left: "-14%",
+                width: "58%",
+                height: "44%",
+                borderRadius: "50%",
                 background:
-                  "linear-gradient(90deg, #22d3ee 0%, #00aeef 35%, #0072bc 70%, rgba(0,180,255,0.4) 100%)",
-                boxShadow:
-                  "0 2px 6px rgba(0, 114, 188, 0.45), inset 0 1px 0 rgba(255,255,255,0.5)",
+                  "radial-gradient(circle at 40% 40%, rgba(160, 250, 255, 0.52) 0%, transparent 68%)",
+                filter: "blur(36px)",
+                opacity: 0.92,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: "-14%",
+                right: "-10%",
+                width: "54%",
+                height: "42%",
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(circle at 55% 45%, rgba(0, 215, 255, 0.26) 0%, transparent 72%)",
+                filter: "blur(32px)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "6%",
+                right: "-4%",
+                width: "46%",
+                height: "22%",
+                borderRadius: "50%",
+                background:
+                  "linear-gradient(108deg, transparent 0%, rgba(255,255,255,0.62) 48%, transparent 78%)",
+                filter: "blur(10px)",
+                opacity: 0.88,
               }}
             />
           </div>
-
-          <div style={rulesPanelGame}>{outcomeHint}</div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 10,
-              marginBottom: 12,
-            }}
-          >
-            <div style={statPanelGame}>
-              <div style={statLabel}>⚔️ Battles</div>
-              <div
-                style={{
-                  color: hudColors.value,
-                  fontWeight: 800,
-                  fontSize: 26,
-                  fontVariantNumeric: "tabular-nums",
-                  lineHeight: 1.1,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {targetBattles}
-                <span
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 14,
-                    opacity: 0.75,
-                  }}
-                >
-                  {" "}
-                  played
-                </span>
-              </div>
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: hudColors.label,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                <span style={{ color: hudColors.accent }}>{battlesWon}</span>
-                {" won · "}
-                <span style={{ color: hudColors.muted }}>{battlesLost}</span>
-                {" lost"}
-              </div>
-            </div>
-            <div style={statPanelGame}>
-              <div style={statLabel}>🎯 Total strokes</div>
-              <div
-                style={{
-                  color: hudColors.value,
-                  fontWeight: 800,
-                  fontSize: 26,
-                  fontVariantNumeric: "tabular-nums",
-                  lineHeight: 1.1,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {totalStrokes}
-              </div>
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: hudColors.label,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                Spread{" "}
-                <strong style={{ color: hudColors.value }}>{spreadStr}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {onOpenHelp ? (
             <button
               type="button"
-              onClick={() => setPage(2)}
+              aria-label="How to play"
+              onClick={onOpenHelp}
               style={{
-                ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
-                borderRadius: 16,
-                padding: "10px 16px",
-                fontSize: 13,
-                fontWeight: 800,
-                letterSpacing: "0.02em",
-                border: "2px solid rgba(255,255,255,0.95)",
-                boxShadow: [
-                  "inset 0 2px 6px rgba(255,255,255,0.45)",
-                  "0 4px 0 rgba(0, 70, 120, 0.35)",
-                  "0 10px 20px rgba(0, 90, 140, 0.28)",
-                ].join(", "),
+                position: "absolute",
+                top: 8,
+                right: 12,
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                zIndex: 3,
+                cursor: "pointer",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transform: "translate(36%, -40%)",
+                background:
+                  "radial-gradient(circle at 38% 30%, rgba(255,255,255,0.98) 0%, rgba(140, 235, 255, 0.78) 40%, rgba(0, 175, 225, 0.55) 100%)",
+                border: "1px solid rgba(255,255,255,0.92)",
+                boxShadow:
+                  "inset 0 2px 0 rgba(255,255,255,0.75), 0 6px 18px rgba(0, 82, 130, 0.32)",
+                ...hudFont,
               }}
             >
-              Career & stats
-            </button>
-            <button
-              type="button"
-              onClick={() => onStartNewSession(3)}
-              style={orangeCtaButtonStyle(orangeCtaPressed)}
-              onMouseDown={() => setOrangeCtaPressed(true)}
-              onMouseUp={() => setOrangeCtaPressed(false)}
-              onMouseLeave={() => setOrangeCtaPressed(false)}
-              onTouchStart={() => setOrangeCtaPressed(true)}
-              onTouchEnd={() => setOrangeCtaPressed(false)}
-            >
-              <span style={orangeCtaShimmer} aria-hidden />
               <span
                 style={{
-                  position: "relative",
-                  zIndex: 1,
+                  fontSize: 22,
+                  fontWeight: 800,
+                  fontStyle: "italic",
+                  lineHeight: 1,
+                  color: hudColors.value,
+                  textShadow: "0 1px 0 rgba(255,255,255,0.85)",
+                }}
+              >
+                i
+              </span>
+            </button>
+          ) : null}
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div
+              style={{
+                marginBottom: 14,
+                paddingBottom: 12,
+                borderBottom: "2px solid rgba(0, 160, 220, 0.18)",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "#0072bc",
+                  textShadow: "0 1px 0 rgba(255,255,255,0.9)",
+                }}
+              >
+                ★ War complete
+              </p>
+              <div
+                style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
+                  gap: 12,
+                  flexWrap: "wrap",
                 }}
               >
                 <span
                   aria-hidden
                   style={{
-                    fontSize: 20,
+                    fontSize: 40,
                     lineHeight: 1,
-                    filter: "drop-shadow(0 3px 2px rgba(0,0,0,0.45))",
+                    filter: "drop-shadow(0 3px 2px rgba(0,60,100,0.25))",
                   }}
                 >
-                  ⚡
+                  {sessionWon ? "🏆" : "⚔️"}
                 </span>
-                <span>Start a new 3-battle war</span>
-              </span>
-            </button>
+                <h2
+                  id="war-end-title"
+                  style={{
+                    margin: 0,
+                    fontSize: 28,
+                    fontWeight: 700,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1.1,
+                    color: hudColors.value,
+                    textShadow: [
+                      "0 2px 0 rgba(255,255,255,0.95)",
+                      "0 3px 0 rgba(0, 80, 120, 0.15)",
+                      "0 8px 18px rgba(0, 120, 180, 0.2)",
+                    ].join(", "),
+                  }}
+                >
+                  {title}{" "}
+                  <span
+                    style={{
+                      fontSize: "0.78em",
+                      fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
+                      letterSpacing: "-0.02em",
+                      color: hudColors.label,
+                    }}
+                  >
+                    ({battlesWon}/{targetBattles})
+                  </span>
+                </h2>
+              </div>
+              <div
+                aria-hidden
+                style={{
+                  marginTop: 12,
+                  height: 5,
+                  width: 72,
+                  borderRadius: 999,
+                  background:
+                    "linear-gradient(90deg, #22d3ee 0%, #00aeef 35%, #0072bc 70%, rgba(0,180,255,0.4) 100%)",
+                  boxShadow:
+                    "0 2px 6px rgba(0, 114, 188, 0.45), inset 0 1px 0 rgba(255,255,255,0.5)",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                paddingBottom: 132,
+              }}
+            >
+              <div style={rulesPanelGame}>{outcomeHint}</div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  marginBottom: 0,
+                }}
+              >
+                <div style={statPanelGame}>
+                  <div style={statLabel}>⚔️ Battles</div>
+                  <div
+                    style={{
+                      color: hudColors.value,
+                      fontWeight: 800,
+                      fontSize: 26,
+                      fontVariantNumeric: "tabular-nums",
+                      lineHeight: 1.1,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {targetBattles}
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        opacity: 0.75,
+                      }}
+                    >
+                      {" "}
+                      played
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: hudColors.label,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    <span style={{ color: hudColors.accent }}>{battlesWon}</span>
+                    {" won · "}
+                    <span style={{ color: hudColors.muted }}>{battlesLost}</span>
+                    {" lost"}
+                  </div>
+                </div>
+                <div style={statPanelGame}>
+                  <div style={statLabel}>🎯 Total strokes</div>
+                  <div
+                    style={{
+                      color: hudColors.value,
+                      fontWeight: 800,
+                      fontSize: 26,
+                      fontVariantNumeric: "tabular-nums",
+                      lineHeight: 1.1,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {totalStrokes}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: hudColors.label,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    Spread{" "}
+                    <strong style={{ color: hudColors.value }}>{spreadStr}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={sessionEndActionsAnchor}>
+                <button
+                  type="button"
+                  onClick={() => setPage(2)}
+                  style={{
+                    ...goldPillButtonStyle({ disabled: false, fullWidth: true }),
+                    borderRadius: 16,
+                    padding: "10px 16px",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    letterSpacing: "0.02em",
+                    border: "2px solid rgba(255,255,255,0.95)",
+                    boxShadow: [
+                      "inset 0 2px 6px rgba(255,255,255,0.45)",
+                      "0 4px 0 rgba(0, 70, 120, 0.35)",
+                      "0 10px 20px rgba(0, 90, 140, 0.28)",
+                    ].join(", "),
+                  }}
+                >
+                  Career & stats
+                </button>
+                <button
+                  type="button"
+                  onClick={onGoToPlaza}
+                  style={plazaHubButtonStyle({
+                    variant: "compact",
+                    fullWidth: true,
+                  })}
+                >
+                  Go to plaza
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onStartNewSession(3)}
+                  style={orangeCtaButtonStyle(orangeCtaPressed)}
+                  onMouseDown={() => setOrangeCtaPressed(true)}
+                  onMouseUp={() => setOrangeCtaPressed(false)}
+                  onMouseLeave={() => setOrangeCtaPressed(false)}
+                  onTouchStart={() => setOrangeCtaPressed(true)}
+                  onTouchEnd={() => setOrangeCtaPressed(false)}
+                >
+                  <span style={orangeCtaShimmer} aria-hidden />
+                  <span
+                    style={{
+                      position: "relative",
+                      zIndex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        fontSize: 20,
+                        lineHeight: 1,
+                        filter: "drop-shadow(0 3px 2px rgba(0,0,0,0.45))",
+                      }}
+                    >
+                      ⚡
+                    </span>
+                    <span>Start a new 3-battle war</span>
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ) : (

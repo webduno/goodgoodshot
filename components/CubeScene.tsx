@@ -246,6 +246,7 @@ export default function CubeScene() {
     "par"
   );
   const [showStartGameModal, setShowStartGameModal] = useState(true);
+  const [enemyLossAnimating, setEnemyLossAnimating] = useState(false);
   useLayoutEffect(() => {
     if (!sessionReady) return;
     try {
@@ -338,6 +339,17 @@ export default function CubeScene() {
 
   const goToPlazaFromMenu = useCallback(() => {
     setShowHelpModal(false);
+    const p = new URLSearchParams();
+    const v = searchParams.get("vehicle");
+    if (v) p.set("vehicle", v);
+    const qs = p.toString();
+    router.push(qs ? `/plaza?${qs}` : "/plaza");
+  }, [router, searchParams]);
+
+  const goToPlazaAfterSessionEnd = useCallback(() => {
+    setShowSessionEndModal(false);
+    clearSessionBattleMaps();
+    clearPlaySession();
     const p = new URLSearchParams();
     const v = searchParams.get("vehicle");
     if (v) p.set("vehicle", v);
@@ -511,7 +523,7 @@ export default function CubeScene() {
 
   const activatePowerup = useCallback(
     (slotId: PowerupSlotId) => {
-      if (shotInFlight || showFinishModal) return;
+      if (shotInFlight || showFinishModal || enemyLossAnimating) return;
 
       if (slotId === "strength") {
         if (strengthChargesRef.current <= 0) return;
@@ -551,7 +563,7 @@ export default function CubeScene() {
         return;
       }
     },
-    [pushHudToast, shotInFlight, showFinishModal]
+    [pushHudToast, shotInFlight, showFinishModal, enemyLossAnimating]
   );
 
   const buyPowerupCharge = useCallback(
@@ -563,6 +575,7 @@ export default function CubeScene() {
       ) {
         return;
       }
+      if (enemyLossAnimating) return;
       if (!spendGoldCoin()) {
         pushHudToast("Need 1 coin");
         return;
@@ -578,7 +591,7 @@ export default function CubeScene() {
         burstPowerupBuyConfetti("nowind");
       }
     },
-    [spendGoldCoin, pushHudToast]
+    [spendGoldCoin, pushHudToast, enemyLossAnimating]
   );
 
   const onChargeHudUpdate = useCallback(
@@ -762,7 +775,8 @@ export default function CubeScene() {
       showStartGameModal ||
       showSessionEndModal ||
       showHelpModal ||
-      showProfileModal
+      showProfileModal ||
+      enemyLossAnimating
     ) {
       return;
     }
@@ -876,6 +890,7 @@ export default function CubeScene() {
     guidelineAdjusting,
     playerVehicle,
     clearGuidelineSpacePowerRepeat,
+    enemyLossAnimating,
   ]);
 
   useEffect(() => {
@@ -913,7 +928,8 @@ export default function CubeScene() {
     };
   }, [clearGuidelineSpacePowerRepeat]);
 
-  const powerupMenuLocked = chargeHud !== null || shotInFlight;
+  const powerupMenuLocked =
+    chargeHud !== null || shotInFlight || enemyLossAnimating;
   const powerupMenuOpen = showPowerupMenu && !powerupMenuLocked;
 
   const remainingCooldownMs =
@@ -957,7 +973,10 @@ export default function CubeScene() {
             aimPitchOffsetRad={aimPitchOffsetRad}
             cooldownUntil={cooldownUntil}
             roundLocked={
-              showFinishModal || showStartGameModal || showSessionEndModal
+              showFinishModal ||
+              showStartGameModal ||
+              showSessionEndModal ||
+              enemyLossAnimating
             }
             shotInFlight={shotInFlight}
             vehicle={playerVehicle}
@@ -994,6 +1013,7 @@ export default function CubeScene() {
             ballFollowStateRef={ballFollowStateRef}
             onEnemyKillReward={onEnemyKillReward}
             goalEnemies={game.goalEnemies}
+            onEnemyLossAnimatingChange={setEnemyLossAnimating}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}
@@ -1024,7 +1044,10 @@ export default function CubeScene() {
           noBounceActive={noBounceActive}
           noWindActive={noWindActive}
           vehicle={playerVehicle}
-          onScoreClick={() => setShowSessionStatsModal(true)}
+          onScoreClick={() => {
+            if (enemyLossAnimating) return;
+            setShowSessionStatsModal(true);
+          }}
           rendererStatsRef={rendererStatsRef}
         />
       )}
@@ -1045,7 +1068,9 @@ export default function CubeScene() {
             <button
               type="button"
               aria-label="Open menu"
+              disabled={enemyLossAnimating}
               onClick={() => {
+                if (enemyLossAnimating) return;
                 setShowProfileModal(false);
                 setShowHelpModal(true);
               }}
@@ -1068,7 +1093,11 @@ export default function CubeScene() {
               transform: "translateZ(0)",
             }}
           >
-            <div style={{ pointerEvents: "auto" }}>
+            <div
+              style={{
+                pointerEvents: enemyLossAnimating ? "none" : "auto",
+              }}
+            >
               <MinimapFlyoutHud
                 islands={islands}
                 mapModalOpen={showCourseMapModal}
@@ -1234,7 +1263,7 @@ export default function CubeScene() {
             {chargeHud === null &&
               (aimControlMode === "pad" ? (
                 <AimPadHud
-                  disabled={shotInFlight}
+                  disabled={shotInFlight || enemyLossAnimating}
                   aimYawRad={aimYawRad}
                   aimPitchOffsetRad={aimPitchOffsetRad}
                   onAimChange={({ yawRad, pitchOffsetRad }) => {
@@ -1252,7 +1281,7 @@ export default function CubeScene() {
                 />
               ) : (
                 <AimHud
-                  disabled={shotInFlight}
+                  disabled={shotInFlight || enemyLossAnimating}
                   onPitchMaxUp={() => setAimPitchOffsetRad(AIM_PITCH_MAX_RAD)}
                   onPitchUp={() =>
                     setAimPitchOffsetRad((p) =>
@@ -1358,14 +1387,16 @@ export default function CubeScene() {
                       showFinishModal ||
                       showStartGameModal ||
                       showSessionEndModal ||
-                      inCooldown
+                      inCooldown ||
+                      enemyLossAnimating
                     }
                     style={hudRoundFireButtonStyle(
                       shotInFlight ||
                         showFinishModal ||
                         showStartGameModal ||
                         showSessionEndModal ||
-                        inCooldown
+                        inCooldown ||
+                        enemyLossAnimating
                         ? "disabled"
                         : "guidelineReady"
                     )}
@@ -1392,7 +1423,8 @@ export default function CubeScene() {
                       showFinishModal ||
                       showStartGameModal ||
                       showSessionEndModal ||
-                      inCooldown;
+                      inCooldown ||
+                      enemyLossAnimating;
                     if (fireDisabled) return;
                     if (e.pointerType === "mouse" && e.button !== 0) return;
                     if (e.currentTarget instanceof HTMLElement) {
@@ -1421,14 +1453,16 @@ export default function CubeScene() {
                     showFinishModal ||
                     showStartGameModal ||
                     showSessionEndModal ||
-                    inCooldown
+                    inCooldown ||
+                    enemyLossAnimating
                   }
                   style={hudRoundFireButtonStyle(
                     shotInFlight ||
                       showFinishModal ||
                       showStartGameModal ||
                       showSessionEndModal ||
-                      inCooldown
+                      inCooldown ||
+                      enemyLossAnimating
                       ? "disabled"
                       : chargeHud !== null
                         ? "charging"
@@ -1528,6 +1562,7 @@ export default function CubeScene() {
         session={playSession}
         onContinue={onContinueSession}
         onStartSession={onStartNewSession}
+        onOpenHelp={() => setShowHelpModal(true)}
       />
       <FinishGameModal
         open={showFinishModal}
@@ -1536,6 +1571,7 @@ export default function CubeScene() {
         battleWon={finishBattleWon}
         lossReason={finishLossReason}
         onContinue={onFinishBattleContinue}
+        onOpenHelp={() => setShowHelpModal(true)}
       />
       <SessionEndModal
         open={showSessionEndModal}
@@ -1550,6 +1586,8 @@ export default function CubeScene() {
           window.location.reload();
         }}
         onStartNewSession={onStartNewWarAfterSessionEnd}
+        onGoToPlaza={goToPlazaAfterSessionEnd}
+        onOpenHelp={() => setShowHelpModal(true)}
       />
       <HelpModal
         open={showHelpModal}

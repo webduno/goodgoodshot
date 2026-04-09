@@ -131,6 +131,9 @@ function goalEnemySpawnOffsetXZ(
 /** Local Y above spawn block center: clears default hull top (~0.5) and typical barrel. */
 const VEHICLE_POWERUP_LABEL_Y = 0.92;
 
+const ENEMY_LOSS_SINK_DURATION_SEC = 2;
+const ENEMY_LOSS_SINK_BLOCKS = 2;
+
 /**
  * Drei `Html` defaults to `zIndexRange` [16777271, 0], so labels paint above fixed UI (e.g. modals at
  * z-index 50). Keep world-space HTML strictly below overlays (`modalBackdrop` / toasts use 50).
@@ -305,6 +308,7 @@ export function SceneContent({
   goalEnemies,
   /** Hub / town: no tee, goal block, lane coins, or messengers — only vehicle + ball on islands. */
   hubMode = false,
+  onEnemyLossAnimatingChange,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -366,6 +370,8 @@ export function SceneContent({
   ballFollowStateRef: BallFollowStateRef;
   /** +3 gold + confetti when the ball hits the goal messenger. */
   onEnemyKillReward: () => void;
+  /** While the enemy-touch sink plays, parent should lock HUD / keyboard aim. */
+  onEnemyLossAnimatingChange?: (active: boolean) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
@@ -378,6 +384,15 @@ export function SceneContent({
   const chargeHoldRepeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   /** Counts simultaneous press sources (pointer + Space) so hold repeat stops only when all release. */
   const fireHeldPressCountRef = useRef(0);
+
+  const enemyLossSinkGroupRef = useRef<THREE.Group>(null);
+  const enemyLossSinkActiveRef = useRef(false);
+  const enemyLossSinkProgressRef = useRef(0);
+  const enemyLossEndDispatchedRef = useRef(false);
+  const onProjectileEndRef = useRef(onProjectileEnd);
+  onProjectileEndRef.current = onProjectileEnd;
+  const onEnemyLossAnimatingChangeRef = useRef(onEnemyLossAnimatingChange);
+  onEnemyLossAnimatingChangeRef.current = onEnemyLossAnimatingChange;
 
   const [enemyAliveMask, setEnemyAliveMask] = useState<boolean[]>(() =>
     Array.from({ length: goalEnemies.length }, () => true)
@@ -413,16 +428,6 @@ export function SceneContent({
     },
     [onEnemyKillReward]
   );
-
-  const onEnemyReachedVehicle = useCallback(() => {
-    const p = projectileRef.current;
-    if (p) {
-      projectileRef.current = null;
-      const mesh = meshRef.current;
-      if (mesh) mesh.visible = false;
-    }
-    onProjectileEnd("enemy_loss");
-  }, [onProjectileEnd]);
 
   useEffect(() => {
     return () => {
@@ -599,6 +604,41 @@ export function SceneContent({
     }
   }, []);
 
+  const cancelActiveChargeWindow = useCallback(() => {
+    if (chargeTimerRef.current) {
+      clearTimeout(chargeTimerRef.current);
+      chargeTimerRef.current = null;
+    }
+    if (chargeTickRef.current) {
+      clearInterval(chargeTickRef.current);
+      chargeTickRef.current = null;
+    }
+    if (chargeHoldRepeatRef.current) {
+      clearInterval(chargeHoldRepeatRef.current);
+      chargeHoldRepeatRef.current = null;
+    }
+    chargingRef.current = false;
+    fireHeldPressCountRef.current = 0;
+    onChargeHudUpdate(null);
+  }, [onChargeHudUpdate]);
+
+  const onEnemyReachedVehicle = useCallback(() => {
+    cancelActiveChargeWindow();
+    const p = projectileRef.current;
+    if (p) {
+      projectileRef.current = null;
+      const mesh = meshRef.current;
+      if (mesh) mesh.visible = false;
+    }
+    enemyLossSinkProgressRef.current = 0;
+    enemyLossEndDispatchedRef.current = false;
+    enemyLossSinkActiveRef.current = true;
+    if (enemyLossSinkGroupRef.current) {
+      enemyLossSinkGroupRef.current.position.y = 0;
+    }
+    onEnemyLossAnimatingChangeRef.current?.(true);
+  }, [cancelActiveChargeWindow]);
+
   const yellowLaneMarkers = useMemo(
     () =>
       hubMode
@@ -615,7 +655,7 @@ export function SceneContent({
 
   void coinRenderTick;
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const mesh = meshRef.current;
     const p = projectileRef.current;
     const st = ballFollowStateRef.current;
@@ -624,6 +664,21 @@ export function SceneContent({
       st.valid = true;
     } else {
       st.valid = false;
+    }
+
+    if (enemyLossSinkActiveRef.current) {
+      enemyLossSinkProgressRef.current += delta / ENEMY_LOSS_SINK_DURATION_SEC;
+      const rawT = Math.min(1, enemyLossSinkProgressRef.current);
+      const easeT = rawT * rawT * (3 - 2 * rawT);
+      const y = -ENEMY_LOSS_SINK_BLOCKS * BLOCK_SIZE * easeT;
+      const g = enemyLossSinkGroupRef.current;
+      if (g) g.position.y = y;
+      if (rawT >= 1 && !enemyLossEndDispatchedRef.current) {
+        enemyLossEndDispatchedRef.current = true;
+        enemyLossSinkActiveRef.current = false;
+        onProjectileEndRef.current("enemy_loss");
+        onEnemyLossAnimatingChangeRef.current?.(false);
+      }
     }
   });
 
@@ -767,6 +822,7 @@ export function SceneContent({
         </>
       )}
       <SpawnVisualGroup>
+        <group ref={enemyLossSinkGroupRef}>
         <group rotation={[0, bodyYawRad, 0]}>
           {vehicle.meshObjPath != null && vehicle.meshObjPath.length > 0 ? (
             <Suspense
@@ -831,6 +887,7 @@ export function SceneContent({
           }
           color={accentColor}
         />
+        </group>
       </SpawnVisualGroup>
       {!hubMode && <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />}
       {!hubMode &&

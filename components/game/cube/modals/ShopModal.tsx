@@ -118,6 +118,7 @@ export function ShopModal({
   goldCoins,
   strengthCharges,
   noBounceCharges,
+  noWindCharges,
   ownedHats,
   equippedHatId,
   onBuyPowerupSlot,
@@ -135,9 +136,10 @@ export function ShopModal({
   goldCoins: number;
   strengthCharges: number;
   noBounceCharges: number;
+  noWindCharges: number;
   ownedHats: readonly HatId[];
   equippedHatId: HatId | null;
-  onBuyPowerupSlot: (slotId: Extract<PowerupSlotId, "strength" | "noBounce">) => void;
+  onBuyPowerupSlot: (slotId: Extract<PowerupSlotId, "strength" | "noBounce" | "nowind">) => void;
   onBuyHat: (id: HatId) => void;
   onEquipHat: (id: HatId | null) => void;
   ownedVehicleIds: readonly string[];
@@ -206,6 +208,20 @@ export function ShopModal({
           </span>
         </span>
         </h2>
+        <p
+          style={{
+            margin: "0 0 12px",
+            fontSize: 12,
+            fontWeight: 600,
+            color: hudColors.muted,
+          }}
+        >
+          Strength charges: {strengthCharges}
+          {" · "}
+          No-bounce: {noBounceCharges}
+          {" · "}
+          No-wind: {noWindCharges}
+        </p>
 
         <div
           role="tablist"
@@ -309,8 +325,45 @@ export function ShopModal({
                 1 coin
               </button>
             </li>
+            <li
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
+                justifyContent: "space-between",
+                gap: 8,
+                minHeight: 96,
+                padding: "8px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(0, 55, 95, 0.18)",
+                background: "rgba(255,255,255,0.55)",
+                boxSizing: "border-box",
+              }}
+            >
+              <span style={shopItemEmojiStyle} aria-hidden>
+                💨
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#0e7490",
+                  lineHeight: 1.25,
+                  textAlign: "center",
+                }}
+              >
+                No wind (+1)
+              </span>
+              <button
+                type="button"
+                onClick={() => onBuyPowerupSlot("nowind")}
+                style={{ ...goldChipButtonStyle(), width: "100%", marginTop: "auto" }}
+              >
+                1 coin
+              </button>
+            </li>
             {Array.from(
-              { length: SHOP_GRID_SLOTS - 2 },
+              { length: SHOP_GRID_SLOTS - 3 },
               (_, i) => (
                 <li
                   key={`powerup-locked-${i}`}

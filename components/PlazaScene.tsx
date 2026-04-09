@@ -110,6 +110,7 @@ export default function PlazaScene() {
     inventory: shopInventory,
     setStrengthCharges,
     setNoBounceCharges,
+    setNoWindCharges,
     setEquippedHatId,
     addOwnedHat,
     addOwnedVehicle,
@@ -121,6 +122,7 @@ export default function PlazaScene() {
   } = useFreeShopClaims(recordGoldCoins);
   const strengthCharges = shopInventory.strengthCharges;
   const noBounceCharges = shopInventory.noBounceCharges;
+  const noWindCharges = shopInventory.noWindCharges;
   const searchParams = useSearchParams();
   const router = useRouter();
   const vehicleParam = searchParams.get("vehicle");
@@ -244,12 +246,16 @@ export default function PlazaScene() {
 
   const powerupStackRef = useRef(0);
   const noBounceRef = useRef(false);
+  const noWindRef = useRef(false);
   const strengthChargesRef = useRef(strengthCharges);
   const noBounceChargesRef = useRef(noBounceCharges);
+  const noWindChargesRef = useRef(noWindCharges);
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
+  const [noWindActive, setNoWindActive] = useState(false);
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
+  noWindChargesRef.current = noWindCharges;
   const inCooldown = cooldownUntil !== null;
 
   useEffect(() => {
@@ -283,6 +289,8 @@ export default function PlazaScene() {
     setPowerupStackCount(0);
     noBounceRef.current = false;
     setNoBounceActive(false);
+    noWindRef.current = false;
+    setNoWindActive(false);
   }, []);
 
   const onGuidelineConsumedForShot = useCallback(() => {}, []);
@@ -316,13 +324,29 @@ export default function PlazaScene() {
         burstPowerupUseConfetti("noBounce");
         return;
       }
+
+      if (slotId === "nowind") {
+        if (noWindRef.current) return;
+        if (noWindChargesRef.current <= 0) return;
+        noWindRef.current = true;
+        setNoWindActive(true);
+        setNoWindCharges((c) => (c <= 0 ? c : c - 1));
+        playSfx(SFX.slash);
+        pushHudToast(`"No wind" used`, "nowind");
+        burstPowerupUseConfetti("nowind");
+        return;
+      }
     },
-    [pushHudToast, shotInFlight, setStrengthCharges, setNoBounceCharges]
+    [pushHudToast, shotInFlight, setStrengthCharges, setNoBounceCharges, setNoWindCharges]
   );
 
   const buyPowerupCharge = useCallback(
     (slotId: PowerupSlotId) => {
-      if (slotId !== "strength" && slotId !== "noBounce") {
+      if (
+        slotId !== "strength" &&
+        slotId !== "noBounce" &&
+        slotId !== "nowind"
+      ) {
         return;
       }
       if (!spendGoldCoin()) {
@@ -335,9 +359,12 @@ export default function PlazaScene() {
       } else if (slotId === "noBounce") {
         setNoBounceCharges((c) => c + 1);
         burstPowerupBuyConfetti("noBounce");
+      } else if (slotId === "nowind") {
+        setNoWindCharges((c) => c + 1);
+        burstPowerupBuyConfetti("nowind");
       }
     },
-    [spendGoldCoin, pushHudToast, setStrengthCharges, setNoBounceCharges]
+    [spendGoldCoin, pushHudToast, setStrengthCharges, setNoBounceCharges, setNoWindCharges]
   );
 
   const buyHatFromShop = useCallback(
@@ -527,7 +554,9 @@ export default function PlazaScene() {
           ? ("strength" as const)
           : k === "2" || e.code === "Numpad2"
             ? ("noBounce" as const)
-            : null;
+            : k === "3" || e.code === "Numpad3"
+              ? ("nowind" as const)
+              : null;
       if (powerupFromKey !== null) {
         e.preventDefault();
         activatePowerup(powerupFromKey);
@@ -723,7 +752,7 @@ export default function PlazaScene() {
             isCharging={chargeHud !== null}
             powerupStackCount={powerupStackCount}
             noBounceActive={noBounceActive}
-            noWindActive={false}
+            noWindActive={noWindActive}
             guidelineActiveNextShot={guidelineArmed}
             onGuidelineConsumedForShot={onGuidelineConsumedForShot}
             chargeHudForGuideline={chargeHud}
@@ -799,10 +828,10 @@ export default function PlazaScene() {
           cooldownUntil={cooldownUntil}
           strengthCharges={strengthCharges}
           noBounceCharges={noBounceCharges}
-          noWindCharges={0}
+          noWindCharges={noWindCharges}
           powerupStackCount={powerupStackCount}
           noBounceActive={noBounceActive}
-          noWindActive={false}
+          noWindActive={noWindActive}
           vehicle={playerVehicle}
           onScoreClick={() => setShowProfileModal(true)}
           rendererStatsRef={rendererStatsRef}
@@ -929,16 +958,15 @@ export default function PlazaScene() {
                 <PowerupSlotRow
                   strengthCharges={strengthCharges}
                   noBounceCharges={noBounceCharges}
-                  noWindCharges={0}
+                  noWindCharges={noWindCharges}
                   canUseStrength={strengthCharges > 0}
                   canUseNoBounce={
                     noBounceCharges > 0 && !noBounceActive
                   }
-                  canUseNoWind={false}
+                  canUseNoWind={noWindCharges > 0 && !noWindActive}
                   canAffordBuy={stats.totalGoldCoins >= 1}
                   onPowerup={activatePowerup}
                   onBuyPowerupCharge={buyPowerupCharge}
-                  omitNoWind
                 />
               </div>
             )}
@@ -1250,6 +1278,7 @@ export default function PlazaScene() {
         goldCoins={stats.totalGoldCoins}
         strengthCharges={strengthCharges}
         noBounceCharges={noBounceCharges}
+        noWindCharges={noWindCharges}
         ownedHats={shopInventory.ownedHats}
         equippedHatId={shopInventory.equippedHatId}
         onBuyPowerupSlot={buyPowerupCharge}

@@ -13,9 +13,9 @@ import {
 const BASE_W = 4.2;
 const BASE_D = 3.4;
 const WALL_H = 2.35;
-const SIGN_W = 3.6;
+const SIGN_W = 3.2;
 const SIGN_H = 0.72;
-const SIGN_Y = WALL_H + 0.55;
+const SIGN_Y = WALL_H - 0.75;
 
 /** Match `PlazaHubRoads` so the connector reads as the same pavement. */
 const SHOP_ROAD_WIDTH = 5;
@@ -109,7 +109,7 @@ export function PlazaShopBuilding({
           <boxGeometry args={[BASE_W, WALL_H, BASE_D]} />
         </mesh>
         <mesh
-          position={[0, bodyCenterY + WALL_H * 0.08, BASE_D / 2 + 0.02]}
+          position={[0, bodyCenterY + WALL_H * 0.5, BASE_D / 2 + 0.02]}
           castShadow
           material={awningMat}
         >
@@ -129,7 +129,7 @@ export function PlazaShopBuilding({
           }}
         >
           <mesh castShadow>
-            <boxGeometry args={[SIGN_W + 0.24, SIGN_H + 0.16, 0.2]} />
+            <boxGeometry args={[SIGN_W + 0.24, SIGN_H + 0., 0.2]} />
             <meshStandardMaterial color="#facc15" roughness={0.35} metalness={0.14} />
           </mesh>
           <Text

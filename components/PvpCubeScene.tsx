@@ -58,7 +58,9 @@ import {
 } from "@/lib/game/constants";
 import {
   createInitialGameStateFromSeed,
+  withDefaultBiome,
 } from "@/lib/game/gameState";
+import { ensureSpawnAndGoalOnIslandsImmutable } from "@/lib/game/islands";
 import { loadAimControlMode, persistAimControlMode, type AimControlMode } from "@/lib/game/aimControlSettings";
 import { loadRetroTvEnabled, persistRetroTvEnabled } from "@/lib/game/retroTvSettings";
 import { loadGuidelineEnabled, persistGuidelineEnabled } from "@/lib/game/guidelineSettings";
@@ -68,6 +70,7 @@ import {
   clampYawDeltaToPadArc,
   hudAimYawToWorldYawRad,
   snapAimAngleRad,
+  snapBlockCenterToGrid,
   wrapYawRad,
 } from "@/lib/game/math";
 import { parCoinCountForIslands } from "@/lib/game/path";
@@ -164,6 +167,134 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     INITIAL_LANE_ORIGIN[1],
     game.goalWorldZ,
   ];
+
+  const gameRef = useRef(game);
+  gameRef.current = game;
+
+  /** Opponent vehicle world position — from room row only (updates when their shot finishes). */
+  const pvpOpponentWorldPos = useMemo((): Vec3 => {
+    if (!room || !userId) return goalCenter;
+    const isHost = userId === room.host_user_id;
+    const ox = isHost ? room.guest_spawn_x : room.host_spawn_x;
+    const oy = isHost ? room.guest_spawn_y : room.host_spawn_y;
+    const oz = isHost ? room.guest_spawn_z : room.host_spawn_z;
+    if (ox == null || oy == null || oz == null) return goalCenter;
+    return [Number(ox), Number(oy), Number(oz)];
+  }, [
+    room,
+    userId,
+    goalCenter[0],
+    goalCenter[1],
+    goalCenter[2],
+  ]);
+
+  useEffect(() => {
+    if (!room?.id || room.status !== "playing" || room.guest_user_id == null) return;
+    if (room.guest_spawn_x != null) return;
+    const supabase = createSupabaseBrowserClient();
+    void supabase.rpc("set_pvp_guest_start_if_null", {
+      p_room_id: room.id,
+      p_x: Math.round(game.goalWorldX),
+      p_y: Math.round(INITIAL_LANE_ORIGIN[1]),
+      p_z: Math.round(game.goalWorldZ),
+    });
+  }, [
+    room?.id,
+    room?.status,
+    room?.guest_user_id,
+    room?.guest_spawn_x,
+    game.goalWorldX,
+    game.goalWorldZ,
+  ]);
+
+  const lastGuestSpawnSyncKeyRef = useRef("");
+  useEffect(() => {
+    if (!room || !userId || room.guest_user_id !== userId) return;
+    if (room.guest_spawn_x == null || room.guest_spawn_y == null || room.guest_spawn_z == null)
+      return;
+    const key = `${room.guest_spawn_x},${room.guest_spawn_y},${room.guest_spawn_z}`;
+    if (key === lastGuestSpawnSyncKeyRef.current) return;
+
+    const next: Vec3 = [
+      Number(room.guest_spawn_x),
+      Number(room.guest_spawn_y),
+      Number(room.guest_spawn_z),
+    ];
+    const g = gameRef.current;
+    if (
+      g.spawnCenter[0] === next[0] &&
+      g.spawnCenter[1] === next[1] &&
+      g.spawnCenter[2] === next[2]
+    ) {
+      lastGuestSpawnSyncKeyRef.current = key;
+      return;
+    }
+    lastGuestSpawnSyncKeyRef.current = key;
+    const gc: Vec3 = [
+      g.goalWorldX,
+      INITIAL_LANE_ORIGIN[1],
+      g.goalWorldZ,
+    ];
+    dispatch({
+      type: "REPLACE_GAME_STATE",
+      state: withDefaultBiome({
+        ...g,
+        spawnCenter: next,
+        islands: ensureSpawnAndGoalOnIslandsImmutable(g.islands, next, gc),
+      }),
+    });
+  }, [
+    room?.guest_spawn_x,
+    room?.guest_spawn_y,
+    room?.guest_spawn_z,
+    room?.guest_user_id,
+    userId,
+    dispatch,
+  ]);
+
+  const lastHostSpawnSyncKeyRef = useRef("");
+  useEffect(() => {
+    if (!room || !userId || room.host_user_id !== userId) return;
+    const key = `${room.host_spawn_x ?? 0},${room.host_spawn_y ?? 0},${room.host_spawn_z ?? 0}`;
+    if (key === lastHostSpawnSyncKeyRef.current) return;
+
+    const next: Vec3 = [
+      Number(room.host_spawn_x ?? 0),
+      Number(room.host_spawn_y ?? 0),
+      Number(room.host_spawn_z ?? 0),
+    ];
+    const g = gameRef.current;
+    if (
+      g.spawnCenter[0] === next[0] &&
+      g.spawnCenter[1] === next[1] &&
+      g.spawnCenter[2] === next[2]
+    ) {
+      lastHostSpawnSyncKeyRef.current = key;
+      return;
+    }
+    lastHostSpawnSyncKeyRef.current = key;
+    const gc: Vec3 = [
+      g.goalWorldX,
+      INITIAL_LANE_ORIGIN[1],
+      g.goalWorldZ,
+    ];
+    dispatch({
+      type: "REPLACE_GAME_STATE",
+      state: withDefaultBiome({
+        ...g,
+        spawnCenter: next,
+        islands: ensureSpawnAndGoalOnIslandsImmutable(g.islands, next, gc),
+      }),
+    });
+  }, [
+    room?.host_spawn_x,
+    room?.host_spawn_y,
+    room?.host_spawn_z,
+    room?.host_user_id,
+    userId,
+    dispatch,
+  ]);
+
   const islands = game.islands;
   const holePar = useMemo(
     () => parCoinCountForIslands(islands, INITIAL_LANE_ORIGIN[1], goalCenter),
@@ -442,10 +573,30 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
       void (async () => {
         const supabase = createSupabaseBrowserClient();
-        const { error: rpcErr } = await supabase.rpc("submit_pvp_shot", {
-          p_room_id: rid,
-          p_outcome: rpcOutcome,
-        });
+        const rpcParams: {
+          p_room_id: string;
+          p_outcome: string;
+          p_spawn_x?: number;
+          p_spawn_y?: number;
+          p_spawn_z?: number;
+        } = { p_room_id: rid, p_outcome: rpcOutcome };
+        if (outcome === "miss" && landing) {
+          const s = snapBlockCenterToGrid(landing);
+          rpcParams.p_spawn_x = Math.round(s[0]);
+          rpcParams.p_spawn_y = Math.round(s[1]);
+          rpcParams.p_spawn_z = Math.round(s[2]);
+        } else if (outcome === "penalty") {
+          const s = snapBlockCenterToGrid(
+            [...spawnBeforeShotRef.current] as Vec3
+          );
+          rpcParams.p_spawn_x = Math.round(s[0]);
+          rpcParams.p_spawn_y = Math.round(s[1]);
+          rpcParams.p_spawn_z = Math.round(s[2]);
+        }
+        const { error: rpcErr } = await supabase.rpc(
+          "submit_pvp_shot",
+          rpcParams
+        );
         if (rpcErr) {
           pushHudToast(rpcErr.message);
           return;
@@ -770,6 +921,8 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             powerupVehicleBurstSlot={powerupVehicleBurst.slot}
             pvpMode
             pvpOpponentVehicle={opponentVehicle}
+            pvpOpponentWorldPos={pvpOpponentWorldPos}
+            pvpOpponentFacingToward={game.spawnCenter}
           />
         </TeleportOrbitRig>
         <InitialFieldGround islands={islands} biome={game.biome} />

@@ -5,29 +5,25 @@ import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts
 import { VehicleObjMesh } from "@/components/game/cube/meshes/VehicleObjMesh";
 import { Html } from "@react-three/drei";
 import { BLOCK_SIZE, TURF_TOP_Y } from "@/lib/game/constants";
-import { goalEnemySpawnOffsetXZ } from "@/lib/game/goalEnemyPlacement";
 import { bodyYawQuarterSnappedFromWorldAim } from "@/lib/game/math";
-import type { IslandRect } from "@/lib/game/islands";
 import type { Vec3 } from "@/lib/game/types";
 import { useLayoutEffect, useMemo, type MutableRefObject } from "react";
 import { Suspense } from "react";
 
 /**
- * Static opponent vehicle at the goal (same anchor as goal messenger). Updates
- * `enemySimRef` for ball collision.
+ * Opponent vehicle at synced world position (updated when their shot completes on the server).
+ * `lookAt` is local player spawn — hull faces you.
  */
 export function PvpOpponentVehicle({
-  goalCenter,
-  spawnCenter,
-  islands,
+  worldPosition,
+  lookAt,
   vehicle,
   alive,
   enemySimRef,
   enemyIndex,
 }: {
-  goalCenter: Vec3;
-  spawnCenter: Vec3;
-  islands: readonly IslandRect[];
+  worldPosition: Vec3;
+  lookAt: Vec3;
   vehicle: PlayerVehicleConfig;
   alive: boolean;
   enemySimRef: MutableRefObject<{
@@ -36,18 +32,13 @@ export function PvpOpponentVehicle({
   }>;
   enemyIndex: number;
 }) {
-  const startOffsetXZ = useMemo(
-    () => goalEnemySpawnOffsetXZ(islands, goalCenter, enemyIndex, 1),
-    [islands, goalCenter, enemyIndex]
-  );
-
-  const x = goalCenter[0] + 0.35 + startOffsetXZ.x;
-  const z = goalCenter[2] - 0.85 + startOffsetXZ.z;
-  const y = goalCenter[1];
+  const x = worldPosition[0];
+  const y = worldPosition[1];
+  const z = worldPosition[2];
 
   const worldAimYawRad = useMemo(
-    () => Math.atan2(spawnCenter[0] - x, spawnCenter[2] - z),
-    [spawnCenter[0], spawnCenter[2], x, z]
+    () => Math.atan2(lookAt[0] - x, lookAt[2] - z),
+    [lookAt[0], lookAt[2], x, z]
   );
   const bodyYawRad = useMemo(
     () => bodyYawQuarterSnappedFromWorldAim(worldAimYawRad),

@@ -269,6 +269,10 @@ export function SceneContent({
   pvpMode = false,
   /** PvP: full vehicle mesh at goal instead of walking messenger. */
   pvpOpponentVehicle = null,
+  /** PvP: opponent world position (from server; updates when their turn ends). */
+  pvpOpponentWorldPos = null,
+  /** PvP: local spawn — opponent hull faces this point. */
+  pvpOpponentFacingToward = null,
   onEnemyLossAnimatingChange,
   equippedHatId = null,
   mapCages = NO_MAP_CAGES,
@@ -287,6 +291,8 @@ export function SceneContent({
   hubMode?: boolean;
   pvpMode?: boolean;
   pvpOpponentVehicle?: PlayerVehicleConfig | null;
+  pvpOpponentWorldPos?: Vec3 | null;
+  pvpOpponentFacingToward?: Vec3 | null;
   /** HUD ring yaw (atan2(dx, −dy)); converted to world XZ for shot, prism, and hull snap. */
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
@@ -891,13 +897,16 @@ export function SceneContent({
       {!hubMode && mapCages.length > 0 && (
         <GoalCageDecor cages={mapCages} brokenKeys={goalCagesBroken} />
       )}
-      {!hubMode && pvpMode && pvpOpponentVehicle
+      {!hubMode &&
+      pvpMode &&
+      pvpOpponentVehicle &&
+      pvpOpponentWorldPos != null &&
+      pvpOpponentFacingToward != null
         ? goalEnemies.map((_, i) => (
             <PvpOpponentVehicle
               key={`pvp-opp-${i}`}
-              goalCenter={goalCenter}
-              spawnCenter={spawnCenter}
-              islands={islands}
+              worldPosition={pvpOpponentWorldPos}
+              lookAt={pvpOpponentFacingToward}
               vehicle={pvpOpponentVehicle}
               alive={enemyAliveMask[i] === true}
               enemySimRef={enemySimRef}

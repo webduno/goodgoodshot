@@ -10,6 +10,12 @@ export type PvpRoomRow = {
   course_seed: number;
   host_vehicle_id?: string;
   guest_vehicle_id?: string;
+  host_spawn_x?: number;
+  host_spawn_y?: number;
+  host_spawn_z?: number;
+  guest_spawn_x?: number | null;
+  guest_spawn_y?: number | null;
+  guest_spawn_z?: number | null;
   created_at: string;
   updated_at: string;
 };

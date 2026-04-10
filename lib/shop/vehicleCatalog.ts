@@ -16,7 +16,7 @@ export const VEHICLE_SHOP_CATALOG: readonly {
 ).map((v, index) => ({
   id: v.id,
   displayName: v.name,
-  priceCoins: 10 + index * 5,
+  priceCoins: 1 + index * 1,
 }));
 
 const priceById = new Map<string, number>();

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "R3F cube",
-  description: "Next.js + React Three Fiber — static camera, simple cube",
+  title: "GG-Shot",
+  description: "GG-Shot is an aim and shoot game about competing in battles with your friends.",
 };
 
 export default function RootLayout({

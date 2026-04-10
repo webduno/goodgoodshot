@@ -30,7 +30,6 @@ import { clearFreeShopClaims } from "@/lib/shop/freeShopClaims";
 import { clearPlayerShopInventory } from "@/lib/shop/playerInventory";
 import {
   isVehicleUnlocked,
-  lockedVehicleSelectionHint,
   PREMIUM_RATATA_VEHICLE_ID,
   shouldShowRatataBetaTag,
 } from "@/lib/game/vehicleUnlock";
@@ -80,6 +79,10 @@ export function HelpModal({
     }
     window.location.assign(url.toString());
   };
+
+  const myVehicles = PREDETERMINED_VEHICLES.filter((v) =>
+    isVehicleUnlocked(stats, v.id, shopInventory.ownedVehicleIds)
+  );
 
   const clearAllSavedData = () => {
     if (
@@ -214,7 +217,7 @@ export function HelpModal({
           </div>
         </div>
         <details>
-          <summary>How to play</summary>
+          <summary>📖 How to play</summary>
           <ul
             style={{
               margin: 0,
@@ -319,7 +322,7 @@ export function HelpModal({
           </ul>
         </details>
         <details>
-          <summary>Vehicles</summary>
+          <summary>🚗 My Vehicles</summary>
           <div
             style={{
               display: "flex",
@@ -327,13 +330,8 @@ export function HelpModal({
               gap: 6,
             }}
           >
-            {PREDETERMINED_VEHICLES.map((v) => {
+            {myVehicles.map((v) => {
               const isCurrent = v.id === vehicle.id;
-              const unlocked = isVehicleUnlocked(
-                stats,
-                v.id,
-                shopInventory.ownedVehicleIds
-              );
               const betaTag =
                 shouldShowRatataBetaTag() && v.id === PREMIUM_RATATA_VEHICLE_ID;
               const mainCss = rgbTupleToCss(v.mainRgb);
@@ -342,20 +340,10 @@ export function HelpModal({
                 <button
                   key={v.id}
                   type="button"
-                  disabled={!unlocked}
                   onClick={() => {
-                    if (!unlocked) return;
                     reloadWithVehicle(v.id);
                   }}
-                  title={
-                    unlocked
-                      ? `Load ${v.name} and start a new round`
-                      : lockedVehicleSelectionHint(
-                          v.id,
-                          stats,
-                          shopInventory.ownedVehicleIds
-                        )
-                  }
+                  title={`Load ${v.name} and start a new round`}
                   style={{
                     ...goldChipButtonStyle(),
                     fontSize: 10,
@@ -365,8 +353,7 @@ export function HelpModal({
                     border: "1px solid rgba(255,255,255,0.88)",
                     color: "#ffffff",
                     textShadow: "0 1px 2px rgba(0,0,0,0.55)",
-                    opacity: unlocked ? 1 : 0.55,
-                    cursor: unlocked ? "pointer" : "not-allowed",
+                    cursor: "pointer",
                     ...(isCurrent
                       ? {
                           boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 12px rgba(0,0,0,0.28), 0 0 0 2px ${accentCss}, 0 0 14px ${accentCss}`,
@@ -421,7 +408,7 @@ export function HelpModal({
           </p>
         </details>
         <details>
-          <summary>Game Config</summary>
+          <summary>⚙️ Game Config</summary>
           <div
             style={{
               display: "flex",

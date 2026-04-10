@@ -41,6 +41,111 @@ function cloneDefaultParts(): PartRow[] {
   ];
 }
 
+function triple(
+  v: unknown,
+  label: string
+): [number, number, number] {
+  if (!Array.isArray(v) || v.length !== 3) {
+    throw new Error(`${label}: expected an array of three numbers`);
+  }
+  const out: [number, number, number] = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    const n = Number(v[i]);
+    if (!Number.isFinite(n)) {
+      throw new Error(`${label}[${i}]: invalid number`);
+    }
+    out[i] = n;
+  }
+  return out;
+}
+
+function parseColor(
+  raw: unknown,
+  index: number
+): VehicleBodyPart["color"] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (raw === "main" || raw === "accent") return raw;
+  if (typeof raw === "string") {
+    throw new Error(
+      `Part ${index}: color string must be "main" or "accent", or use [r,g,b]`
+    );
+  }
+  const t = triple(raw, `Part ${index} color`);
+  return [t[0], t[1], t[2]] as [number, number, number];
+}
+
+function rawPartToRow(raw: unknown, index: number): PartRow {
+  if (!raw || typeof raw !== "object") {
+    throw new Error(`Part ${index}: expected an object`);
+  }
+  const o = raw as Record<string, unknown>;
+  const type = o.type;
+  if (type !== "cube" && type !== "cylinder" && type !== "sphere") {
+    throw new Error(
+      `Part ${index}: "type" must be "cube", "cylinder", or "sphere"`
+    );
+  }
+  const pos = triple(o.pos, `Part ${index} pos`);
+  const size = triple(o.size, `Part ${index} size`);
+  let rotDeg: [number, number, number] | undefined;
+  if (o.rotDeg !== undefined) {
+    rotDeg = triple(o.rotDeg, `Part ${index} rotDeg`);
+  }
+  const color = parseColor(o.color, index);
+  let polygonOffset: boolean | undefined;
+  if (o.polygonOffset === true) polygonOffset = true;
+  else if (o.polygonOffset !== undefined && o.polygonOffset !== false) {
+    throw new Error(`Part ${index}: polygonOffset must be boolean`);
+  }
+
+  return {
+    id: newId(),
+    type,
+    pos,
+    size,
+    rotDeg,
+    color,
+    polygonOffset,
+  };
+}
+
+/**
+ * Accepts a JSON array of body parts, or a full vehicle object with `bodyParts`.
+ */
+function parseBodyPartsImport(text: string): PartRow[] {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    throw new Error("Paste a JSON array or a vehicle object with bodyParts.");
+  }
+  let data: unknown;
+  try {
+    data = JSON.parse(trimmed) as unknown;
+  } catch {
+    throw new Error("Invalid JSON.");
+  }
+
+  let arr: unknown[];
+  if (Array.isArray(data)) {
+    arr = data;
+  } else if (data && typeof data === "object") {
+    const bp = (data as { bodyParts?: unknown }).bodyParts;
+    if (!Array.isArray(bp)) {
+      throw new Error(
+        "Expected a JSON array, or an object with a bodyParts array."
+      );
+    }
+    arr = bp;
+  } else {
+    throw new Error("Expected a JSON array or an object.");
+  }
+
+  if (arr.length === 0) {
+    throw new Error("bodyParts array is empty.");
+  }
+
+  return arr.map((item, i) => rawPartToRow(item, i));
+}
+
 function stripForJson(p: PartRow): Record<string, unknown> {
   const { id: _id, ...rest } = p;
   const o: Record<string, unknown> = {
@@ -123,6 +228,8 @@ export default function VehicleBuilderClient() {
   const [exportName, setExportName] = useState("My vehicle");
   const [exportTab, setExportTab] = useState<"parts" | "full">("parts");
   const [copyHint, setCopyHint] = useState<string | null>(null);
+  const [importText, setImportText] = useState("");
+  const [importHint, setImportHint] = useState<string | null>(null);
 
   const selected = parts.find((p) => p.id === selectedId) ?? null;
 
@@ -161,6 +268,19 @@ export default function VehicleBuilderClient() {
       setTimeout(() => setCopyHint(null), 3000);
     }
   }, [showJson]);
+
+  const applyImport = useCallback(() => {
+    try {
+      const next = parseBodyPartsImport(importText);
+      setParts(next);
+      setSelectedId(next[0]?.id ?? null);
+      setImportHint(`Imported ${next.length} part${next.length === 1 ? "" : "s"}.`);
+      setTimeout(() => setImportHint(null), 3500);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Import failed.";
+      setImportHint(msg);
+    }
+  }, [importText]);
 
   const updateSelected = useCallback(
     (patch: Partial<Omit<PartRow, "id">>) => {
@@ -399,6 +519,42 @@ export default function VehicleBuilderClient() {
             </label>
           </section>
         )}
+
+        <section className="space-y-2 border-t border-slate-200/80 pt-2">
+          <div className="text-xs font-medium text-slate-700">Import bodyParts</div>
+          <p className="text-[10px] text-slate-500">
+            Paste a <code className="rounded bg-slate-200/80 px-0.5">bodyParts</code>{" "}
+            JSON array, or a full vehicle object (uses its{" "}
+            <code className="rounded bg-slate-200/80 px-0.5">bodyParts</code> field).
+          </p>
+          <textarea
+            className="h-28 w-full resize-y rounded border border-slate-300 bg-white p-2 font-mono text-[11px] leading-snug text-slate-800 placeholder:text-slate-400"
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder='[ { "type": "cube", "pos": [0,0,0], "size": [1,1,1], "color": "main" } ]'
+            spellCheck={false}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+              onClick={applyImport}
+            >
+              Import
+            </button>
+            {importHint && (
+              <span
+                className={`text-xs ${
+                  importHint.startsWith("Imported")
+                    ? "text-emerald-700"
+                    : "text-red-700"
+                }`}
+              >
+                {importHint}
+              </span>
+            )}
+          </div>
+        </section>
 
         <section className="space-y-2 border-t border-slate-200/80 pt-2">
           <div className="text-xs font-medium text-slate-700">Export JSON</div>

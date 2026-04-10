@@ -1,11 +1,8 @@
 "use client";
 
-import { TURF_TOP_Y } from "@/lib/game/constants";
+import { MAP_CAGE_DOME_RADIUS, TURF_TOP_Y } from "@/lib/game/constants";
 import { mapCageKey } from "@/lib/game/mapCages";
 import type { Vec3 } from "@/lib/game/types";
-
-/** Wireframe dome (upper hemisphere); flat rim on the turf. */
-const DOME_RADIUS = 0.92;
 
 export function GoalCageDecor({
   cages,
@@ -29,7 +26,15 @@ export function GoalCageDecor({
             receiveShadow={false}
           >
             <sphereGeometry
-              args={[DOME_RADIUS, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2]}
+              args={[
+                MAP_CAGE_DOME_RADIUS,
+                10,
+                5,
+                0,
+                Math.PI * 2,
+                0,
+                Math.PI / 2,
+              ]}
             />
             <meshBasicMaterial color="#8a8a8a" wireframe />
           </mesh>

@@ -89,7 +89,9 @@ export type GameState = {
    */
   goalEnemies: readonly GoalEnemySpec[];
   /**
-   * Up to two trap “cages” on random fairway islands (integer block centers); rerolled on hole-out.
+   * Up to two trap domes on random fairway islands (integer block centers). Same persistence model as
+   * `islands` / `ponds`: stored inside each war `maps[]` entry in localStorage; lane coin collection
+   * stays client-only in refs — cages are always authored from this array.
    */
   mapCages: readonly Vec3[];
 };

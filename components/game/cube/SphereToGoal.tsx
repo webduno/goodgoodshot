@@ -16,7 +16,7 @@ import {
   sphereIntersectsAabb,
   sphereIntersectsGoalBox,
 } from "@/lib/game/collision";
-import { mapCageKey } from "@/lib/game/mapCages";
+import { mapCageKey, sphereTouchesMapCage } from "@/lib/game/mapCages";
 import { coinCellKey } from "@/lib/game/path";
 import { spawnTopYFromBlockCenterY } from "@/lib/game/math";
 import type { IslandRect } from "@/lib/game/islands";
@@ -90,19 +90,30 @@ export function SphereToGoal({
     }
   };
 
-  const tryCageTrapAtStop = (px: number, pz: number) => {
-    if (hubMode) return;
-    const sx = Math.round(px);
-    const sz = Math.round(pz);
-    const key = mapCageKey(sx, sz);
-    if (goalCagesBrokenRef.current.has(key)) return;
+  const tryCageTrapContact = (
+    px: number,
+    py: number,
+    pz: number,
+    mesh: THREE.Mesh
+  ): boolean => {
+    if (hubMode) return false;
     const cages = mapCagesRef.current;
+    const broken = goalCagesBrokenRef.current;
     for (let i = 0; i < cages.length; i++) {
       const c = cages[i]!;
-      if (Math.round(c[0]) !== sx || Math.round(c[2]) !== sz) continue;
+      const cx = Math.round(c[0]);
+      const cz = Math.round(c[2]);
+      const key = mapCageKey(cx, cz);
+      if (broken.has(key)) continue;
+      if (!sphereTouchesMapCage(px, py, pz, c)) continue;
       onCageTrapped?.();
-      return;
+      projectileRef.current = null;
+      mesh.visible = false;
+      mesh.position.set(cx, FLOOR_CONTACT_CENTER_Y, cz);
+      onProjectileEnd("miss", [cx, spawnCenter[1], cz]);
+      return true;
     }
+    return false;
   };
 
   const tryEnemyHit = (px: number, py: number, pz: number) => {
@@ -178,8 +189,9 @@ export function SphereToGoal({
         return;
       }
 
+      if (tryCageTrapContact(p.x, p.y, p.z, mesh)) return;
+
       if (Math.hypot(p.vx, p.vz) <= ROLL_STOP_SPEED) {
-        tryCageTrapAtStop(p.x, p.z);
         projectileRef.current = null;
         mesh.visible = false;
         onProjectileEnd("miss", [p.x, spawnCenter[1], p.z]);
@@ -217,6 +229,8 @@ export function SphereToGoal({
       return;
     }
 
+    if (tryCageTrapContact(p.x, p.y, p.z, mesh)) return;
+
     let landingX = p.x;
     let landingZ = p.z;
     if (y0 > FLOOR_CONTACT_CENTER_Y && p.y !== y0) {
@@ -237,6 +251,10 @@ export function SphereToGoal({
 
     if (p.y > FLOOR_CONTACT_CENTER_Y) {
       mesh.position.set(p.x, p.y, p.z);
+      return;
+    }
+
+    if (tryCageTrapContact(landingX, FLOOR_CONTACT_CENTER_Y, landingZ, mesh)) {
       return;
     }
 
@@ -269,7 +287,6 @@ export function SphereToGoal({
       return;
     }
 
-    tryCageTrapAtStop(landingX, landingZ);
     projectileRef.current = null;
     mesh.position.set(landingX, FLOOR_CONTACT_CENTER_Y, landingZ);
     mesh.visible = false;

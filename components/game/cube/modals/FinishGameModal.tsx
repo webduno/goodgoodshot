@@ -65,6 +65,7 @@ export function FinishGameModal({
   par,
   battleWon,
   lossReason = "par",
+  coinsEarned = 0,
   warBattlesPlayed,
   warBattlesLeft,
   onContinue,
@@ -76,6 +77,8 @@ export function FinishGameModal({
   par: number;
   battleWon: boolean;
   lossReason?: "par" | "enemy";
+  /** Gold coins granted for this win (war battle index). */
+  coinsEarned?: number;
   /** Set when a war session is active; completed battles in the war (includes this result). */
   warBattlesPlayed?: number;
   /** Battles remaining after this one in the current war. */
@@ -215,6 +218,22 @@ export function FinishGameModal({
             >
               {subtitle}
             </p>
+            {battleWon && coinsEarned > 0 ? (
+              <p
+                style={{
+                  margin: "0 0 14px",
+                  fontSize: 17,
+                  fontWeight: 800,
+                  lineHeight: 1.3,
+                  color: hudColors.value,
+                  textShadow:
+                    "0 1px 0 rgba(255,255,255,0.9), 0 0 18px rgba(255, 200, 80, 0.35)",
+                }}
+              >
+                🪙 +{coinsEarned}{" "}
+                {coinsEarned === 1 ? "coin" : "coins"}
+              </p>
+            ) : null}
             <div
               style={{
                 display: "inline-block",

@@ -59,6 +59,12 @@ export const POND_HALF_Z_MAX = 24;
 
 export const PLAYER_GROUND_HALF = BLOCK_SIZE / 2;
 
+/**
+ * Map trap dome: hemisphere radius in the scene (`GoalCageDecor`) and ball overlap test (`sphereTouchesMapCage`).
+ * This is the knob to make cages bigger or smaller.
+ */
+export const MAP_CAGE_DOME_RADIUS = 1.55;
+
 /** Goal pyramid AABB half-extents: 2×2 blocks on XZ, 2 blocks tall (center on `goalCenter` + `GOAL_PYRAMID_Y_OFFSET` on Y). */
 export const GOAL_HALF_XZ = BLOCK_SIZE;
 export const GOAL_HALF_Y = BLOCK_SIZE;

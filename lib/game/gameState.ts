@@ -76,7 +76,11 @@ export function createInitialGameState(opts?: {
   };
 }
 
-/** Ensures `biome` and `goalEnemies` exist when hydrating from JSON (older saves). */
+/**
+ * Ensures `biome`, `goalEnemies`, and `mapCages` exist when hydrating from JSON (older saves).
+ * `mapCages` is part of `GameState` like `islands` (serialized in war session `maps[]`); legacy payloads
+ * without it get new random cages so traps match the stored course layout.
+ */
 export function withDefaultBiome(state: GameState): GameState {
   let next = state;
   if (!isValidBiomeId(state.biome)) {
@@ -88,12 +92,29 @@ export function withDefaultBiome(state: GameState): GameState {
   if (!Array.isArray(next.mapCages)) {
     next = { ...next, mapCages: [] };
   }
+  if (next.mapCages.length === 0 && next.islands.length > 0) {
+    const goalCenter: Vec3 = [
+      next.goalWorldX,
+      INITIAL_LANE_ORIGIN[1],
+      next.goalWorldZ,
+    ];
+    next = {
+      ...next,
+      mapCages: pickMapCages(
+        next.islands,
+        next.spawnCenter,
+        goalCenter,
+        next.ponds,
+        2
+      ),
+    };
+  }
   return next;
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   if (action.type === "REPLACE_GAME_STATE") {
-    return action.state;
+    return withDefaultBiome(action.state);
   }
   if (action.type !== "PROJECTILE_END") return state;
 

@@ -1,7 +1,35 @@
+import {
+  MAP_CAGE_DOME_RADIUS,
+  SPHERE_RADIUS,
+  TURF_TOP_Y,
+} from "@/lib/game/constants";
 import { pointInPondXZ } from "@/lib/game/collision";
 import type { IslandRect } from "@/lib/game/islands";
-import type { PondSpec, Vec3 } from "@/lib/game/types";
 import { randomIntInclusive } from "@/lib/game/math";
+import type { PondSpec, Vec3 } from "@/lib/game/types";
+
+/**
+ * True when the ball intersects the dome volume (upper hemisphere only, same as the wireframe mesh).
+ * Uses `MAP_CAGE_DOME_RADIUS` + `SPHERE_RADIUS` for contact.
+ */
+export function sphereTouchesMapCage(
+  px: number,
+  py: number,
+  pz: number,
+  cage: Vec3,
+  domeRadius: number = MAP_CAGE_DOME_RADIUS
+): boolean {
+  const cx = cage[0];
+  const cz = cage[2];
+  const cy = TURF_TOP_Y;
+  const dx = px - cx;
+  const dy = py - cy;
+  const dz = pz - cz;
+  const dist = Math.hypot(dx, dy, dz);
+  if (dist > domeRadius + SPHERE_RADIUS) return false;
+  if (py < cy) return false;
+  return true;
+}
 
 export const EMPTY_MAP_CAGES_BROKEN: ReadonlySet<string> = new Set();
 
@@ -63,7 +91,7 @@ function cellValidForCage(
 
 /**
  * Up to `maxCages` (2) random integer grid cells on random islands (same island allowed if far apart).
- * Count is 0, 1, or 2 (uniform); fewer if no valid cell is found.
+ * Always tries for at least one cage when `maxCages >= 1`; second cage is 50/50. Fewer if no valid cell is found.
  */
 export function pickMapCages(
   islands: readonly IslandRect[],
@@ -74,13 +102,15 @@ export function pickMapCages(
 ): Vec3[] {
   if (islands.length === 0 || maxCages <= 0) return [];
 
-  const targetCount = randomIntInclusive(0, maxCages);
-  if (targetCount === 0) return [];
+  const targetCount =
+    maxCages <= 1
+      ? 1
+      : 1 + randomIntInclusive(0, 1);
 
   const placed: Vec3[] = [];
   const gy = spawnCenter[1];
   let globalAttempts = 0;
-  const maxGlobalAttempts = 120;
+  const maxGlobalAttempts = 280;
 
   while (placed.length < targetCount && globalAttempts < maxGlobalAttempts) {
     globalAttempts += 1;

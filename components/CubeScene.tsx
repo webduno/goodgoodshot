@@ -133,7 +133,7 @@ import {
 import * as THREE from "three";
 
 export default function CubeScene() {
-  const { recordHoleCompleted, recordGoldCoin, spendGoldCoin, stats } =
+  const { recordHoleCompleted, recordGoldCoin, recordGoldCoins, spendGoldCoin, stats } =
     usePlayerStats();
   const {
     inventory: shopInventory,
@@ -258,6 +258,8 @@ export default function CubeScene() {
   const [finishLossReason, setFinishLossReason] = useState<"par" | "enemy">(
     "par"
   );
+  /** Gold coins granted for this battle win (war battle index: 1st → 1, 5th → 5). */
+  const [finishBattleCoinsEarned, setFinishBattleCoinsEarned] = useState(0);
   const [showStartGameModal, setShowStartGameModal] = useState(true);
   const [enemyLossAnimating, setEnemyLossAnimating] = useState(false);
   useLayoutEffect(() => {
@@ -728,6 +730,11 @@ export default function CubeScene() {
           const shots = sessionShotsRef.current;
           const battleWon =
             outcome === "hit" && shots <= par;
+          const session = loadPlaySession();
+          const warBattleIndex =
+            session != null
+              ? session.battlesWon + session.battlesLost + 1
+              : 0;
           recordHoleCompleted({
             vehicleId: playerVehicle.id,
             shots,
@@ -739,7 +746,13 @@ export default function CubeScene() {
             waterPenaltiesThisRound: waterPenaltiesRoundRef.current,
             battleOutcome: battleWon ? "win" : "loss",
           });
-          const session = loadPlaySession();
+          if (battleWon && session && warBattleIndex > 0) {
+            recordGoldCoins(warBattleIndex);
+            const coinWord = warBattleIndex === 1 ? "coin" : "coins";
+            pushHudToast(
+              `Battle ${warBattleIndex} won — +${warBattleIndex} ${coinWord}`
+            );
+          }
           if (session) {
             const nextWon = session.battlesWon + (battleWon ? 1 : 0);
             const nextLost = session.battlesLost + (battleWon ? 0 : 1);
@@ -774,6 +787,9 @@ export default function CubeScene() {
           setFinishBattleWon(battleWon);
           setFinishPar(par);
           setFinishLossReason(outcome === "enemy_loss" ? "enemy" : "par");
+          setFinishBattleCoinsEarned(
+            battleWon && session && warBattleIndex > 0 ? warBattleIndex : 0
+          );
         }
         if (!(outcome === "hit" || outcome === "enemy_loss") || !deferredMap) {
           dispatch({
@@ -789,7 +805,13 @@ export default function CubeScene() {
       }
       setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
     },
-    [maybeWindToast, playerVehicle, pushHudToast, recordHoleCompleted]
+    [
+      maybeWindToast,
+      playerVehicle,
+      pushHudToast,
+      recordHoleCompleted,
+      recordGoldCoins,
+    ]
   );
 
   const onFinishBattleContinue = useCallback(() => {
@@ -1688,6 +1710,7 @@ export default function CubeScene() {
         par={finishPar}
         battleWon={finishBattleWon}
         lossReason={finishLossReason}
+        coinsEarned={finishBattleCoinsEarned}
         warBattlesPlayed={
           playSession
             ? playSession.battlesWon + playSession.battlesLost

@@ -126,6 +126,43 @@ import {
 } from "react";
 import * as THREE from "three";
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+async function ensureSupabaseSession(): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) return;
+
+  const { error } = await supabase.auth.signInAnonymously();
+  if (error) {
+    const message =
+      typeof error.message === "string" ? error.message : "sign-in failed";
+    if (message.includes("anonymous_provider_disabled")) {
+      throw new Error(
+        "Anonymous sign-ins are disabled in Supabase. Enable Auth > Providers > Anonymous."
+      );
+    }
+    throw new Error(message);
+  }
+
+  const {
+    data: { session: nextSession },
+  } = await supabase.auth.getSession();
+  if (!nextSession) {
+    throw new Error("Sign-in did not create a session");
+  }
+}
+
 export default function PlazaScene() {
   const { spendGoldCoin, spendGoldCoins, recordGoldCoins, stats } =
     usePlayerStats();
@@ -244,11 +281,7 @@ export default function PlazaScene() {
     if (pvpLobbyBusy) return;
     setPvpLobbyBusy(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) await supabase.auth.signInAnonymously();
+      await ensureSupabaseSession();
       const id = await createPvpRoom();
       const p = new URLSearchParams();
       const v = searchParams.get("vehicle");
@@ -256,7 +289,7 @@ export default function PlazaScene() {
       const qs = p.toString();
       router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
-      pushHudToast(e instanceof Error ? e.message : "PvP setup failed");
+      pushHudToast(getErrorMessage(e, "PvP setup failed"));
     } finally {
       setPvpLobbyBusy(false);
     }
@@ -266,11 +299,7 @@ export default function PlazaScene() {
     if (pvpLobbyBusy) return;
     setPvpLobbyBusy(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) await supabase.auth.signInAnonymously();
+      await ensureSupabaseSession();
       const id = await joinFirstOpenPvpRoom();
       if (!id) {
         pushHudToast("No open room — create one");
@@ -282,7 +311,7 @@ export default function PlazaScene() {
       const qs = p.toString();
       router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
-      pushHudToast(e instanceof Error ? e.message : "PvP join failed");
+      pushHudToast(getErrorMessage(e, "PvP join failed"));
     } finally {
       setPvpLobbyBusy(false);
     }

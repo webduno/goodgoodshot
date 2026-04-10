@@ -279,6 +279,10 @@ export default function PlazaScene() {
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
   const [noWindActive, setNoWindActive] = useState(false);
+  const [powerupVehicleBurst, setPowerupVehicleBurst] = useState<{
+    seq: number;
+    slot: "strength" | "noBounce" | "nowind";
+  }>({ seq: 0, slot: "strength" });
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
   noWindChargesRef.current = noWindCharges;
@@ -336,6 +340,7 @@ export default function PlazaScene() {
         playSfx(SFX.slash);
         pushHudToast(`"Strength" used (×${mult})`, "strength");
         burstPowerupUseConfetti("strength");
+        setPowerupVehicleBurst((p) => ({ seq: p.seq + 1, slot: "strength" }));
         return;
       }
 
@@ -348,6 +353,7 @@ export default function PlazaScene() {
         playSfx(SFX.slash);
         pushHudToast(`"No bounce" used`, "noBounce");
         burstPowerupUseConfetti("noBounce");
+        setPowerupVehicleBurst((p) => ({ seq: p.seq + 1, slot: "noBounce" }));
         return;
       }
 
@@ -360,6 +366,7 @@ export default function PlazaScene() {
         playSfx(SFX.slash);
         pushHudToast(`"No wind" used`, "nowind");
         burstPowerupUseConfetti("nowind");
+        setPowerupVehicleBurst((p) => ({ seq: p.seq + 1, slot: "nowind" }));
         return;
       }
     },
@@ -913,6 +920,8 @@ export default function PlazaScene() {
             goalEnemies={[]}
             hubMode
             equippedHatId={shopInventory.equippedHatId}
+            powerupVehicleBurstSeq={powerupVehicleBurst.seq}
+            powerupVehicleBurstSlot={powerupVehicleBurst.slot}
           />
         </TeleportOrbitRig>
         <InitialFieldGround

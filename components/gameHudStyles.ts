@@ -376,6 +376,18 @@ export const POWERUP_SLOT_ACCENT: Record<
   },
 };
 
+/**
+ * sRGB 0–1 for lightweight 3D particles — dominant stops from `POWERUP_SLOT_ACCENT` gradients.
+ */
+export const POWERUP_WORLD_RGB: Record<
+  "strength" | "noBounce" | "nowind",
+  readonly [number, number, number]
+> = {
+  strength: [234 / 255, 88 / 255, 12 / 255],
+  noBounce: [124 / 255, 58 / 255, 237 / 255],
+  nowind: [8 / 255, 145 / 255, 178 / 255],
+};
+
 /** Toast bubble styling matching the corresponding power-up slot. */
 export function powerupToastAccentStyle(
   slot: "strength" | "noBounce" | "nowind" | "guideline"

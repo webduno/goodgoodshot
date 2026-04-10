@@ -32,6 +32,10 @@ import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
 import { VehicleGlassHat } from "@/components/game/cube/meshes/VehicleGlassHat";
 import { VehicleObjMesh } from "@/components/game/cube/meshes/VehicleObjMesh";
+import {
+  VehiclePowerupBurst,
+  type VehiclePowerupBurstSlot,
+} from "@/components/game/cube/meshes/VehiclePowerupBurst";
 import { SphereToGoal } from "@/components/game/cube/SphereToGoal";
 import {
   type BallFollowStateRef,
@@ -322,6 +326,8 @@ export function SceneContent({
   cageEscapeNextShot = false,
   onCageTrapped,
   onBreakGoalCageFromShot,
+  powerupVehicleBurstSeq = 0,
+  powerupVehicleBurstSlot = "strength",
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -395,6 +401,9 @@ export function SceneContent({
   cageEscapeNextShot?: boolean;
   onCageTrapped?: () => void;
   onBreakGoalCageFromShot?: (cellKey: string) => void;
+  /** Bump when the local player uses a consumable power-up (strength / no bounce / no wind). */
+  powerupVehicleBurstSeq?: number;
+  powerupVehicleBurstSlot?: VehiclePowerupBurstSlot;
 }) {
   const mapCagesRef = useRef(mapCages);
   mapCagesRef.current = mapCages;
@@ -913,6 +922,10 @@ export function SceneContent({
             noWindActive={noWindActive}
           />
           <VehicleGlassHat hatId={equippedHatId} />
+          <VehiclePowerupBurst
+            burstSeq={powerupVehicleBurstSeq}
+            slot={powerupVehicleBurstSlot}
+          />
         </group>
         <AimYawPrism
           spawnCenter={[0, 0, 0]}

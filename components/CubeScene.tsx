@@ -517,6 +517,10 @@ export default function CubeScene() {
   const [powerupStackCount, setPowerupStackCount] = useState(0);
   const [noBounceActive, setNoBounceActive] = useState(false);
   const [noWindActive, setNoWindActive] = useState(false);
+  const [powerupVehicleBurst, setPowerupVehicleBurst] = useState<{
+    seq: number;
+    slot: "strength" | "noBounce" | "nowind";
+  }>({ seq: 0, slot: "strength" });
   const [windHud, setWindHud] = useState({ x: 0, y: 0, z: 0 });
   strengthChargesRef.current = strengthCharges;
   noBounceChargesRef.current = noBounceCharges;
@@ -608,6 +612,7 @@ export default function CubeScene() {
         playSfx(SFX.slash);
         pushHudToast(`"Strength" used (×${mult})`, "strength");
         burstPowerupUseConfetti("strength");
+        setPowerupVehicleBurst((p) => ({ seq: p.seq + 1, slot: "strength" }));
         return;
       }
 
@@ -621,6 +626,7 @@ export default function CubeScene() {
         playSfx(SFX.slash);
         pushHudToast(`"No bounce" used`, "noBounce");
         burstPowerupUseConfetti("noBounce");
+        setPowerupVehicleBurst((p) => ({ seq: p.seq + 1, slot: "noBounce" }));
         return;
       }
 
@@ -633,6 +639,7 @@ export default function CubeScene() {
         playSfx(SFX.slash);
         pushHudToast(`"No wind" used`, "nowind");
         burstPowerupUseConfetti("nowind");
+        setPowerupVehicleBurst((p) => ({ seq: p.seq + 1, slot: "nowind" }));
         return;
       }
     },
@@ -1160,6 +1167,8 @@ export default function CubeScene() {
             cageEscapeNextShot={cageEscapeNextShot}
             onCageTrapped={onCageTrapped}
             onBreakGoalCageFromShot={onBreakGoalCageFromShot}
+            powerupVehicleBurstSeq={powerupVehicleBurst.seq}
+            powerupVehicleBurstSlot={powerupVehicleBurst.slot}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}

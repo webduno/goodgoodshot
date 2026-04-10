@@ -13,6 +13,7 @@ import type {
   AquariumId,
   FishId,
   HatId,
+  PlazaBirdId,
   PlayerShopInventory,
 } from "@/lib/shop/playerInventory";
 import {
@@ -152,6 +153,19 @@ export function usePlayerShopInventory() {
     [patch]
   );
 
+  const addOwnedPlazaBird = useCallback(
+    (id: PlazaBirdId) => {
+      patch((prev) => {
+        if (prev.ownedPlazaBirdIds.includes(id)) return prev;
+        return {
+          ...prev,
+          ownedPlazaBirdIds: [...prev.ownedPlazaBirdIds, id],
+        };
+      });
+    },
+    [patch]
+  );
+
   const addOwnedAquarium = useCallback(
     (id: AquariumId) => {
       patch((prev) => {
@@ -177,6 +191,7 @@ export function usePlayerShopInventory() {
     addOwnedHat,
     addOwnedVehicle,
     addOwnedFish,
+    addOwnedPlazaBird,
     addOwnedAquarium,
     isHatOwned,
   };

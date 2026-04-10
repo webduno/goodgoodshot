@@ -13,6 +13,7 @@ import {
 } from "@/components/gameHudStyles";
 import { isVehicleUnlocked } from "@/lib/game/vehicleUnlock";
 import { FISH_SHOP_ITEMS, AQUARIUM_SHOP_ITEMS } from "@/lib/shop/aquariumCatalog";
+import { BIRD_SHOP_ITEMS } from "@/lib/shop/birdCatalog";
 import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
 import type { HatId, PlayerShopInventory } from "@/lib/shop/playerInventory";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
@@ -160,6 +161,18 @@ export function ProfileModal({
         key: `aq-${aqId}`,
         emoji: row?.emoji ?? "🧊",
         title: row?.label ?? aqId,
+        detail: "Owned",
+      };
+    });
+  }, [shopInventory]);
+
+  const plazaBirdRows = useMemo((): ProfileInvRow[] => {
+    return shopInventory.ownedPlazaBirdIds.map((birdId) => {
+      const row = BIRD_SHOP_ITEMS.find((b) => b.id === birdId);
+      return {
+        key: `bird-${birdId}`,
+        emoji: row?.emoji ?? "🐦",
+        title: row?.label ?? birdId,
         detail: "Owned",
       };
     });
@@ -328,7 +341,7 @@ export function ProfileModal({
             }}
           >
             Power-up charges on this device; other subsections list only what you
-            own (hats, vehicles, fish, aquariums).
+            own (hats, vehicles, fish, birds, aquariums).
           </p>
 
           <h4 style={{ ...subsectionHeaderStyle, margin: "0 0 8px" }}>
@@ -487,6 +500,57 @@ export function ProfileModal({
               </h4>
               <ul style={invGridStyle}>
                 {fishRows.map((row) => (
+                  <li key={row.key} style={invCellStyle}>
+                    <span
+                      style={{
+                        fontSize: 26,
+                        lineHeight: 1,
+                        textAlign: "center",
+                      }}
+                      aria-hidden
+                    >
+                      {row.emoji}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: hudColors.value,
+                        textAlign: "center",
+                        lineHeight: 1.25,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {row.title}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        fontVariantNumeric: "tabular-nums",
+                        color: row.accent ?? hudColors.accent,
+                        textAlign: "center",
+                        marginTop: "auto",
+                      }}
+                    >
+                      {row.detail}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+
+          {plazaBirdRows.length > 0 ? (
+            <>
+              <h4 style={{ ...subsectionHeaderStyle, margin: "14px 0 8px" }}>
+                Birds (plaza)
+              </h4>
+              <ul style={invGridStyle}>
+                {plazaBirdRows.map((row) => (
                   <li key={row.key} style={invCellStyle}>
                     <span
                       style={{

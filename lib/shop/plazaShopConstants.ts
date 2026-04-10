@@ -33,3 +33,25 @@ export function isNearPlazaAquariumShop(
   const dz = wz - cz;
   return Math.hypot(dx, dz) <= PLAZA_AQUARIUM_SHOP_LAND_TRIGGER_RADIUS;
 }
+
+/**
+ * Bird shop / aviary center relative to the plaza hub island — keep in sync with
+ * `PlazaFrutigerAeroDecor` (`birdAviary.cx` / `birdAviary.cz`).
+ */
+export const PLAZA_BIRD_SHOP_ISLAND_OFFSET_X = -17;
+export const PLAZA_BIRD_SHOP_ISLAND_OFFSET_Z = -11;
+
+export const PLAZA_BIRD_SHOP_LAND_TRIGGER_RADIUS = 4.2;
+
+export function isNearPlazaBirdShop(
+  wx: number,
+  wz: number,
+  islandWorldX: number,
+  islandWorldZ: number
+): boolean {
+  const cx = islandWorldX + PLAZA_BIRD_SHOP_ISLAND_OFFSET_X;
+  const cz = islandWorldZ + PLAZA_BIRD_SHOP_ISLAND_OFFSET_Z;
+  const dx = wx - cx;
+  const dz = wz - cz;
+  return Math.hypot(dx, dz) <= PLAZA_BIRD_SHOP_LAND_TRIGGER_RADIUS;
+}

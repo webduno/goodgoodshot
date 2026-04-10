@@ -11,6 +11,9 @@ export type HatId = "glassPyramid" | "glassCube" | "glassSphere";
 
 export type FishId = "fishYellow" | "fishBlue" | "fishRed";
 
+/** Plaza bird shop — placement / gameplay hooks can be added later. */
+export type PlazaBirdId = "birdBee" | "birdColibri" | "birdSparrow";
+
 export type AquariumId =
   | "aquariumSmallCube"
   | "aquariumMediumCube"
@@ -25,6 +28,7 @@ export type PlayerShopInventory = {
   /** Lowercase `v_id` strings from `data/defaultVehicles.json` (excludes free `default`). */
   ownedVehicleIds: string[];
   ownedFishIds: FishId[];
+  ownedPlazaBirdIds: PlazaBirdId[];
   ownedAquariumIds: AquariumId[];
 };
 
@@ -37,6 +41,7 @@ export function defaultPlayerShopInventory(): PlayerShopInventory {
     equippedHatId: null,
     ownedVehicleIds: [],
     ownedFishIds: [],
+    ownedPlazaBirdIds: [],
     ownedAquariumIds: [],
   };
 }
@@ -49,6 +54,10 @@ function isHatId(x: unknown): x is HatId {
 
 function isFishId(x: unknown): x is FishId {
   return x === "fishYellow" || x === "fishBlue" || x === "fishRed";
+}
+
+function isPlazaBirdId(x: unknown): x is PlazaBirdId {
+  return x === "birdBee" || x === "birdColibri" || x === "birdSparrow";
 }
 
 function isAquariumId(x: unknown): x is AquariumId {
@@ -125,6 +134,17 @@ export function loadPlayerShopInventory(): PlayerShopInventory {
       }
     }
 
+    let ownedPlazaBirdIds: PlazaBirdId[] = [];
+    if (Array.isArray(p.ownedPlazaBirdIds)) {
+      const seen = new Set<PlazaBirdId>();
+      for (const raw of p.ownedPlazaBirdIds) {
+        if (!isPlazaBirdId(raw)) continue;
+        if (seen.has(raw)) continue;
+        seen.add(raw);
+        ownedPlazaBirdIds.push(raw);
+      }
+    }
+
     let ownedAquariumIds: AquariumId[] = [];
     if (Array.isArray(p.ownedAquariumIds)) {
       const seen = new Set<AquariumId>();
@@ -144,6 +164,7 @@ export function loadPlayerShopInventory(): PlayerShopInventory {
       equippedHatId,
       ownedVehicleIds,
       ownedFishIds,
+      ownedPlazaBirdIds,
       ownedAquariumIds,
     };
   } catch {

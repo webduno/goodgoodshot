@@ -8,6 +8,8 @@ import { TURF_TOP_Y } from "@/lib/game/constants";
 import {
   PLAZA_AQUARIUM_ISLAND_OFFSET_X,
   PLAZA_AQUARIUM_ISLAND_OFFSET_Z,
+  PLAZA_BIRD_SHOP_ISLAND_OFFSET_X,
+  PLAZA_BIRD_SHOP_ISLAND_OFFSET_Z,
 } from "@/lib/shop/plazaShopConstants";
 import { addMultiplicativeWhiteVertexColors } from "@/lib/game/threeInstancing";
 
@@ -25,6 +27,8 @@ const BUBBLE_MEGA_COUNT = 3;
 const BUBBLE_MEGA_RADIUS_SCALE = 4;
 const ORB_COUNT = 28;
 const FISH_COUNT = 42;
+/** Decorative fliers inside the plaza bird aviary (separate seed from main decor). */
+const BIRD_DECO_COUNT = 30;
 const BUILDING_COUNT = 6;
 /** Smaller “city block” cubes beside each tower; split opaque vs glass (Frutiger Aero). */
 const SATELLITE_OPAQUE_COUNT = 12;
@@ -57,6 +61,15 @@ const FISH_COLORS = [
   "#b026ff",
   "#ff3355",
   "#00ffaa",
+] as const;
+
+const BIRD_FLIT_COLORS = [
+  "#fbbf24",
+  "#f59e0b",
+  "#22d3ee",
+  "#34d399",
+  "#fb7185",
+  "#a78bfa",
 ] as const;
 
 type BubbleSpec = {
@@ -137,6 +150,7 @@ export function PlazaFrutigerAeroDecor({
   walk,
   outer,
   onPointerDownAquariumShop,
+  onPointerDownBirdShop,
 }: {
   wx: number;
   wz: number;
@@ -144,6 +158,8 @@ export function PlazaFrutigerAeroDecor({
   outer: number;
   /** Opens the aquarium shop modal (plaza hub). */
   onPointerDownAquariumShop?: () => void;
+  /** Opens the bird shop modal (plaza hub). */
+  onPointerDownBirdShop?: () => void;
 }) {
   const bubbleGlassRef = useRef<THREE.InstancedMesh>(null);
   const bubbleOpaqueRef = useRef<THREE.InstancedMesh>(null);
@@ -151,6 +167,7 @@ export function PlazaFrutigerAeroDecor({
   const bubbleBrightRef = useRef<THREE.InstancedMesh>(null);
   const orbRef = useRef<THREE.InstancedMesh>(null);
   const fishRef = useRef<THREE.InstancedMesh>(null);
+  const birdFlitRef = useRef<THREE.InstancedMesh>(null);
   const buildingRef = useRef<THREE.InstancedMesh>(null);
   const satelliteOpaqueRef = useRef<THREE.InstancedMesh>(null);
   const satelliteGlassRef = useRef<THREE.InstancedMesh>(null);
@@ -168,6 +185,8 @@ export function PlazaFrutigerAeroDecor({
     orbs,
     fishSpecs,
     aquarium,
+    birdAviary,
+    birdFlitSpecs,
     buildings,
     satelliteOpaque,
     satelliteGlass,
@@ -332,6 +351,34 @@ export function PlazaFrutigerAeroDecor({
       }
     }
 
+    const brRand = seededRand(90212);
+    const birdW = 5.5;
+    const birdD = 4.6;
+    const birdH = 3.15;
+    const birdCx = wx + PLAZA_BIRD_SHOP_ISLAND_OFFSET_X;
+    const birdCz = wz + PLAZA_BIRD_SHOP_ISLAND_OFFSET_Z;
+    const birdAviary = {
+      cx: birdCx,
+      cz: birdCz,
+      w: birdW,
+      d: birdD,
+      h: birdH,
+      baseY: TURF_TOP_Y + 0.02,
+    };
+    const maxBirdR = Math.min(birdW, birdD) * 0.38;
+    const birdFlitSpecs: FishSpec[] = [];
+    for (let i = 0; i < BIRD_DECO_COUNT; i++) {
+      birdFlitSpecs.push({
+        cx: birdCx,
+        cz: birdCz,
+        r: 0.22 + brRand() * Math.max(0.14, maxBirdR - 0.22),
+        ph: brRand() * Math.PI * 2,
+        sp: 1.15 + brRand() * 1.55,
+        y0: TURF_TOP_Y + 0.52 + brRand() * (birdH - 0.62),
+        wobble: brRand() * Math.PI * 2,
+      });
+    }
+
     return {
       bubblesGlass,
       bubblesOpaque,
@@ -340,6 +387,8 @@ export function PlazaFrutigerAeroDecor({
       orbs,
       fishSpecs,
       aquarium,
+      birdAviary,
+      birdFlitSpecs,
       buildings,
       satelliteOpaque,
       satelliteGlass,
@@ -527,6 +576,36 @@ export function PlazaFrutigerAeroDecor({
     []
   );
 
+  const birdGlassMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffe8c8",
+        transparent: true,
+        opacity: 0.24,
+        roughness: 0.06,
+        metalness: 0.1,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    []
+  );
+
+  const birdAirMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#fff7e8",
+        roughness: 0.35,
+        metalness: 0.02,
+        transparent: true,
+        opacity: 0.28,
+        emissive: "#ffd9a0",
+        emissiveIntensity: 0.22,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    []
+  );
+
   const poolWaterMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -548,6 +627,7 @@ export function PlazaFrutigerAeroDecor({
     const bbMesh = bubbleBrightRef.current;
     const oMesh = orbRef.current;
     const fMesh = fishRef.current;
+    const bfMesh = birdFlitRef.current;
     const blMesh = buildingRef.current;
     const soMesh = satelliteOpaqueRef.current;
     const sgMesh = satelliteGlassRef.current;
@@ -558,6 +638,7 @@ export function PlazaFrutigerAeroDecor({
       !bbMesh ||
       !oMesh ||
       !fMesh ||
+      !bfMesh ||
       !blMesh ||
       !soMesh ||
       !sgMesh
@@ -641,6 +722,24 @@ export function PlazaFrutigerAeroDecor({
     fMesh.instanceMatrix.needsUpdate = true;
     if (fMesh.instanceColor) fMesh.instanceColor.needsUpdate = true;
 
+    for (let i = 0; i < BIRD_DECO_COUNT; i++) {
+      const f = birdFlitSpecs[i]!;
+      const ang = f.ph;
+      dummy.position.set(
+        f.cx + Math.cos(ang) * f.r,
+        f.y0,
+        f.cz + Math.sin(ang) * f.r
+      );
+      dummy.scale.set(0.92, 0.92, 0.92);
+      dummy.rotation.set(Math.PI / 2, ang + Math.PI / 2, 0);
+      dummy.updateMatrix();
+      bfMesh.setMatrixAt(i, dummy.matrix);
+      color.set(BIRD_FLIT_COLORS[i % BIRD_FLIT_COLORS.length]!);
+      bfMesh.setColorAt(i, color);
+    }
+    bfMesh.instanceMatrix.needsUpdate = true;
+    if (bfMesh.instanceColor) bfMesh.instanceColor.needsUpdate = true;
+
     for (let i = 0; i < BUILDING_COUNT; i++) {
       const b = buildings[i]!;
       dummy.position.set(b.x, TURF_TOP_Y + b.h / 2, b.z);
@@ -677,6 +776,7 @@ export function PlazaFrutigerAeroDecor({
     bubblesBright,
     orbs,
     fishSpecs,
+    birdFlitSpecs,
     buildings,
     satelliteOpaque,
     satelliteGlass,
@@ -692,7 +792,9 @@ export function PlazaFrutigerAeroDecor({
     const bbMesh = bubbleBrightRef.current;
     const oMesh = orbRef.current;
     const fMesh = fishRef.current;
-    if (!bgMesh || !boMesh || !bmMesh || !bbMesh || !oMesh || !fMesh) return;
+    const bfMesh = birdFlitRef.current;
+    if (!bgMesh || !boMesh || !bmMesh || !bbMesh || !oMesh || !fMesh || !bfMesh)
+      return;
 
     const bobble = (b: BubbleSpec) => {
       const bob = Math.sin(t * b.sp + b.ph) * 0.34;
@@ -754,6 +856,20 @@ export function PlazaFrutigerAeroDecor({
       fMesh.setMatrixAt(i, dummy.matrix);
     }
     fMesh.instanceMatrix.needsUpdate = true;
+
+    for (let i = 0; i < BIRD_DECO_COUNT; i++) {
+      const f = birdFlitSpecs[i]!;
+      const ang = t * f.sp + f.ph;
+      const bob = Math.sin(t * 2.4 + f.wobble) * 0.09;
+      const px = f.cx + Math.cos(ang) * f.r;
+      const pz = f.cz + Math.sin(ang) * f.r;
+      dummy.position.set(px, f.y0 + bob, pz);
+      dummy.scale.set(0.92, 0.92, 0.92);
+      dummy.rotation.set(Math.PI / 2, ang + Math.PI / 2, 0);
+      dummy.updateMatrix();
+      bfMesh.setMatrixAt(i, dummy.matrix);
+    }
+    bfMesh.instanceMatrix.needsUpdate = true;
   });
 
   const wallT = 0.07;
@@ -764,6 +880,15 @@ export function PlazaFrutigerAeroDecor({
   const innerD = aquarium.d - 2 * wallT - 0.08;
   const innerH = aquarium.h - wallT - 0.08;
   const waterCenterY = wallT + innerH / 2;
+
+  const bWallT = 0.07;
+  const bhw = birdAviary.w / 2;
+  const bhd = birdAviary.d / 2;
+  const bhyLocal = birdAviary.h / 2;
+  const bInnerW = birdAviary.w - 2 * bWallT - 0.08;
+  const bInnerD = birdAviary.d - 2 * bWallT - 0.08;
+  const bInnerH = birdAviary.h - bWallT - 0.08;
+  const birdAirCenterY = bWallT + bInnerH / 2;
 
   const waterPools = useMemo(
     () => [
@@ -900,6 +1025,118 @@ export function PlazaFrutigerAeroDecor({
         </mesh>
       </group>
 
+      <group position={[birdAviary.cx, birdAviary.baseY, birdAviary.cz]}>
+        <pointLight
+          position={[0, birdAviary.h + 0.45, 0]}
+          color="#ffe8c0"
+          intensity={4.2}
+          distance={Math.max(birdAviary.w, birdAviary.d) * 2.6}
+          decay={2}
+        />
+        <mesh
+          position={[0, birdAirCenterY, 0]}
+          castShadow={false}
+          receiveShadow
+          material={birdAirMat}
+          renderOrder={-1}
+          onPointerDown={
+            onPointerDownBirdShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownBirdShop();
+                }
+              : undefined
+          }
+        >
+          <boxGeometry args={[bInnerW, bInnerH, bInnerD]} />
+        </mesh>
+        <mesh
+          position={[0, bhyLocal, -bhd + bWallT / 2]}
+          castShadow={false}
+          receiveShadow
+          material={birdGlassMat}
+          onPointerDown={
+            onPointerDownBirdShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownBirdShop();
+                }
+              : undefined
+          }
+        >
+          <boxGeometry args={[birdAviary.w, birdAviary.h, bWallT]} />
+        </mesh>
+        <mesh
+          position={[0, bhyLocal, bhd - bWallT / 2]}
+          castShadow={false}
+          receiveShadow
+          material={birdGlassMat}
+          onPointerDown={
+            onPointerDownBirdShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownBirdShop();
+                }
+              : undefined
+          }
+        >
+          <boxGeometry args={[birdAviary.w, birdAviary.h, bWallT]} />
+        </mesh>
+        <mesh
+          position={[-bhw + bWallT / 2, bhyLocal, 0]}
+          castShadow={false}
+          receiveShadow
+          material={birdGlassMat}
+          onPointerDown={
+            onPointerDownBirdShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownBirdShop();
+                }
+              : undefined
+          }
+        >
+          <boxGeometry args={[bWallT, birdAviary.h, birdAviary.d]} />
+        </mesh>
+        <mesh
+          position={[bhw - bWallT / 2, bhyLocal, 0]}
+          castShadow={false}
+          receiveShadow
+          material={birdGlassMat}
+          onPointerDown={
+            onPointerDownBirdShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownBirdShop();
+                }
+              : undefined
+          }
+        >
+          <boxGeometry args={[bWallT, birdAviary.h, birdAviary.d]} />
+        </mesh>
+        <mesh
+          position={[0, bWallT / 2, 0]}
+          receiveShadow
+          onPointerDown={
+            onPointerDownBirdShop
+              ? (e) => {
+                  e.stopPropagation();
+                  onPointerDownBirdShop();
+                }
+              : undefined
+          }
+        >
+          <boxGeometry args={[birdAviary.w, bWallT, birdAviary.d]} />
+          <meshStandardMaterial
+            color="#f5e6d4"
+            roughness={0.34}
+            metalness={0.14}
+            transparent
+            opacity={0.7}
+          />
+        </mesh>
+      </group>
+
       <instancedMesh
         ref={buildingRef}
         args={[buildingGeo, buildingMat, BUILDING_COUNT]}
@@ -950,6 +1187,11 @@ export function PlazaFrutigerAeroDecor({
       <instancedMesh
         ref={fishRef}
         args={[fishGeo, fishMat, FISH_COUNT]}
+        renderOrder={1}
+      />
+      <instancedMesh
+        ref={birdFlitRef}
+        args={[fishGeo, fishMat, BIRD_DECO_COUNT]}
         renderOrder={1}
       />
     </group>

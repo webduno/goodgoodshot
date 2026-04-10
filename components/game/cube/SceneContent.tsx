@@ -5,6 +5,7 @@ import {
   vehicleChargeMs,
   type PlayerVehicleConfig,
 } from "@/components/playerVehicleConfig";
+import { PvpOpponentVehicle } from "@/components/game/cube/meshes/PvpOpponentVehicle";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import {
@@ -65,6 +66,9 @@ import {
   NO_MAP_CAGES,
 } from "@/lib/game/mapCages";
 import { coinCellKey, coinCentersForIslands } from "@/lib/game/path";
+import {
+  goalEnemySpawnOffsetXZ,
+} from "@/lib/game/goalEnemyPlacement";
 import type { IslandRect } from "@/lib/game/islands";
 import {
   INITIAL_LANE_ORIGIN,
@@ -81,63 +85,6 @@ import { EarthTextured } from "../EarthTextured";
 import { ShotGuidelineArc } from "@/components/game/cube/ShotGuidelineArc";
 import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
-
-/** Spread messengers along X when more enemies than distinct islands (fallback). */
-function goalEnemyCrowdOffset(
-  index: number,
-  total: number
-): { x: number; z: number } {
-  if (total <= 1) return { x: 0, z: 0 };
-  const step = 0.58;
-  const mid = (total - 1) / 2;
-  return { x: (index - mid) * step, z: 0 };
-}
-
-/**
- * World offset from `goalCenter` so each messenger spawns on a different island when possible.
- * Islands are ordered spawn → goal; index 0 uses the goal island, 1 the previous, etc.
- * Matches `GoalMessengerCharacter` anchor `(goalCenter + offset) + (0.35, -0.85)` ≡ island center + (0.35, -0.85).
- * When `total` exceeds `islands.length`, extras share the goal island with crowding vs index 0.
- */
-function goalEnemySpawnOffsetXZ(
-  islands: readonly IslandRect[],
-  goalCenter: Vec3,
-  index: number,
-  total: number
-): { x: number; z: number } {
-  if (total <= 1) return { x: 0, z: 0 };
-  if (islands.length === 0) return goalEnemyCrowdOffset(index, total);
-
-  const goalIsland = islands[islands.length - 1]!;
-  const baseOnGoal = {
-    x: goalIsland.worldX - goalCenter[0],
-    z: goalIsland.worldZ - goalCenter[2],
-  };
-
-  const onGoalCount =
-    total > islands.length ? total - islands.length + 1 : 1;
-
-  if (index === 0) {
-    const crowd = goalEnemyCrowdOffset(0, onGoalCount);
-    return {
-      x: baseOnGoal.x + crowd.x,
-      z: baseOnGoal.z + crowd.z,
-    };
-  }
-  if (index >= islands.length) {
-    const k = index - islands.length + 1;
-    const crowd = goalEnemyCrowdOffset(k, onGoalCount);
-    return {
-      x: baseOnGoal.x + crowd.x,
-      z: baseOnGoal.z + crowd.z,
-    };
-  }
-  const is = islands[islands.length - 1 - index]!;
-  return {
-    x: is.worldX - goalCenter[0],
-    z: is.worldZ - goalCenter[2],
-  };
-}
 
 /** Local Y above spawn block center: clears default hull top (~0.5) and typical barrel. */
 const VEHICLE_POWERUP_LABEL_Y = 0.92;
@@ -315,12 +262,13 @@ export function SceneContent({
   biome,
   onTerrainCoordsClick,
   ballFollowStateRef,
-  onEnemyKillReward,
   goalEnemies,
   /** Hub / town: no tee, goal block, lane coins, or messengers — only vehicle + ball on islands. */
   hubMode = false,
   /** PvP: hide green goal block; opponent is the goal messenger(s). */
   pvpMode = false,
+  /** PvP: full vehicle mesh at goal instead of walking messenger. */
+  pvpOpponentVehicle = null,
   onEnemyLossAnimatingChange,
   equippedHatId = null,
   mapCages = NO_MAP_CAGES,
@@ -338,6 +286,7 @@ export function SceneContent({
   goalEnemies: readonly GoalEnemySpec[];
   hubMode?: boolean;
   pvpMode?: boolean;
+  pvpOpponentVehicle?: PlayerVehicleConfig | null;
   /** HUD ring yaw (atan2(dx, −dy)); converted to world XZ for shot, prism, and hull snap. */
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
@@ -390,8 +339,6 @@ export function SceneContent({
   /** Earth / terrain mesh pick: parent can show HUD toast (e.g. coordinates). */
   onTerrainCoordsClick?: (coords: { lat: number; lng: number }) => void;
   ballFollowStateRef: BallFollowStateRef;
-  /** +3 gold + confetti when the ball hits the goal messenger. */
-  onEnemyKillReward: () => void;
   /** While the enemy-touch sink plays, parent should lock HUD / keyboard aim. */
   onEnemyLossAnimatingChange?: (active: boolean) => void;
   /** Cosmetic glass hat from the plaza shop (local player). */
@@ -453,21 +400,17 @@ export function SceneContent({
     setEnemyAliveMask(Array.from({ length: n }, () => true));
   }, [goalCenter[0], goalCenter[2], goalEnemies.length]);
 
-  const onEnemyKilledByBall = useCallback(
-    (index: number) => {
-      if (!enemySimRef.current.alive[index]) return;
-      enemySimRef.current.alive[index] = false;
-      setEnemyAliveMask((prev) => {
-        if (!prev[index]) return prev;
-        const next = [...prev];
-        next[index] = false;
-        return next;
-      });
-      playSfx(SFX.enemyKill);
-      onEnemyKillReward();
-    },
-    [onEnemyKillReward]
-  );
+  const onEnemyHitByBall = useCallback((index: number) => {
+    if (!enemySimRef.current.alive[index]) return;
+    enemySimRef.current.alive[index] = false;
+    setEnemyAliveMask((prev) => {
+      if (!prev[index]) return prev;
+      const next = [...prev];
+      next[index] = false;
+      return next;
+    });
+    playSfx(SFX.enemyKill);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -948,26 +891,39 @@ export function SceneContent({
       {!hubMode && mapCages.length > 0 && (
         <GoalCageDecor cages={mapCages} brokenKeys={goalCagesBroken} />
       )}
-      {!hubMode &&
-        goalEnemies.map((spec, i) => (
-          <GoalMessengerCharacter
-            key={`messenger-${i}-${spec.colorHex}-${goalCenter[0]}-${goalCenter[2]}`}
-            goalCenter={goalCenter}
-            spawnCenter={spawnCenter}
-            alive={enemyAliveMask[i] === true}
-            paused={roundLocked || shotInFlight}
-            onReachedVehicle={onEnemyReachedVehicle}
-            enemySimRef={enemySimRef}
-            enemyIndex={i}
-            colorHex={spec.colorHex}
-            startOffsetXZ={goalEnemySpawnOffsetXZ(
-              islands,
-              goalCenter,
-              i,
-              goalEnemies.length
-            )}
-          />
-        ))}
+      {!hubMode && pvpMode && pvpOpponentVehicle
+        ? goalEnemies.map((_, i) => (
+            <PvpOpponentVehicle
+              key={`pvp-opp-${i}`}
+              goalCenter={goalCenter}
+              spawnCenter={spawnCenter}
+              islands={islands}
+              vehicle={pvpOpponentVehicle}
+              alive={enemyAliveMask[i] === true}
+              enemySimRef={enemySimRef}
+              enemyIndex={i}
+            />
+          ))
+        : !hubMode &&
+          goalEnemies.map((spec, i) => (
+            <GoalMessengerCharacter
+              key={`messenger-${i}-${spec.colorHex}-${goalCenter[0]}-${goalCenter[2]}`}
+              goalCenter={goalCenter}
+              spawnCenter={spawnCenter}
+              alive={enemyAliveMask[i] === true}
+              paused={roundLocked || shotInFlight}
+              onReachedVehicle={onEnemyReachedVehicle}
+              enemySimRef={enemySimRef}
+              enemyIndex={i}
+              colorHex={spec.colorHex}
+              startOffsetXZ={goalEnemySpawnOffsetXZ(
+                islands,
+                goalCenter,
+                i,
+                goalEnemies.length
+              )}
+            />
+          ))}
       {!hubMode &&
         yellowLaneMarkers.map((center, i) => {
           const ck = coinCellKey(center);
@@ -989,11 +945,12 @@ export function SceneContent({
         collectedCoinKeysRef={collectedCoinKeysRef}
         onCoinCollected={onCoinCollected}
         enemySimRef={enemySimRef}
-        onEnemyKilledByBall={onEnemyKilledByBall}
+        onEnemyHitByBall={onEnemyHitByBall}
         hubMode={hubMode}
         mapCagesRef={mapCagesRef}
         goalCagesBrokenRef={goalCagesBrokenRef}
         onCageTrapped={onCageTrapped}
+        pvpMode={pvpMode}
       />
       {guidelinePoints.length >= 2 && (
         <ShotGuidelineArc points={guidelinePoints} />

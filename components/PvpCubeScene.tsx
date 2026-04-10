@@ -35,6 +35,7 @@ import {
 } from "@/components/gameHudStyles";
 import {
   DEFAULT_PLAYER_VEHICLE,
+  getVehicleByVId,
   halfClicksForStrengthBarRef,
   maxClicksForStrengthBarRef,
   vehicleShotCooldownMs,
@@ -112,6 +113,25 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
   const { room, userId, initialFetchDone, error: roomError } =
     usePvpRoom(roomId);
+
+  const opponentVehicle = useMemo(() => {
+    if (!room || !userId) return DEFAULT_PLAYER_VEHICLE;
+    const oid =
+      userId === room.host_user_id
+        ? room.guest_vehicle_id
+        : room.host_vehicle_id;
+    const raw = oid?.trim() || "default";
+    return getVehicleByVId(raw) ?? DEFAULT_PLAYER_VEHICLE;
+  }, [room, userId]);
+
+  useEffect(() => {
+    if (!room?.id || !userId) return;
+    const supabase = createSupabaseBrowserClient();
+    void supabase.rpc("set_pvp_room_vehicle", {
+      p_room_id: room.id,
+      p_vehicle_id: playerVehicle.id,
+    });
+  }, [room?.id, userId, playerVehicle.id]);
 
   const [game, dispatch] = useReducer(
     pvpGameReducer,
@@ -247,6 +267,20 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     const qs = p.toString();
     router.push(qs ? `/plaza?${qs}` : "/plaza");
   }, [router, searchParams]);
+
+  const leavePvpRoom = useCallback(() => {
+    void (async () => {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.rpc("leave_pvp_room", {
+        p_room_id: roomId,
+      });
+      if (error) {
+        pushHudToast(error.message);
+        return;
+      }
+      goToPlaza();
+    })();
+  }, [roomId, goToPlaza, pushHudToast]);
 
   const prevWindMagRef = useRef<number | null>(null);
   const maybeWindToast = useCallback(
@@ -417,6 +451,10 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           return;
         }
 
+        if (outcome === "enemy_loss") {
+          onEnemyKillReward();
+        }
+
         if (outcome === "penalty") {
           setCageEscapeNextShot(false);
           dispatch({
@@ -435,7 +473,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
       })();
     },
-    [maybeWindToast, playerVehicle, pushHudToast, room?.id]
+    [maybeWindToast, onEnemyKillReward, playerVehicle, pushHudToast, room?.id]
   );
 
   useEffect(() => {
@@ -626,7 +664,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
               {room.winner_user_id === userId ? "You won!" : "You lost"}
             </h2>
             <p style={{ margin: "0 0 16px", opacity: 0.85 }}>
-              First to hit the opponent wins.
+              First to hit the opponent&apos;s vehicle wins.
             </p>
             <button type="button" onClick={goToPlaza} style={goldChipButtonStyle()}>
               Back to plaza
@@ -649,6 +687,24 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           }}
         >
           Waiting for opponent to join…
+        </div>
+      )}
+
+      {bothPlayersReady && !matchOver && room && (
+        <div
+          style={{
+            position: "absolute",
+            top: 56,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 55,
+            ...hudMiniPanel,
+            ...hudFont,
+            padding: "8px 14px",
+            textAlign: "center",
+          }}
+        >
+          {isMyTurn ? "Your turn" : "Opponent's turn"}
         </div>
       )}
 
@@ -702,7 +758,6 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             biome={game.biome}
             onTerrainCoordsClick={() => {}}
             ballFollowStateRef={ballFollowStateRef}
-            onEnemyKillReward={onEnemyKillReward}
             goalEnemies={[...PVP_OPPONENT_ENEMY]}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
             equippedHatId={shopInventory.equippedHatId}
@@ -714,6 +769,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             powerupVehicleBurstSeq={powerupVehicleBurst.seq}
             powerupVehicleBurstSlot={powerupVehicleBurst.slot}
             pvpMode
+            pvpOpponentVehicle={opponentVehicle}
           />
         </TeleportOrbitRig>
         <InitialFieldGround islands={islands} biome={game.biome} />
@@ -762,6 +818,13 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           style={goldChipButtonStyle()}
         >
           Menu
+        </button>
+        <button
+          type="button"
+          onClick={leavePvpRoom}
+          style={goldChipButtonStyle()}
+        >
+          Leave room
         </button>
       </div>
       <div

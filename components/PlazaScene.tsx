@@ -386,8 +386,6 @@ export default function PlazaScene() {
     setCoinRenderTick((t) => t + 1);
   }, []);
 
-  const onEnemyKillReward = useCallback(() => {}, []);
-
   const getPowerupMultiplier = useCallback(
     () => Math.pow(2, powerupStackRef.current),
     []
@@ -997,7 +995,6 @@ export default function PlazaScene() {
             guidelineFireBlocked={guidelineAdjusting}
             biome="plain"
             ballFollowStateRef={ballFollowStateRef}
-            onEnemyKillReward={onEnemyKillReward}
             goalEnemies={[]}
             hubMode
             equippedHatId={shopInventory.equippedHatId}

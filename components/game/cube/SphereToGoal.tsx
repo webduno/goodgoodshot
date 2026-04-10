@@ -37,11 +37,12 @@ export function SphereToGoal({
   collectedCoinKeysRef,
   onCoinCollected,
   enemySimRef,
-  onEnemyKilledByBall,
+  onEnemyHitByBall,
   hubMode = false,
   mapCagesRef,
   goalCagesBrokenRef,
   onCageTrapped,
+  pvpMode = false,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   projectileRef: MutableRefObject<Projectile | null>;
@@ -64,8 +65,11 @@ export function SphereToGoal({
     positions: { x: number; y: number; z: number }[];
     alive: boolean[];
   }>;
-  onEnemyKilledByBall: (enemyIndex: number) => void;
+  /** Ball touched an enemy: update sim only (reward comes from `onProjectileEnd("enemy_loss")`). */
+  onEnemyHitByBall: (enemyIndex: number) => void;
   hubMode?: boolean;
+  /** PvP: no goal-block win; win by hitting the opponent vehicle. */
+  pvpMode?: boolean;
   mapCagesRef: MutableRefObject<readonly Vec3[]>;
   goalCagesBrokenRef: MutableRefObject<ReadonlySet<string>>;
   onCageTrapped?: () => void;
@@ -116,7 +120,12 @@ export function SphereToGoal({
     return false;
   };
 
-  const tryEnemyHit = (px: number, py: number, pz: number) => {
+  const tryEnemyHit = (
+    px: number,
+    py: number,
+    pz: number,
+    mesh: THREE.Mesh
+  ): boolean => {
     const sim = enemySimRef.current;
     const { positions, alive } = sim;
     for (let i = 0; i < positions.length; i++) {
@@ -129,10 +138,14 @@ export function SphereToGoal({
         Math.hypot(dx, dy, dz) <
         SPHERE_RADIUS + GOAL_ENEMY_HIT_RADIUS
       ) {
-        onEnemyKilledByBall(i);
-        return;
+        onEnemyHitByBall(i);
+        projectileRef.current = null;
+        mesh.visible = false;
+        onProjectileEnd("enemy_loss");
+        return true;
       }
     }
+    return false;
   };
 
   useFrame((_, delta) => {
@@ -173,15 +186,17 @@ export function SphereToGoal({
       }
 
       tryCollectCoins(p.x, p.y, p.z);
-      tryEnemyHit(p.x, p.y, p.z);
+      if (tryEnemyHit(p.x, p.y, p.z, mesh)) return;
 
-      const hitGoal = sphereIntersectsGoalBox(
-        p.x,
-        p.y,
-        p.z,
-        SPHERE_RADIUS,
-        goalCenter
-      );
+      const hitGoal =
+        !pvpMode &&
+        sphereIntersectsGoalBox(
+          p.x,
+          p.y,
+          p.z,
+          SPHERE_RADIUS,
+          goalCenter
+        );
       if (hitGoal) {
         projectileRef.current = null;
         mesh.visible = false;
@@ -213,15 +228,17 @@ export function SphereToGoal({
     p.z += p.vz * dt;
 
     tryCollectCoins(p.x, p.y, p.z);
-    tryEnemyHit(p.x, p.y, p.z);
+    if (tryEnemyHit(p.x, p.y, p.z, mesh)) return;
 
-    const hitGoal = sphereIntersectsGoalBox(
-      p.x,
-      p.y,
-      p.z,
-      SPHERE_RADIUS,
-      goalCenter
-    );
+    const hitGoal =
+      !pvpMode &&
+      sphereIntersectsGoalBox(
+        p.x,
+        p.y,
+        p.z,
+        SPHERE_RADIUS,
+        goalCenter
+      );
     if (hitGoal) {
       projectileRef.current = null;
       mesh.visible = false;

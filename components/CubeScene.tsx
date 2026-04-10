@@ -718,6 +718,9 @@ export default function CubeScene() {
       setShotInFlight(false);
       setWindHud({ x: windRef.current.x, y: 0, z: windRef.current.z });
       maybeWindToast(windRef.current.x, windRef.current.z, false);
+      if (outcome === "enemy_loss") {
+        onEnemyKillReward();
+      }
       if (outcome === "penalty") {
         setCageEscapeNextShot(false);
         waterPenaltiesRoundRef.current += 1;
@@ -820,6 +823,7 @@ export default function CubeScene() {
     },
     [
       maybeWindToast,
+      onEnemyKillReward,
       playerVehicle,
       pushHudToast,
       recordHoleCompleted,
@@ -1158,7 +1162,6 @@ export default function CubeScene() {
             }
             }
             ballFollowStateRef={ballFollowStateRef}
-            onEnemyKillReward={onEnemyKillReward}
             goalEnemies={game.goalEnemies}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
             equippedHatId={shopInventory.equippedHatId}

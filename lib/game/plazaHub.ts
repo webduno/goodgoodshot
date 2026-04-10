@@ -5,6 +5,9 @@ export const PLAZA_OUTER_HALF = 54;
 /** Flat walkable turf half-extent; ball stays inside this inner square. */
 export const PLAZA_WALKABLE_HALF = 40;
 
+/** Cardinal torus portals — inside the walkable edge so they sit nearer the hub center. */
+export const PLAZA_PORTAL_ORBIT = 32;
+
 /** Inner walkable turf — slightly more saturated than `FIELD_GROUND_MUTED_GREEN` (plain course). */
 export const PLAZA_HUB_TURF_GREEN = "#2cfb26";
 

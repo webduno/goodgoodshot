@@ -12,6 +12,7 @@ import {
   type PlazaVoxelHouseKind,
   type PlazaVoxelHouseSpec,
 } from "@/components/game/cube/meshes/PlazaInstancedVoxelHouses";
+import { PLAZA_PORTAL_ORBIT } from "@/lib/game/plazaHub";
 
 /** Porcelain / mist “buildings” — Frutiger Aero (avoid dark brown stone). */
 const STONE = "#f2f6fb";
@@ -60,16 +61,16 @@ function clearOfPortals(
   lx: number,
   lz: number,
   wx: number,
-  wz: number,
-  walk: number
+  wz: number
 ): boolean {
   const px = lx - wx;
   const pz = lz - wz;
+  const o = PLAZA_PORTAL_ORBIT;
   const anchors: [number, number][] = [
-    [0, walk],
-    [0, -walk],
-    [walk, 0],
-    [-walk, 0],
+    [0, o],
+    [0, -o],
+    [o, 0],
+    [-o, 0],
   ];
   for (const [kx, kz] of anchors) {
     if (Math.hypot(px - kx, pz - kz) < PORTAL_EXCLUSION_R) return false;
@@ -357,7 +358,7 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
         stoneColor?: string;
       }
     ) => {
-      if (!clearOfPortals(lx, lz, wx, wz, walk)) return;
+      if (!clearOfPortals(lx, lz, wx, wz)) return;
       const levels =
         opts?.levels ??
         (tall
@@ -521,7 +522,7 @@ export function PlazaHubEdgeDecor({ island }: { island: IslandRect }) {
       floorY: number,
       seed: string
     ) => {
-      if (!clearOfPortals(lx, lz, wx, wz, walk)) return;
+      if (!clearOfPortals(lx, lz, wx, wz)) return;
       const pr = Math.hypot(lx - wx, lz - wz);
       if (pr < ringInner - 0.2 || pr > ringOuter + 1.2) return;
       const k = `${lx.toFixed(2)},${lz.toFixed(2)},${floorY.toFixed(2)}`;

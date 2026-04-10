@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 import type { BallFollowStateRef } from "@/components/game/cube/TeleportOrbitRig";
 import { PLAZA_WAR_PORTAL_BATTLE_COUNT, TURF_TOP_Y } from "@/lib/game/constants";
-import { PLAZA_WALKABLE_HALF } from "@/lib/game/plazaHub";
+import { PLAZA_PORTAL_ORBIT } from "@/lib/game/plazaHub";
 
 /** Major radius, tube radius — match `torusGeometry` args for trigger bounds. */
 const PORTAL_MAJOR_R = 3;
@@ -177,7 +177,7 @@ export function PlazaWarPortalTorus({
   return (
     <PlazaPortalTorus
       worldX={0}
-      worldZ={PLAZA_WALKABLE_HALF}
+      worldZ={PLAZA_PORTAL_ORBIT}
       rotationY={0}
       label={signLabel}
       ballFollowStateRef={ballFollowStateRef}

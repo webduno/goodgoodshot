@@ -88,7 +88,7 @@ import {
 import {
   PLAZA_HUB_ISLANDS,
   PLAZA_HUB_TURF_GREEN,
-  PLAZA_WALKABLE_HALF,
+  PLAZA_PORTAL_ORBIT,
 } from "@/lib/game/plazaHub";
 import {
   AQUARIUM_SHOP_ITEMS,
@@ -942,7 +942,7 @@ export default function PlazaScene() {
         <PlazaShopBuilding onPointerDownOpen={() => setShowShopModal(true)} />
         <PlazaPortalTorus
           worldX={0}
-          worldZ={PLAZA_WALKABLE_HALF}
+          worldZ={PLAZA_PORTAL_ORBIT}
           label={`${PLAZA_WAR_PORTAL_BATTLE_COUNT} Battle War`}
           ballFollowStateRef={ballFollowStateRef}
           shotInFlight={shotInFlight}
@@ -950,7 +950,7 @@ export default function PlazaScene() {
         />
         <PlazaPortalTorus
           worldX={0}
-          worldZ={-PLAZA_WALKABLE_HALF}
+          worldZ={-PLAZA_PORTAL_ORBIT}
           rotationY={Math.PI}
           label="Home"
           ballFollowStateRef={ballFollowStateRef}
@@ -958,7 +958,7 @@ export default function PlazaScene() {
           onBallEnter={onHomePortalEnter}
         />
         <PlazaPortalTorus
-          worldX={PLAZA_WALKABLE_HALF}
+          worldX={PLAZA_PORTAL_ORBIT}
           worldZ={0}
           rotationY={-Math.PI / 2}
           label="9 Battle War"
@@ -967,7 +967,7 @@ export default function PlazaScene() {
           onBallEnter={onNineBattlePortalEnter}
         />
         <PlazaPortalTorus
-          worldX={-PLAZA_WALKABLE_HALF}
+          worldX={-PLAZA_PORTAL_ORBIT}
           worldZ={0}
           rotationY={Math.PI / 2}
           label="5 Battle War"

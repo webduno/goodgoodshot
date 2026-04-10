@@ -573,30 +573,30 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
       void (async () => {
         const supabase = createSupabaseBrowserClient();
-        const rpcParams: {
-          p_room_id: string;
-          p_outcome: string;
-          p_spawn_x?: number;
-          p_spawn_y?: number;
-          p_spawn_z?: number;
-        } = { p_room_id: rid, p_outcome: rpcOutcome };
+        // Always pass all five args (null spawns) so PostgREST matches submit_pvp_shot(uuid, text, bigint, bigint, bigint).
+        let p_spawn_x: number | null = null;
+        let p_spawn_y: number | null = null;
+        let p_spawn_z: number | null = null;
         if (outcome === "miss" && landing) {
           const s = snapBlockCenterToGrid(landing);
-          rpcParams.p_spawn_x = Math.round(s[0]);
-          rpcParams.p_spawn_y = Math.round(s[1]);
-          rpcParams.p_spawn_z = Math.round(s[2]);
+          p_spawn_x = Math.round(s[0]);
+          p_spawn_y = Math.round(s[1]);
+          p_spawn_z = Math.round(s[2]);
         } else if (outcome === "penalty") {
           const s = snapBlockCenterToGrid(
             [...spawnBeforeShotRef.current] as Vec3
           );
-          rpcParams.p_spawn_x = Math.round(s[0]);
-          rpcParams.p_spawn_y = Math.round(s[1]);
-          rpcParams.p_spawn_z = Math.round(s[2]);
+          p_spawn_x = Math.round(s[0]);
+          p_spawn_y = Math.round(s[1]);
+          p_spawn_z = Math.round(s[2]);
         }
-        const { error: rpcErr } = await supabase.rpc(
-          "submit_pvp_shot",
-          rpcParams
-        );
+        const { error: rpcErr } = await supabase.rpc("submit_pvp_shot", {
+          p_room_id: rid,
+          p_outcome: rpcOutcome,
+          p_spawn_x,
+          p_spawn_y,
+          p_spawn_z,
+        });
         if (rpcErr) {
           pushHudToast(rpcErr.message);
           return;

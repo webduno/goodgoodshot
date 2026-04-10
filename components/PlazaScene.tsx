@@ -111,6 +111,8 @@ import type {
   PlazaBirdId,
 } from "@/lib/shop/playerInventory";
 import { startWarSessionAndRedirectHome } from "@/lib/game/startWarSession";
+import { createPvpRoom, joinFirstOpenPvpRoom } from "@/lib/pvp/plazaActions";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { type PowerupSlotId, type Vec3 } from "@/lib/game/types";
 import { Canvas } from "@react-three/fiber";
@@ -155,6 +157,8 @@ export default function PlazaScene() {
       resolvePlayerVehicle(vehicleParam, stats, shopInventory.ownedVehicleIds),
     [vehicleParam, stats, shopInventory.ownedVehicleIds]
   );
+
+  const [pvpLobbyBusy, setPvpLobbyBusy] = useState(false);
 
   const [spawnCenter, setSpawnCenter] = useState<Vec3>(() => [0, 0, 0]);
   const spawnCenterRef = useRef<Vec3>(spawnCenter);
@@ -235,6 +239,54 @@ export default function PlazaScene() {
     },
     []
   );
+
+  const onPvpCreateRoom = useCallback(async () => {
+    if (pvpLobbyBusy) return;
+    setPvpLobbyBusy(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) await supabase.auth.signInAnonymously();
+      const id = await createPvpRoom();
+      const p = new URLSearchParams();
+      const v = searchParams.get("vehicle");
+      if (v) p.set("vehicle", v);
+      const qs = p.toString();
+      router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+    } catch (e) {
+      pushHudToast(e instanceof Error ? e.message : "PvP setup failed");
+    } finally {
+      setPvpLobbyBusy(false);
+    }
+  }, [pvpLobbyBusy, searchParams, router, pushHudToast]);
+
+  const onPvpJoinOpen = useCallback(async () => {
+    if (pvpLobbyBusy) return;
+    setPvpLobbyBusy(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) await supabase.auth.signInAnonymously();
+      const id = await joinFirstOpenPvpRoom();
+      if (!id) {
+        pushHudToast("No open room — create one");
+        return;
+      }
+      const p = new URLSearchParams();
+      const v = searchParams.get("vehicle");
+      if (v) p.set("vehicle", v);
+      const qs = p.toString();
+      router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+    } catch (e) {
+      pushHudToast(e instanceof Error ? e.message : "PvP join failed");
+    } finally {
+      setPvpLobbyBusy(false);
+    }
+  }, [pvpLobbyBusy, searchParams, router, pushHudToast]);
 
   const onRetroTvChange = useCallback((next: boolean) => {
     setRetroTvEnabled(next);
@@ -1025,6 +1077,31 @@ export default function PlazaScene() {
           >
             Menu
           </button>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              alignItems: "stretch",
+            }}
+          >
+            <button
+              type="button"
+              disabled={pvpLobbyBusy}
+              onClick={() => void onPvpCreateRoom()}
+              style={goldChipButtonStyle()}
+            >
+              PvP: New room
+            </button>
+            <button
+              type="button"
+              disabled={pvpLobbyBusy}
+              onClick={() => void onPvpJoinOpen()}
+              style={goldChipButtonStyle()}
+            >
+              PvP: Join open
+            </button>
+          </div>
         </div>
       )}
       {!modalBlocksHud && (

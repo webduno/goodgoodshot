@@ -319,6 +319,8 @@ export function SceneContent({
   goalEnemies,
   /** Hub / town: no tee, goal block, lane coins, or messengers — only vehicle + ball on islands. */
   hubMode = false,
+  /** PvP: hide green goal block; opponent is the goal messenger(s). */
+  pvpMode = false,
   onEnemyLossAnimatingChange,
   equippedHatId = null,
   mapCages = NO_MAP_CAGES,
@@ -335,6 +337,7 @@ export function SceneContent({
   biome: BiomeId;
   goalEnemies: readonly GoalEnemySpec[];
   hubMode?: boolean;
+  pvpMode?: boolean;
   /** HUD ring yaw (atan2(dx, −dy)); converted to world XZ for shot, prism, and hull snap. */
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
@@ -941,7 +944,7 @@ export function SceneContent({
         />
         </group>
       </SpawnVisualGroup>
-      {!hubMode && <Block center={goalCenter} />}
+      {!hubMode && !pvpMode && <Block center={goalCenter} />}
       {!hubMode && mapCages.length > 0 && (
         <GoalCageDecor cages={mapCages} brokenKeys={goalCagesBroken} />
       )}

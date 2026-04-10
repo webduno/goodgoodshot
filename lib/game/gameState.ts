@@ -19,7 +19,11 @@ import {
   type GoalEnemySpec,
   type Vec3,
 } from "./types";
-import { randomIntInclusive, snapBlockCenterToGrid } from "./math";
+import {
+  randomIntInclusive,
+  snapBlockCenterToGrid,
+  withSeededRNG,
+} from "./math";
 
 /** Blue, green, yellow, red — random picks per messenger in a battle. */
 const GOAL_ENEMY_COLOR_PALETTE = [
@@ -38,6 +42,22 @@ export function createGoalEnemySpecsForBattle(battleIndex: number): readonly Goa
         Math.floor(Math.random() * GOAL_ENEMY_COLOR_PALETTE.length)
       ]!,
   }));
+}
+
+/** Same layout rules as `createInitialGameState`, but fully determined by `courseSeed` (multiplayer parity). */
+export function createInitialGameStateFromSeed(
+  courseSeed: number,
+  opts?: {
+    biome?: BiomeId;
+    goalEnemies?: readonly GoalEnemySpec[];
+  }
+): GameState {
+  return withSeededRNG(courseSeed, () =>
+    createInitialGameState({
+      biome: opts?.biome ?? "plain",
+      goalEnemies: opts?.goalEnemies ?? [{ colorHex: "#e11d48" }],
+    })
+  );
 }
 
 export function createInitialGameState(opts?: {

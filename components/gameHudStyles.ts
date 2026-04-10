@@ -548,6 +548,9 @@ export function progressFillStyle(
   };
 }
 
+/** Above `modalBackdrop` (50) and nested overlays (e.g. confirm at 60). */
+export const hudToastZIndex = 70;
+
 export const modalBackdrop: CSSProperties = {
   position: "fixed",
   inset: 0,

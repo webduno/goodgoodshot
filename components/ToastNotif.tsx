@@ -2,6 +2,7 @@
 
 import {
   hudFont,
+  hudToastZIndex,
   powerupToastAccentStyle,
 } from "@/components/gameHudStyles";
 import { useEffect, useState } from "react";
@@ -59,7 +60,7 @@ export function ToastNotif({
         left: "50%",
         top,
         transform: "translateX(-50%)",
-        zIndex: 50,
+        zIndex: hudToastZIndex,
         pointerEvents: "none",
         ...hudFont,
         fontSize: 14,

@@ -654,14 +654,20 @@ export default function CubeScene() {
         return;
       }
       if (slotId === "strength") {
+        const next = strengthChargesRef.current + 1;
         setStrengthCharges((c) => c + 1);
         burstPowerupBuyConfetti("strength");
+        pushHudToast(`Strength: ${next}`, "strength");
       } else if (slotId === "noBounce") {
+        const next = noBounceChargesRef.current + 1;
         setNoBounceCharges((c) => c + 1);
         burstPowerupBuyConfetti("noBounce");
+        pushHudToast(`"No bounce": ${next}`, "noBounce");
       } else if (slotId === "nowind") {
+        const next = noWindChargesRef.current + 1;
         setNoWindCharges((c) => c + 1);
         burstPowerupBuyConfetti("nowind");
+        pushHudToast(`"No wind": ${next}`, "nowind");
       }
     },
     [

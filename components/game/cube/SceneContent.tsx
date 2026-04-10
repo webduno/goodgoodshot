@@ -143,7 +143,7 @@ const ENEMY_LOSS_SINK_BLOCKS = 2;
 
 /**
  * Drei `Html` defaults to `zIndexRange` [16777271, 0], so labels paint above fixed UI (e.g. modals at
- * z-index 50). Keep world-space HTML strictly below overlays (`modalBackdrop` / toasts use 50).
+ * z-index 50). Keep world-space HTML strictly below overlays (`modalBackdrop` 50; HUD toasts 70).
  */
 const VEHICLE_HTML_Z_INDEX_RANGE: [number, number] = [35, 0];
 

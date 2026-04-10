@@ -19,3 +19,26 @@ export async function joinFirstOpenPvpRoom(): Promise<string | null> {
   if (data == null) return null;
   return typeof data === "string" ? data : String(data);
 }
+
+export type OpenPvpRoomRow = {
+  id: string;
+  created_at: string;
+  course_seed: number;
+  status: string;
+};
+
+export async function listOpenPvpRoomsToday(): Promise<OpenPvpRoomRow[]> {
+  const supabase = createSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc("list_open_pvp_rooms_today");
+  if (error) throw error;
+  if (!data || !Array.isArray(data)) return [];
+  return data as OpenPvpRoomRow[];
+}
+
+export async function joinPvpRoomById(roomId: string): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const { error } = await supabase.rpc("join_pvp_room_by_id", {
+    p_room_id: roomId,
+  });
+  if (error) throw error;
+}

@@ -3,6 +3,7 @@
 import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
+import { PvpJoinRoomModal } from "@/components/game/cube/modals/PvpJoinRoomModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { AquariumShopModal } from "@/components/game/cube/modals/AquariumShopModal";
 import { BirdShopModal } from "@/components/game/cube/modals/BirdShopModal";
@@ -111,7 +112,11 @@ import type {
   PlazaBirdId,
 } from "@/lib/shop/playerInventory";
 import { startWarSessionAndRedirectHome } from "@/lib/game/startWarSession";
-import { createPvpRoom, joinFirstOpenPvpRoom } from "@/lib/pvp/plazaActions";
+import {
+  createPvpRoom,
+  joinFirstOpenPvpRoom,
+  joinPvpRoomById,
+} from "@/lib/pvp/plazaActions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { type PowerupSlotId, type Vec3 } from "@/lib/game/types";
@@ -235,6 +240,7 @@ export default function PlazaScene() {
   const [showShopModal, setShowShopModal] = useState(false);
   const [showAquariumShopModal, setShowAquariumShopModal] = useState(false);
   const [showBirdShopModal, setShowBirdShopModal] = useState(false);
+  const [showPvpJoinModal, setShowPvpJoinModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -295,7 +301,7 @@ export default function PlazaScene() {
     }
   }, [pvpLobbyBusy, searchParams, router, pushHudToast]);
 
-  const onPvpJoinOpen = useCallback(async () => {
+  const onPvpQuickPlay = useCallback(async () => {
     if (pvpLobbyBusy) return;
     setPvpLobbyBusy(true);
     try {
@@ -316,6 +322,28 @@ export default function PlazaScene() {
       setPvpLobbyBusy(false);
     }
   }, [pvpLobbyBusy, searchParams, router, pushHudToast]);
+
+  const onPvpJoinRoomFromList = useCallback(
+    async (roomId: string) => {
+      if (pvpLobbyBusy) return;
+      setPvpLobbyBusy(true);
+      try {
+        await ensureSupabaseSession();
+        await joinPvpRoomById(roomId);
+        const p = new URLSearchParams();
+        const v = searchParams.get("vehicle");
+        if (v) p.set("vehicle", v);
+        const qs = p.toString();
+        setShowPvpJoinModal(false);
+        router.push(qs ? `/pvp/${roomId}?${qs}` : `/pvp/${roomId}`);
+      } catch (e) {
+        pushHudToast(getErrorMessage(e, "Could not join room"));
+      } finally {
+        setPvpLobbyBusy(false);
+      }
+    },
+    [pvpLobbyBusy, searchParams, router, pushHudToast]
+  );
 
   const onRetroTvChange = useCallback((next: boolean) => {
     setRetroTvEnabled(next);
@@ -748,7 +776,8 @@ export default function PlazaScene() {
       showProfileModal ||
       showShopModal ||
       showAquariumShopModal ||
-      showBirdShopModal
+      showBirdShopModal ||
+      showPvpJoinModal
     ) {
       return;
     }
@@ -869,6 +898,7 @@ export default function PlazaScene() {
     showShopModal,
     showAquariumShopModal,
     showBirdShopModal,
+    showPvpJoinModal,
     inCooldown,
     chargeHud,
     activatePowerup,
@@ -927,14 +957,16 @@ export default function PlazaScene() {
     showProfileModal ||
     showShopModal ||
     showAquariumShopModal ||
-    showBirdShopModal;
+    showBirdShopModal ||
+    showPvpJoinModal;
 
   const modalBlocksHud =
     showHelpModal ||
     showProfileModal ||
     showShopModal ||
     showAquariumShopModal ||
-    showBirdShopModal;
+    showBirdShopModal ||
+    showPvpJoinModal;
 
   return (
     <div
@@ -1117,15 +1149,27 @@ export default function PlazaScene() {
               onClick={() => void onPvpCreateRoom()}
               style={goldChipButtonStyle()}
             >
-              PvP: New room
+              PvP: Create room
             </button>
             <button
               type="button"
               disabled={pvpLobbyBusy}
-              onClick={() => void onPvpJoinOpen()}
+              onClick={() => {
+                setShowProfileModal(false);
+                setShowHelpModal(false);
+                setShowPvpJoinModal(true);
+              }}
               style={goldChipButtonStyle()}
             >
-              PvP: Join open
+              PvP: Join room
+            </button>
+            <button
+              type="button"
+              disabled={pvpLobbyBusy}
+              onClick={() => void onPvpQuickPlay()}
+              style={goldChipButtonStyle()}
+            >
+              PvP: Quick play
             </button>
           </div>
         </div>
@@ -1521,6 +1565,12 @@ export default function PlazaScene() {
           </svg>
         </button>
       </div>
+      <PvpJoinRoomModal
+        open={showPvpJoinModal}
+        onClose={() => setShowPvpJoinModal(false)}
+        busy={pvpLobbyBusy}
+        onJoinRoom={(roomId) => void onPvpJoinRoomFromList(roomId)}
+      />
       <HelpModal
         open={showHelpModal}
         onClose={() => setShowHelpModal(false)}

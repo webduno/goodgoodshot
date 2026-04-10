@@ -150,6 +150,33 @@
       "rollDeceleration": 8.5,
       "meshObjPath": "/model/Meshy_AI_ratata_0407023011_texture.obj",
       "meshObjYawOffsetDeg": 0
+    },
+    {
+      "v_id": "sea-skipper",
+      "name": "Sea Skipper",
+      "mainRgb": [28, 86, 138],
+      "accentRgb": [200, 220, 245],
+      "strengthPerBaseClick": 8,
+      "extraClickStrengthFraction": 0.1,
+      "secondsBeforeShotTrigger": 2,
+      "shotCooldownSeconds": 5,
+      "gravityY": -22,
+      "launchAngleDeg": 48,
+      "landingBounces": 1,
+      "bounceRestitution": 0.52,
+      "rollDeceleration": 9,
+      "bodyParts": [
+        { "type": "cube", "pos": [0, -0.1, 0.04], "size": [0.88, 0.18, 0.92], "color": "main" },
+        { "type": "cube", "pos": [0, 0.02, 0.38], "size": [0.42, 0.14, 0.22], "color": "accent" },
+        { "type": "cube", "pos": [0, -0.02, -0.36], "size": [0.72, 0.12, 0.2], "color": [36, 68, 108] },
+        { "type": "cylinder", "pos": [0, 0.38, -0.06], "size": [0.038, 0.52, 6], "color": [52, 42, 34] },
+        { "type": "cube", "pos": [0, 0.52, -0.06], "size": [0.52, 0.04, 0.06], "color": [52, 42, 34] },
+        { "type": "cube", "pos": [0, 0.36, -0.06], "size": [0.03, 0.34, 0.3], "color": [240, 248, 255] },
+        { "type": "cube", "pos": [-0.18, 0.08, 0.48], "size": [0.2, 0.18, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [0.18, 0.08, 0.48], "size": [0.2, 0.18, 0.06], "color": [255, 255, 255], "polygonOffset": true },
+        { "type": "cube", "pos": [-0.12, 0.04, 0.51], "size": [0.07, 0.07, 0.04], "color": [24, 24, 28], "polygonOffset": true },
+        { "type": "cube", "pos": [0.12, 0.04, 0.51], "size": [0.07, 0.07, 0.04], "color": [24, 24, 28], "polygonOffset": true }
+      ]
     }
   ]
 }

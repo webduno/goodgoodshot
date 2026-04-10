@@ -962,6 +962,7 @@ export function StartGameModal({
                         { id: "desert" as const, label: "Desert" },
                         { id: "forest" as const, label: "Forest" },
                         { id: "snow" as const, label: "Snow" },
+                        { id: "sea" as const, label: "Sea" },
                       ] as const
                     ).map((opt) => {
                       const selected = biomeChoice === opt.id;

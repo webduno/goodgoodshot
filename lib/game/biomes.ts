@@ -3,10 +3,12 @@ import {
   FIELD_GROUND_DESERT_SAND,
   FIELD_GROUND_FOREST,
   FIELD_GROUND_MUTED_GREEN,
+  FIELD_GROUND_SEA,
   FIELD_GROUND_SNOW,
   FIELD_ISLAND_FOUNDATION_DESERT,
   FIELD_ISLAND_FOUNDATION_FOREST,
   FIELD_ISLAND_FOUNDATION_PLAIN,
+  FIELD_ISLAND_FOUNDATION_SEA,
   FIELD_ISLAND_FOUNDATION_SNOW,
   GOAL_GREEN,
 } from "./constants";
@@ -16,6 +18,7 @@ export const BIOME_IDS: readonly BiomeId[] = [
   "desert",
   "forest",
   "snow",
+  "sea",
 ];
 
 export function isValidBiomeId(value: unknown): value is BiomeId {
@@ -33,6 +36,8 @@ export function biomeDisplayName(biome: BiomeId): string {
       return "Forest";
     case "snow":
       return "Snow";
+    case "sea":
+      return "Sea";
   }
 }
 
@@ -71,6 +76,11 @@ export function islandColorsForBiome(biome: BiomeId): {
         turf: FIELD_GROUND_SNOW,
         foundation: FIELD_ISLAND_FOUNDATION_SNOW,
       };
+    case "sea":
+      return {
+        turf: FIELD_GROUND_SEA,
+        foundation: FIELD_ISLAND_FOUNDATION_SEA,
+      };
   }
 }
 
@@ -89,5 +99,7 @@ export function minimapTeeSurfaceColor(biome: BiomeId): string {
     case "snow":
       /** Slightly cooler than `FIELD_GROUND_SNOW` so tee reads vs fairway on the minimap. */
       return "#cfe8f4";
+    case "sea":
+      return GOAL_GREEN;
   }
 }

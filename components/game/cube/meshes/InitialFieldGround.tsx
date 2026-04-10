@@ -1,7 +1,11 @@
 "use client";
 
 import { islandColorsForBiome } from "@/lib/game/biomes";
-import { FIELD_ISLAND_FOUNDATION_SNOW_MESH, TURF_TOP_Y } from "@/lib/game/constants";
+import {
+  FIELD_ISLAND_FOUNDATION_SNOW_MESH,
+  FIELD_SEA_ISLAND_TOP_COLOR,
+  TURF_TOP_Y,
+} from "@/lib/game/constants";
 import type { IslandRect } from "@/lib/game/islands";
 import type { BiomeId } from "@/lib/game/types";
 import {
@@ -32,6 +36,7 @@ export function InitialFieldGround({
   const { turf: turfFromBiome, foundation: foundationColor } =
     islandColorsForBiome(biome);
   const turfColor = turfColorOverride ?? turfFromBiome;
+  const seaGlassIslandTop = biome === "sea" && turfColorOverride == null;
   const foundationMeshColor =
     biome === "snow" ? FIELD_ISLAND_FOUNDATION_SNOW_MESH : foundationColor;
 
@@ -86,9 +91,12 @@ export function InitialFieldGround({
               <mesh position={[wx, cy, wz]} castShadow receiveShadow>
                 <boxGeometry args={[innerX, th, innerZ]} />
                 <meshStandardMaterial
-                  color={turfColor}
-                  roughness={0.92}
-                  metalness={0}
+                  color={seaGlassIslandTop ? FIELD_SEA_ISLAND_TOP_COLOR : turfColor}
+                  roughness={seaGlassIslandTop ? 0.22 : 0.92}
+                  metalness={seaGlassIslandTop ? 0.06 : 0}
+                  transparent={seaGlassIslandTop}
+                  opacity={seaGlassIslandTop ? 0.5 : 1}
+                  depthWrite={!seaGlassIslandTop}
                 />
               </mesh>
               <mesh
@@ -171,9 +179,12 @@ export function InitialFieldGround({
             <mesh position={[is.worldX, cy, is.worldZ]} castShadow receiveShadow>
               <boxGeometry args={[is.halfX * 2, th, is.halfZ * 2]} />
               <meshStandardMaterial
-                color={turfColor}
-                roughness={0.92}
-                metalness={0}
+                color={seaGlassIslandTop ? FIELD_SEA_ISLAND_TOP_COLOR : turfColor}
+                roughness={seaGlassIslandTop ? 0.22 : 0.92}
+                metalness={seaGlassIslandTop ? 0.06 : 0}
+                transparent={seaGlassIslandTop}
+                opacity={seaGlassIslandTop ? 0.5 : 1}
+                depthWrite={!seaGlassIslandTop}
               />
             </mesh>
             <mesh
@@ -192,8 +203,12 @@ export function InitialFieldGround({
               />
               <meshStandardMaterial
                 color={foundationMeshColor}
-                roughness={biome === "snow" ? 0.88 : 0.94}
-                metalness={biome === "snow" ? 0.04 : 0.06}
+                roughness={
+                  biome === "snow" ? 0.88 : biome === "sea" ? 0.55 : 0.94
+                }
+                metalness={
+                  biome === "snow" ? 0.04 : biome === "sea" ? 0.1 : 0.06
+                }
               />
             </mesh>
           </group>

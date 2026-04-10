@@ -64,7 +64,7 @@ export type GoalEnemySpec = {
 };
 
 /** Visual theme for fairway decorations (trees vs cactus, turf colors, etc.). */
-export type BiomeId = "plain" | "desert" | "forest" | "snow";
+export type BiomeId = "plain" | "desert" | "forest" | "snow" | "sea";
 
 export type GameState = {
   spawnCenter: Vec3;

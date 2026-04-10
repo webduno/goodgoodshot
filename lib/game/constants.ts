@@ -176,6 +176,14 @@ export const FIELD_ISLAND_FOUNDATION_SNOW = "#7a95a8";
  * light + shadow on steep faces does not read near-black.
  */
 export const FIELD_ISLAND_FOUNDATION_SNOW_MESH = "#aabdcb";
+/** Sea fairway top tint (opaque reference for UI / minimap; 3D turf uses transparency in `InitialFieldGround`). */
+export const FIELD_GROUND_SEA = "#5ec8f8";
+/** Inverted pyramid under sea fairway — deep wet rock. */
+export const FIELD_ISLAND_FOUNDATION_SEA = "#2a4a5e";
+/** Minimap foundation strip — darker than `FIELD_ISLAND_FOUNDATION_SEA` for contrast with glassy turf fill. */
+export const FIELD_MINIMAP_SEA_FOUNDATION = "#1a3548";
+/** Island slab material: glassy blue (paired with `transparent` + `opacity` on the top mesh). */
+export const FIELD_SEA_ISLAND_TOP_COLOR = "#4ab8ea";
 
 /** Starting charges per power-up type (Strength, No bounce, No wind each have their own pool). */
 export const INITIAL_POWERUP_CHARGES = 2;

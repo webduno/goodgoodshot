@@ -54,7 +54,7 @@ function outcomeSubtitle(
   battleWon: boolean,
   lossReason: "par" | "enemy"
 ): string {
-  if (battleWon) return "You won! 🎉 Congratulations! You reached the goal under the shot limit.";
+  if (battleWon) return "Congratulations! 🎉 You reached the goal under the shot limit.";
   if (lossReason === "enemy") return "An Enemy Virus attacked your vehicle.";
   return "You lost! 😭 Sorry, you reached the goal over the shot limit.";
 }
@@ -65,6 +65,8 @@ export function FinishGameModal({
   par,
   battleWon,
   lossReason = "par",
+  warBattlesPlayed,
+  warBattlesLeft,
   onContinue,
   onGoToPlaza,
   onOpenHelp,
@@ -74,6 +76,10 @@ export function FinishGameModal({
   par: number;
   battleWon: boolean;
   lossReason?: "par" | "enemy";
+  /** Set when a war session is active; completed battles in the war (includes this result). */
+  warBattlesPlayed?: number;
+  /** Battles remaining after this one in the current war. */
+  warBattlesLeft?: number;
   onContinue: () => void;
   onGoToPlaza?: () => void;
   onOpenHelp?: () => void;
@@ -225,13 +231,28 @@ export function FinishGameModal({
                   "inset 0 2px 0 rgba(255,255,255,0.9), 0 4px 12px rgba(0, 82, 130, 0.1)",
               }}
             >
-              Shots:{" "}
-              <strong style={{ color: hudColors.value }}>{sessionShots}</strong>
-              {" · "}
-              Shot limit:{" "}
-              <strong style={{ color: hudColors.value }}>{par}</strong>
+              <div>
+                Shots:{" "}
+                <strong style={{ color: hudColors.value }}>{sessionShots}</strong>
+                {" · "}
+                Shot limit:{" "}
+                <strong style={{ color: hudColors.value }}>{par}</strong>
+              </div>
+              {typeof warBattlesPlayed === "number" &&
+              typeof warBattlesLeft === "number" ? (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(0, 150, 200, 0.18)" }}>
+                  Battles played:{" "}
+                  <strong style={{ color: hudColors.value }}>
+                    {warBattlesPlayed}
+                  </strong>
+                  {" · "}
+                  Left in war:{" "}
+                  <strong style={{ color: hudColors.value }}>
+                    {warBattlesLeft}
+                  </strong>
+                </div>
+              ) : null}
             </div>
-            <hr style={{ margin: "14px 0 32px 0", opacity: 0.2 }} />
             <div style={finishActionsAnchor}>
               <button
                 type="button"
@@ -256,13 +277,14 @@ export function FinishGameModal({
               style={{
                 width: "100%",
                 overflow: "hidden",
+                marginTop: 16,
               }}
             >
               <img
-                src="/textures/plaza1.png"
+                src="/textures/plaza2.png"
                 alt=""
-                width={520}
-                height={320}
+                width={416}
+                height={256}
                 style={{
                   display: "block",
                   width: "100%",

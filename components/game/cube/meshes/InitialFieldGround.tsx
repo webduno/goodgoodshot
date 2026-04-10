@@ -22,12 +22,16 @@ const GRASS_STONE_OVERLAP_Y = 0.06;
 export function InitialFieldGround({
   islands,
   biome,
+  turfColorOverride,
 }: {
   islands: readonly IslandRect[];
   biome: BiomeId;
+  /** When set, replaces biome turf color (e.g. plaza hub grass vs plain course). */
+  turfColorOverride?: string;
 }) {
-  const { turf: turfColor, foundation: foundationColor } =
+  const { turf: turfFromBiome, foundation: foundationColor } =
     islandColorsForBiome(biome);
+  const turfColor = turfColorOverride ?? turfFromBiome;
   const foundationMeshColor =
     biome === "snow" ? FIELD_ISLAND_FOUNDATION_SNOW_MESH : foundationColor;
 

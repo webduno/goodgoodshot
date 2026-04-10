@@ -19,31 +19,40 @@ const PYRAMID_MINIMAP_HALF_W = 6;
 
 /**
  * Top-down schematic of the current hole’s island footprints (`IslandRect`), matching
- * `computeIslandsForLane` layout. Static (no player marker); updates only when the course rerolls.
+ * `computeIslandsForLane` layout. Optional grey dot for player XZ (same mapping as goal).
  */
 export function StaticCourseMinimap({
   islands,
   biome,
   goalWorldX,
   goalWorldZ,
+  playerWorldX,
+  playerWorldZ,
+  showPlayer = false,
 }: {
   islands: readonly IslandRect[];
   biome: BiomeId;
   /** Lane XZ of the goal pyramid (same as `goalCenter[0]` / `[2]`). */
   goalWorldX: number;
   goalWorldZ: number;
+  /** Ball or spawn X when `showPlayer` is true. */
+  playerWorldX?: number;
+  playerWorldZ?: number;
+  /** When false, the player dot is omitted (e.g. browsing another battle’s map). */
+  showPlayer?: boolean;
 }) {
   const { turf, foundation } = islandColorsForBiome(biome);
   const teeTop = minimapTeeSurfaceColor(biome);
   const foundationStrip =
     biome === "desert" ? FIELD_MINIMAP_DESERT_FOUNDATION : foundation;
 
-  const { rects, viewBox, pyramid } = useMemo(() => {
+  const { rects, viewBox, pyramid, playerDot } = useMemo(() => {
     if (islands.length === 0) {
       return {
         rects: [] as const,
         viewBox: `0 0 ${VIEW} ${VIEW}`,
         pyramid: null as { cx: number; cy: number } | null,
+        playerDot: null as { cx: number; cy: number } | null,
       };
     }
 
@@ -93,12 +102,32 @@ export function StaticCourseMinimap({
     const cx = ((bx1 - goalWorldX) / bw) * VIEW;
     const cy = ((bz1 - goalWorldZ) / bh) * VIEW;
 
+    let dot: { cx: number; cy: number } | null = null;
+    if (
+      showPlayer &&
+      playerWorldX !== undefined &&
+      playerWorldZ !== undefined
+    ) {
+      dot = {
+        cx: ((bx1 - playerWorldX) / bw) * VIEW,
+        cy: ((bz1 - playerWorldZ) / bh) * VIEW,
+      };
+    }
+
     return {
       rects,
       viewBox: `0 0 ${VIEW} ${VIEW}`,
       pyramid: { cx, cy },
+      playerDot: dot,
     };
-  }, [islands, goalWorldX, goalWorldZ]);
+  }, [
+    islands,
+    goalWorldX,
+    goalWorldZ,
+    showPlayer,
+    playerWorldX,
+    playerWorldZ,
+  ]);
 
   if (islands.length === 0) return null;
 
@@ -158,6 +187,16 @@ export function StaticCourseMinimap({
             strokeWidth={2.25}
             strokeLinejoin="round"
             paintOrder="stroke fill"
+          />
+        )}
+        {playerDot && (
+          <circle
+            cx={playerDot.cx}
+            cy={playerDot.cy}
+            r={2.75}
+            fill="#9ca3af"
+            stroke="rgba(0,0,0,0.45)"
+            strokeWidth={0.55}
           />
         )}
       </svg>

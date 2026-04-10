@@ -275,6 +275,35 @@ export default function CubeScene() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSessionStatsModal, setShowSessionStatsModal] = useState(false);
   const [showCourseMapModal, setShowCourseMapModal] = useState(false);
+  const [courseMapPlayerXZ, setCourseMapPlayerXZ] = useState({
+    x: 0,
+    z: 0,
+  });
+
+  useLayoutEffect(() => {
+    if (!showCourseMapModal) return;
+    const st = ballFollowStateRef.current;
+    setCourseMapPlayerXZ({
+      x: st.valid ? st.pos.x : game.spawnCenter[0],
+      z: st.valid ? st.pos.z : game.spawnCenter[2],
+    });
+  }, [showCourseMapModal, game.spawnCenter[0], game.spawnCenter[2]]);
+
+  useEffect(() => {
+    if (!showCourseMapModal) return;
+    let raf = 0;
+    const loop = () => {
+      const st = ballFollowStateRef.current;
+      const x = st.valid ? st.pos.x : game.spawnCenter[0];
+      const z = st.valid ? st.pos.z : game.spawnCenter[2];
+      setCourseMapPlayerXZ((prev) =>
+        prev.x === x && prev.z === z ? prev : { x, z }
+      );
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [showCourseMapModal, game.spawnCenter[0], game.spawnCenter[2]]);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -833,6 +862,23 @@ export default function CubeScene() {
       if (powerupFromKey !== null) {
         e.preventDefault();
         activatePowerup(powerupFromKey);
+        return;
+      }
+      if (k === "Enter" || e.code === "NumpadEnter") {
+        if (!guidelineAdjusting) return;
+        if (
+          shotInFlight ||
+          showFinishModal ||
+          showStartGameModal ||
+          showSessionEndModal ||
+          inCooldown ||
+          enemyLossAnimating
+        ) {
+          return;
+        }
+        if (e.repeat) return;
+        e.preventDefault();
+        guidelineShootRef.current?.();
         return;
       }
       if (k === " " || e.code === "Space") {
@@ -1612,6 +1658,17 @@ export default function CubeScene() {
         par={finishPar}
         battleWon={finishBattleWon}
         lossReason={finishLossReason}
+        warBattlesPlayed={
+          playSession
+            ? playSession.battlesWon + playSession.battlesLost
+            : undefined
+        }
+        warBattlesLeft={
+          playSession
+            ? playSession.targetBattles -
+              (playSession.battlesWon + playSession.battlesLost)
+            : undefined
+        }
         onContinue={onFinishBattleContinue}
         onGoToPlaza={onFinishBattleGoToPlaza}
         onOpenHelp={() => setShowHelpModal(true)}
@@ -1676,6 +1733,13 @@ export default function CubeScene() {
             ? playSession.battlesWon + playSession.battlesLost
             : 0
         }
+        currentBattleIndex={
+          playSession
+            ? playSession.battlesWon + playSession.battlesLost
+            : 0
+        }
+        playerWorldX={courseMapPlayerXZ.x}
+        playerWorldZ={courseMapPlayerXZ.z}
       />
     </div>
   );

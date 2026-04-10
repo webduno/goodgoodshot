@@ -130,9 +130,12 @@ export function ShopModal({
   canClaimFreeCoinBag,
   freeCoinBagRemainingMs,
   onClaimFreeCoinBag,
+  onOpenProfile,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Opens profile / inventory; shop should close in the parent handler. */
+  onOpenProfile: () => void;
   goldCoins: number;
   strengthCharges: number;
   noBounceCharges: number;
@@ -179,49 +182,60 @@ export function ShopModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2
-          id="shop-title"
+        <div
           style={{
-            margin: "0 0 8px",
-            fontSize: 18,
-            fontWeight: 800,
-            color: hudColors.value,
-            letterSpacing: "0.02em",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 8,
+            flexWrap: "wrap",
           }}
         >
-          Shop
-        <span
-          style={{
-            margin: "0 0 12px 16px",
-            fontSize: 12,
-            fontWeight: 600,
-            color: hudColors.muted,
-            background: "#eeeeee",
-            borderRadius: 10,
-            padding: "4px 8px",
-          }}
-        >
-          {/* single coin emoji */}
-          🪙 Coins:{" "}
-          <span style={{ color: hudColors.accent, fontWeight: 800 }}>
-            {goldCoins}
-          </span>
-        </span>
-        </h2>
-        <p
-          style={{
-            margin: "0 0 12px",
-            fontSize: 12,
-            fontWeight: 600,
-            color: hudColors.muted,
-          }}
-        >
-          Strength charges: {strengthCharges}
-          {" · "}
-          No-bounce: {noBounceCharges}
-          {" · "}
-          No-wind: {noWindCharges}
-        </p>
+          <h2
+            id="shop-title"
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 800,
+              color: hudColors.value,
+              letterSpacing: "0.02em",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "8px 16px",
+            }}
+          >
+            Shop
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: hudColors.muted,
+                background: "#eeeeee",
+                borderRadius: 10,
+                padding: "4px 8px",
+              }}
+            >
+              {/* single coin emoji */}
+              🪙 Coins:{" "}
+              <span style={{ color: hudColors.accent, fontWeight: 800 }}>
+                {goldCoins}
+              </span>
+            </span>
+          </h2>
+          <button
+            type="button"
+            aria-label="Open profile"
+            onClick={() => {
+              resetTab();
+              onOpenProfile();
+            }}
+            style={goldChipButtonStyle()}
+          >
+            Profile
+          </button>
+        </div>
 
         <div
           role="tablist"

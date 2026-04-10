@@ -16,6 +16,7 @@ import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGr
 import { PlazaShopBuilding } from "@/components/game/cube/meshes/PlazaShopBuilding";
 import { PlazaHubRoads } from "@/components/game/cube/meshes/PlazaHubRoads";
 import { PlazaFrutigerAeroDecor } from "@/components/game/cube/meshes/PlazaFrutigerAeroDecor";
+import { PlazaHillDecorIslands } from "@/components/game/cube/meshes/PlazaHillDecorIslands";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
 import { PlazaPortalTorus } from "@/components/game/cube/meshes/PlazaWarPortalTorus";
@@ -83,7 +84,11 @@ import {
   snapBlockCenterToGrid,
   wrapYawRad,
 } from "@/lib/game/math";
-import { PLAZA_HUB_ISLANDS, PLAZA_WALKABLE_HALF } from "@/lib/game/plazaHub";
+import {
+  PLAZA_HUB_ISLANDS,
+  PLAZA_HUB_TURF_GREEN,
+  PLAZA_WALKABLE_HALF,
+} from "@/lib/game/plazaHub";
 import {
   AQUARIUM_SHOP_ITEMS,
   FISH_SHOP_ITEMS,
@@ -630,6 +635,14 @@ export default function PlazaScene() {
         activatePowerup(powerupFromKey);
         return;
       }
+      if (k === "Enter" || e.code === "NumpadEnter") {
+        if (!guidelineAdjusting) return;
+        if (shotInFlight || inCooldown) return;
+        if (e.repeat) return;
+        e.preventDefault();
+        guidelineShootRef.current?.();
+        return;
+      }
       if (k === " " || e.code === "Space") {
         if (shotInFlight || inCooldown) {
           return;
@@ -837,7 +850,12 @@ export default function PlazaScene() {
             equippedHatId={shopInventory.equippedHatId}
           />
         </TeleportOrbitRig>
-        <InitialFieldGround islands={islands} biome="plain" />
+        <InitialFieldGround
+          islands={islands}
+          biome="plain"
+          turfColorOverride={PLAZA_HUB_TURF_GREEN}
+        />
+        <PlazaHillDecorIslands />
         <PlazaHubRoads />
         <PlazaFrutigerAeroDecor
           wx={islands[0]!.worldX}
@@ -1347,6 +1365,10 @@ export default function PlazaScene() {
       <ShopModal
         open={showShopModal}
         onClose={() => setShowShopModal(false)}
+        onOpenProfile={() => {
+          setShowShopModal(false);
+          setShowProfileModal(true);
+        }}
         goldCoins={stats.totalGoldCoins}
         strengthCharges={strengthCharges}
         noBounceCharges={noBounceCharges}

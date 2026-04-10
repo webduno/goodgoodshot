@@ -632,7 +632,7 @@ export function ProfileModal({
                 background: "rgba(255,255,255,0.45)",
               }}
             >
-              Finish a hole by hitting the goal to see your last round here.
+              Finish a battle by hitting the goal to see your last round here.
             </p>
           ) : (
             <div

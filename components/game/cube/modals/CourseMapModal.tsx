@@ -23,6 +23,9 @@ export function CourseMapModal({
   goalWorldZ,
   warMaps,
   initialBattleIndex = 0,
+  currentBattleIndex = 0,
+  playerWorldX,
+  playerWorldZ,
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,6 +37,11 @@ export function CourseMapModal({
   warMaps?: readonly GameState[] | null;
   /** Battle index to show when opening (0-based). */
   initialBattleIndex?: number;
+  /** Active battle (0-based); player dot only when it matches `selectedIndex` in multi-war. */
+  currentBattleIndex?: number;
+  /** Live ball or spawn XZ for the active battle (map modal). */
+  playerWorldX: number;
+  playerWorldZ: number;
 }) {
   const multiWar = warMaps != null && warMaps.length > 1;
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -93,6 +101,9 @@ export function CourseMapModal({
     goalWorldX,
     goalWorldZ,
   ]);
+
+  const showPlayerOnMap =
+    !multiWar || selectedIndex === currentBattleIndex;
 
   if (!open) return null;
   if (display.islands.length === 0) return null;
@@ -158,6 +169,9 @@ export function CourseMapModal({
               biome={display.biome}
               goalWorldX={display.goalWorldX}
               goalWorldZ={display.goalWorldZ}
+              playerWorldX={playerWorldX}
+              playerWorldZ={playerWorldZ}
+              showPlayer={showPlayerOnMap}
             />
             <button
               type="button"
@@ -186,6 +200,9 @@ export function CourseMapModal({
               biome={display.biome}
               goalWorldX={display.goalWorldX}
               goalWorldZ={display.goalWorldZ}
+              playerWorldX={playerWorldX}
+              playerWorldZ={playerWorldZ}
+              showPlayer={showPlayerOnMap}
             />
           </div>
         )}

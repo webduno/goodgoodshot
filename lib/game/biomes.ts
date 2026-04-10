@@ -2,11 +2,13 @@ import type { BiomeId } from "./types";
 import {
   FIELD_GROUND_DESERT_SAND,
   FIELD_GROUND_FOREST,
+  FIELD_GROUND_ICE,
   FIELD_GROUND_MUTED_GREEN,
   FIELD_GROUND_SEA,
   FIELD_GROUND_SNOW,
   FIELD_ISLAND_FOUNDATION_DESERT,
   FIELD_ISLAND_FOUNDATION_FOREST,
+  FIELD_ISLAND_FOUNDATION_ICE,
   FIELD_ISLAND_FOUNDATION_PLAIN,
   FIELD_ISLAND_FOUNDATION_SEA,
   FIELD_ISLAND_FOUNDATION_SNOW,
@@ -19,6 +21,7 @@ export const BIOME_IDS: readonly BiomeId[] = [
   "forest",
   "snow",
   "sea",
+  "ice",
 ];
 
 export function isValidBiomeId(value: unknown): value is BiomeId {
@@ -38,6 +41,8 @@ export function biomeDisplayName(biome: BiomeId): string {
       return "Snow";
     case "sea":
       return "Sea";
+    case "ice":
+      return "Ice";
   }
 }
 
@@ -46,7 +51,7 @@ export function biomeUsesCactus(biome: BiomeId): boolean {
   return biome === "desert";
 }
 
-/** Desert uses sparse dead shrub; snow uses ice spikes (`IceSpikeBush`) instead. */
+/** Desert uses sparse dead shrub; snow and ice use ice spikes (`IceSpikeBush`) instead. */
 export function biomeUsesDeadBush(biome: BiomeId): boolean {
   return biome === "desert";
 }
@@ -81,6 +86,11 @@ export function islandColorsForBiome(biome: BiomeId): {
         turf: FIELD_GROUND_SEA,
         foundation: FIELD_ISLAND_FOUNDATION_SEA,
       };
+    case "ice":
+      return {
+        turf: FIELD_GROUND_ICE,
+        foundation: FIELD_ISLAND_FOUNDATION_ICE,
+      };
   }
 }
 
@@ -100,6 +110,8 @@ export function minimapTeeSurfaceColor(biome: BiomeId): string {
       /** Slightly cooler than `FIELD_GROUND_SNOW` so tee reads vs fairway on the minimap. */
       return "#cfe8f4";
     case "sea":
+      return GOAL_GREEN;
+    case "ice":
       return GOAL_GREEN;
   }
 }

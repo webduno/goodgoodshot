@@ -31,7 +31,7 @@ export function TeeCornerTree({ biome }: { biome: BiomeId }) {
     -TEE_PAD_HALF_Z - TEE_PAD_EXTEND_BACK_Z + CORNER_INSET;
 
   const Deco =
-    biome === "snow"
+    biome === "snow" || biome === "ice"
       ? SnowPineTree
       : biomeUsesCactus(biome)
         ? BlockyCactus

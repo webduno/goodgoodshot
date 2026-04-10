@@ -6,6 +6,7 @@ import { hudFont, hudMiniPanel } from "@/components/gameHudStyles";
 import { islandColorsForBiome, minimapTeeSurfaceColor } from "@/lib/game/biomes";
 import {
   FIELD_MINIMAP_DESERT_FOUNDATION,
+  FIELD_MINIMAP_ICE_FOUNDATION,
   FIELD_MINIMAP_SEA_FOUNDATION,
   GOAL_PYRAMID_COLOR,
 } from "@/lib/game/constants";
@@ -49,7 +50,9 @@ export function StaticCourseMinimap({
       ? FIELD_MINIMAP_DESERT_FOUNDATION
       : biome === "sea"
         ? FIELD_MINIMAP_SEA_FOUNDATION
-        : foundation;
+        : biome === "ice"
+          ? FIELD_MINIMAP_ICE_FOUNDATION
+          : foundation;
 
   const { rects, viewBox, pyramid, playerDot } = useMemo(() => {
     if (islands.length === 0) {

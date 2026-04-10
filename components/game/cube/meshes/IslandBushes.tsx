@@ -22,7 +22,7 @@ export function IslandBushes({
           const seed = ii * 1000 + bi * 17 + Math.round(b.ox * 1e3);
           const wx = is.worldX + b.ox;
           const wz = is.worldZ + b.oz;
-          if (biome === "snow") {
+          if (biome === "snow" || biome === "ice") {
             return (
               <IceSpikeBush
                 key={`island-${ii}-bush-${bi}-${b.ox}-${b.oz}`}

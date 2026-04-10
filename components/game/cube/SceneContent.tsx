@@ -898,14 +898,14 @@ export function SceneContent({
               />
             </mesh>
           )}
-          {vehicleCornerOffsets.map((pos, i) => (
+          {/* vehicleCornerOffsets.map((pos, i) => (
             <VehicleCornerBlock
               key={`wheel-${i}`}
               position={pos}
               size={VEHICLE_CORNER_BLOCK_SIZE}
               color={bodyColor}
             />
-          ))}
+          )) */}
           <ShootTriggerCube phase={shootTriggerPhase} onFireHeld={setFireHeld} />
           <VehicleNextShotPowerupLabel
             powerupStackCount={powerupStackCount}

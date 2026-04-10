@@ -26,7 +26,7 @@ export function IslandTrees({
   }
 
   const TreeMesh =
-    biome === "snow"
+    biome === "snow" || biome === "ice"
       ? SnowPineTree
       : biomeUsesCactus(biome)
         ? BlockyCactus

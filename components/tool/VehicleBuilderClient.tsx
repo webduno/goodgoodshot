@@ -1,15 +1,35 @@
 "use client";
 
-import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
+import {
+  VehicleBuilderScene,
+  type GizmoMode,
+} from "@/components/tool/VehicleBuilderScene";
 import {
   DEFAULT_PLAYER_VEHICLE,
   type VehicleBodyPart,
 } from "@/components/playerVehicleConfig";
-import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useCallback, useMemo, useState } from "react";
 
 type PartRow = VehicleBodyPart & { id: string };
+
+function DuplicatePartIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
 
 function newId(): string {
   return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
@@ -230,18 +250,9 @@ export default function VehicleBuilderClient() {
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const [importText, setImportText] = useState("");
   const [importHint, setImportHint] = useState<string | null>(null);
+  const [gizmoMode, setGizmoMode] = useState<GizmoMode>("translate");
 
   const selected = parts.find((p) => p.id === selectedId) ?? null;
-
-  const renderParts: VehicleBodyPart[] = useMemo(
-    () =>
-      parts.map(({ id: _i, ...p }) => ({
-        ...p,
-        pos: p.pos,
-        size: p.size,
-      })),
-    [parts]
-  );
 
   const bodyJson = useMemo(() => partsToBodyPartsJson(parts), [parts]);
   const fullJson = useMemo(
@@ -318,6 +329,47 @@ export default function VehicleBuilderClient() {
     setSelectedId(fallback.id);
   }, [selectedId, parts]);
 
+  const duplicatePart = useCallback((id: string) => {
+    const nid = newId();
+    setParts((prev) => {
+      const idx = prev.findIndex((p) => p.id === id);
+      if (idx < 0) return prev;
+      const o = prev[idx];
+      const color =
+        o.color === undefined
+          ? undefined
+          : o.color === "main" || o.color === "accent"
+            ? o.color
+            : ([o.color[0], o.color[1], o.color[2]] as [
+                number,
+                number,
+                number,
+              ]);
+      const copy: PartRow = {
+        id: nid,
+        type: o.type,
+        pos: [o.pos[0], o.pos[1], o.pos[2]],
+        size: [o.size[0], o.size[1], o.size[2]],
+        rotDeg: o.rotDeg
+          ? [o.rotDeg[0], o.rotDeg[1], o.rotDeg[2]]
+          : undefined,
+        color,
+        polygonOffset: o.polygonOffset,
+      };
+      return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
+    });
+    setSelectedId(nid);
+  }, []);
+
+  const onPartTransform = useCallback(
+    (id: string, patch: Partial<Omit<PartRow, "id">>) => {
+      setParts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...patch } : p))
+      );
+    },
+    []
+  );
+
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <Canvas
@@ -333,26 +385,13 @@ export default function VehicleBuilderClient() {
           position={[6, 10, 4]}
           shadow-mapSize={[1024, 1024]}
         />
-        <VehicleBodyParts
-          parts={renderParts}
+        <VehicleBuilderScene
+          parts={parts}
           mainRgb={mainRgb}
           accentRgb={accentRgb}
-        />
-        <mesh
-          receiveShadow
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, -0.55, 0]}
-        >
-          <planeGeometry args={[24, 24]} />
-          <meshStandardMaterial color="#7ecf6a" roughness={0.85} />
-        </mesh>
-        <OrbitControls
-          makeDefault
-          enableDamping
-          dampingFactor={0.08}
-          minDistance={1.2}
-          maxDistance={14}
-          target={[0, 0, 0]}
+          selectedId={selectedId}
+          gizmoMode={gizmoMode}
+          onPartTransform={onPartTransform}
         />
       </Canvas>
 
@@ -364,20 +403,52 @@ export default function VehicleBuilderClient() {
           Vehicle body builder
         </h1>
         <p className="text-xs text-slate-600">
-          Orbit: drag · Zoom: wheel — Paste exports into{" "}
+          Orbit: drag (empty space) · Zoom: wheel — Gizmo on selected part — Paste
+          exports into{" "}
           <code className="rounded bg-slate-200/80 px-1">data/defaultVehicles.json</code>
         </p>
 
         <section className="space-y-2 border-t border-slate-200/80 pt-2">
+          <div className="text-xs font-medium text-slate-700">3D gizmo</div>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ["translate", "Move"],
+                ["rotate", "Rotate"],
+                ["scale", "Scale"],
+              ] as const
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                disabled={!selectedId}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium disabled:opacity-40 ${
+                  gizmoMode === mode
+                    ? "bg-violet-700 text-white"
+                    : "bg-slate-200 text-slate-800 hover:bg-slate-300"
+                }`}
+                onClick={() => setGizmoMode(mode)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-500">
+            Drag colored axes on the selected part. Scale updates the part&apos;s{" "}
+            <code className="rounded bg-slate-200/80 px-0.5">size</code> values.
+          </p>
+        </section>
+
+        <section className="space-y-2 border-t border-slate-200/80 pt-2">
           <div className="text-xs font-medium text-slate-700">Vehicle colors</div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-0.5 text-[11px] text-slate-600">
-              Main RGB
-              <RgbInput rgb={mainRgb} onChange={setMainRgb} />
+            <label className="flex flex-col gap-1 text-[11px] text-slate-600">
+              Main
+              <RgbColorInput rgb={mainRgb} onChange={setMainRgb} />
             </label>
-            <label className="flex flex-col gap-0.5 text-[11px] text-slate-600">
-              Accent RGB
-              <RgbInput rgb={accentRgb} onChange={setAccentRgb} />
+            <label className="flex flex-col gap-1 text-[11px] text-slate-600">
+              Accent
+              <RgbColorInput rgb={accentRgb} onChange={setAccentRgb} />
             </label>
           </div>
         </section>
@@ -417,17 +488,32 @@ export default function VehicleBuilderClient() {
           </div>
           <ul className="max-h-28 space-y-1 overflow-y-auto rounded border border-slate-200/80 bg-white/90 p-1">
             {parts.map((p) => (
-              <li key={p.id}>
+              <li
+                key={p.id}
+                className={`flex items-center gap-0.5 rounded pr-0.5 ${
+                  p.id === selectedId
+                    ? "bg-sky-200/90"
+                    : "hover:bg-slate-100"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => setSelectedId(p.id)}
-                  className={`w-full rounded px-2 py-1 text-left text-xs ${
-                    p.id === selectedId
-                      ? "bg-sky-200/90 text-slate-900"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
+                  className="min-w-0 flex-1 rounded px-2 py-1 text-left text-xs text-slate-800"
                 >
                   {p.type} @ [{p.pos.map((n) => n.toFixed(2)).join(", ")}]
+                </button>
+                <button
+                  type="button"
+                  title="Duplicate part"
+                  aria-label="Duplicate part"
+                  className="shrink-0 rounded p-1 text-slate-500 hover:bg-sky-300/50 hover:text-slate-900"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    duplicatePart(p.id);
+                  }}
+                >
+                  <DuplicatePartIcon className="h-3.5 w-3.5" />
                 </button>
               </li>
             ))}
@@ -498,10 +584,8 @@ export default function VehicleBuilderClient() {
               </select>
             </label>
             {colorMode(selected.color) === "rgb" && Array.isArray(selected.color) && (
-              <RgbInput
-                rgb={
-                  selected.color as [number, number, number]
-                }
+              <RgbColorInput
+                rgb={selected.color as [number, number, number]}
                 onChange={(rgb) => updateSelected({ color: rgb })}
               />
             )}
@@ -628,7 +712,21 @@ export default function VehicleBuilderClient() {
   );
 }
 
-function RgbInput({
+function rgbTupleToHex(rgb: readonly [number, number, number]): string {
+  const [r, g, b] = rgb.map((n) =>
+    Math.min(255, Math.max(0, Math.round(Number(n))))
+  );
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+function hexToRgbTuple(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return [0, 0, 0];
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function RgbColorInput({
   rgb,
   onChange,
 }: {
@@ -636,23 +734,13 @@ function RgbInput({
   onChange: (v: [number, number, number]) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-1">
-      {([0, 1, 2] as const).map((i) => (
-        <input
-          key={i}
-          type="number"
-          min={0}
-          max={255}
-          className="w-full rounded border border-slate-300 px-1 py-0.5 text-xs"
-          value={rgb[i]}
-          onChange={(e) => {
-            const next = [...rgb] as [number, number, number];
-            next[i] = Math.min(255, Math.max(0, Number(e.target.value) || 0));
-            onChange(next);
-          }}
-        />
-      ))}
-    </div>
+    <input
+      type="color"
+      value={rgbTupleToHex(rgb)}
+      onChange={(e) => onChange(hexToRgbTuple(e.target.value))}
+      className="h-9 w-full max-w-[140px] cursor-pointer rounded border border-slate-300 bg-white p-0.5"
+      title={`RGB ${rgb.join(", ")}`}
+    />
   );
 }
 

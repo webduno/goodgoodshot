@@ -15,6 +15,50 @@ function resolvePartColor(
 }
 
 /**
+ * Single primitive mesh (parent group supplies world transform).
+ */
+export function VehicleBodyPartMesh({
+  part,
+  mainRgb,
+  accentRgb,
+}: {
+  part: VehicleBodyPart;
+  mainRgb: RgbTuple;
+  accentRgb: RgbTuple;
+}) {
+  const color = resolvePartColor(part, mainRgb, accentRgb);
+  const [sx, sy, sz] = part.size;
+
+  return (
+    <mesh castShadow receiveShadow>
+      {part.type === "cube" && <boxGeometry args={[sx, sy, sz]} />}
+      {part.type === "cylinder" && (
+        <cylinderGeometry
+          args={[sx, sx, sy, Math.max(3, Math.round(sz))]}
+        />
+      )}
+      {part.type === "sphere" && (
+        <sphereGeometry
+          args={[
+            sx,
+            Math.max(3, Math.round(sy)),
+            Math.max(2, Math.round(sz)),
+          ]}
+        />
+      )}
+      <meshStandardMaterial
+        color={color}
+        roughness={0.32}
+        metalness={0.2}
+        polygonOffset={part.polygonOffset === true}
+        polygonOffsetFactor={part.polygonOffset === true ? -1 : 0}
+        polygonOffsetUnits={part.polygonOffset === true ? -1 : 0}
+      />
+    </mesh>
+  );
+}
+
+/**
  * Voxel-style vehicle hull from primitive parts (cubes, low-poly cylinders/spheres).
  * Parts use local space with origin at spawn block center (same as the default 1×1×1 box).
  */
@@ -30,12 +74,10 @@ export function VehicleBodyParts({
   return (
     <>
       {parts.map((p, i) => {
-        const color = resolvePartColor(p, mainRgb, accentRgb);
         const rot = p.rotDeg ?? [0, 0, 0];
         const rx = THREE.MathUtils.degToRad(rot[0]);
         const ry = THREE.MathUtils.degToRad(rot[1]);
         const rz = THREE.MathUtils.degToRad(rot[2]);
-        const [sx, sy, sz] = p.size;
 
         return (
           <group
@@ -43,38 +85,7 @@ export function VehicleBodyParts({
             position={[p.pos[0], p.pos[1], p.pos[2]]}
             rotation={[rx, ry, rz]}
           >
-            <mesh castShadow receiveShadow>
-              {p.type === "cube" && (
-                <boxGeometry args={[sx, sy, sz]} />
-              )}
-              {p.type === "cylinder" && (
-                <cylinderGeometry
-                  args={[
-                    sx,
-                    sx,
-                    sy,
-                    Math.max(3, Math.round(sz)),
-                  ]}
-                />
-              )}
-              {p.type === "sphere" && (
-                <sphereGeometry
-                  args={[
-                    sx,
-                    Math.max(3, Math.round(sy)),
-                    Math.max(2, Math.round(sz)),
-                  ]}
-                />
-              )}
-              <meshStandardMaterial
-                color={color}
-                roughness={0.32}
-                metalness={0.2}
-                polygonOffset={p.polygonOffset === true}
-                polygonOffsetFactor={p.polygonOffset === true ? -1 : 0}
-                polygonOffsetUnits={p.polygonOffset === true ? -1 : 0}
-              />
-            </mesh>
+            <VehicleBodyPartMesh part={p} mainRgb={mainRgb} accentRgb={accentRgb} />
           </group>
         );
       })}

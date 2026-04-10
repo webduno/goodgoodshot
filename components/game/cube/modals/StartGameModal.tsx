@@ -945,8 +945,8 @@ export function StartGameModal({
                     }}
                   >
                     Choose fairway style for this war. Random picks among plain,
-                    desert, forest, and snow independently for each battle; a
-                    fixed choice uses that biome for every battle.
+                    desert, forest, snow, sea, and ice independently for each
+                    battle; a fixed choice uses that biome for every battle.
                   </p>
                   <div
                     style={{
@@ -963,6 +963,7 @@ export function StartGameModal({
                         { id: "forest" as const, label: "Forest" },
                         { id: "snow" as const, label: "Snow" },
                         { id: "sea" as const, label: "Sea" },
+                        { id: "ice" as const, label: "Ice" },
                       ] as const
                     ).map((opt) => {
                       const selected = biomeChoice === opt.id;

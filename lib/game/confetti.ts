@@ -186,6 +186,27 @@ export function burstMessengerKillConfetti() {
   });
 }
 
+const CAGE_BREAK_COLORS = [
+  "#fbbf24",
+  "#34d399",
+  "#60a5fa",
+  "#f472b6",
+  "#a78bfa",
+  "#ffffff",
+  "#fcd34d",
+];
+
+/** When the ball breaks out of a goal-corner cage with the weak escape shot. */
+export function burstCageBreakConfetti() {
+  const j = getConfetti();
+  if (!j) return;
+  void j.addConfetti({
+    confettiNumber: 90,
+    confettiColors: CAGE_BREAK_COLORS,
+    confettiRadius: 4,
+  });
+}
+
 export function burstFinishBattleConfetti() {
   const j = getConfetti();
   if (!j) return;

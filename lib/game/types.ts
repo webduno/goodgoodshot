@@ -88,6 +88,10 @@ export type GameState = {
    * Preserved when the hole rerolls within the same battle.
    */
   goalEnemies: readonly GoalEnemySpec[];
+  /**
+   * Up to two trap “cages” on random fairway islands (integer block centers); rerolled on hole-out.
+   */
+  mapCages: readonly Vec3[];
 };
 
 export type GameAction =

@@ -54,6 +54,7 @@ import { resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
+  burstCageBreakConfetti,
   burstMessengerKillConfetti,
   burstPowerupBuyConfetti,
   burstPowerupUseConfetti,
@@ -181,6 +182,8 @@ export default function CubeScene() {
   aimYawRef.current = aimYawRad;
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [shotInFlight, setShotInFlight] = useState(false);
+  const [goalCagesBroken, setGoalCagesBroken] = useState(() => new Set<string>());
+  const [cageEscapeNextShot, setCageEscapeNextShot] = useState(false);
   const [followBallCamera, setFollowBallCamera] = useState(true);
   const ballFollowStateRef = useRef({
     pos: new THREE.Vector3(),
@@ -353,6 +356,27 @@ export default function CubeScene() {
     },
     []
   );
+
+  const onCageTrapped = useCallback(() => {
+    setCageEscapeNextShot(true);
+    pushHudToast("Caged — next shot is 15% power (breaks cage)");
+  }, [pushHudToast]);
+
+  const onBreakGoalCageFromShot = useCallback((cellKey: string) => {
+    setGoalCagesBroken((prev) => {
+      if (prev.has(cellKey)) return prev;
+      const next = new Set(prev);
+      next.add(cellKey);
+      return next;
+    });
+    setCageEscapeNextShot(false);
+    burstCageBreakConfetti();
+  }, []);
+
+  useEffect(() => {
+    setGoalCagesBroken(new Set());
+    setCageEscapeNextShot(false);
+  }, [game.mapCages]);
 
   const onRetroTvChange = useCallback((next: boolean) => {
     setRetroTvEnabled(next);
@@ -680,6 +704,7 @@ export default function CubeScene() {
       setWindHud({ x: windRef.current.x, y: 0, z: windRef.current.z });
       maybeWindToast(windRef.current.x, windRef.current.z, false);
       if (outcome === "penalty") {
+        setCageEscapeNextShot(false);
         waterPenaltiesRoundRef.current += 1;
         pushHudToast("Out of bounds");
         dispatch({
@@ -1102,6 +1127,11 @@ export default function CubeScene() {
             goalEnemies={game.goalEnemies}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
             equippedHatId={shopInventory.equippedHatId}
+            mapCages={game.mapCages}
+            goalCagesBroken={goalCagesBroken}
+            cageEscapeNextShot={cageEscapeNextShot}
+            onCageTrapped={onCageTrapped}
+            onBreakGoalCageFromShot={onBreakGoalCageFromShot}
           />
         </TeleportOrbitRig>
         {/** Draw after scene content so the green turf sits on top of `TerrainTextured`. */}

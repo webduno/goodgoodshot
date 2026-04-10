@@ -16,6 +16,7 @@ import {
   sphereIntersectsAabb,
   sphereIntersectsGoalBox,
 } from "@/lib/game/collision";
+import { mapCageKey } from "@/lib/game/mapCages";
 import { coinCellKey } from "@/lib/game/path";
 import { spawnTopYFromBlockCenterY } from "@/lib/game/math";
 import type { IslandRect } from "@/lib/game/islands";
@@ -37,6 +38,10 @@ export function SphereToGoal({
   onCoinCollected,
   enemySimRef,
   onEnemyKilledByBall,
+  hubMode = false,
+  mapCagesRef,
+  goalCagesBrokenRef,
+  onCageTrapped,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   projectileRef: MutableRefObject<Projectile | null>;
@@ -60,6 +65,10 @@ export function SphereToGoal({
     alive: boolean[];
   }>;
   onEnemyKilledByBall: (enemyIndex: number) => void;
+  hubMode?: boolean;
+  mapCagesRef: MutableRefObject<readonly Vec3[]>;
+  goalCagesBrokenRef: MutableRefObject<ReadonlySet<string>>;
+  onCageTrapped?: () => void;
 }) {
   const sx = spawnCenter[0];
   const spawnTopY = spawnTopYFromBlockCenterY(spawnCenter[1]);
@@ -78,6 +87,21 @@ export function SphereToGoal({
       ) {
         onCoinCollected(key);
       }
+    }
+  };
+
+  const tryCageTrapAtStop = (px: number, pz: number) => {
+    if (hubMode) return;
+    const sx = Math.round(px);
+    const sz = Math.round(pz);
+    const key = mapCageKey(sx, sz);
+    if (goalCagesBrokenRef.current.has(key)) return;
+    const cages = mapCagesRef.current;
+    for (let i = 0; i < cages.length; i++) {
+      const c = cages[i]!;
+      if (Math.round(c[0]) !== sx || Math.round(c[2]) !== sz) continue;
+      onCageTrapped?.();
+      return;
     }
   };
 
@@ -155,6 +179,7 @@ export function SphereToGoal({
       }
 
       if (Math.hypot(p.vx, p.vz) <= ROLL_STOP_SPEED) {
+        tryCageTrapAtStop(p.x, p.z);
         projectileRef.current = null;
         mesh.visible = false;
         onProjectileEnd("miss", [p.x, spawnCenter[1], p.z]);
@@ -244,6 +269,7 @@ export function SphereToGoal({
       return;
     }
 
+    tryCageTrapAtStop(landingX, landingZ);
     projectileRef.current = null;
     mesh.position.set(landingX, FLOOR_CONTACT_CENTER_Y, landingZ);
     mesh.visible = false;
@@ -259,12 +285,8 @@ export function SphereToGoal({
       castShadow
       receiveShadow
     >
-      <sphereGeometry args={[SPHERE_RADIUS, 24, 24]} />
-      <meshStandardMaterial
-        color="#e8f8ff"
-        roughness={0.28}
-        metalness={0.24}
-      />
+      <sphereGeometry args={[SPHERE_RADIUS, 10, 8]} />
+      <meshBasicMaterial color="#7d7d7d" wireframe />
     </mesh>
   );
 }

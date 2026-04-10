@@ -8,6 +8,7 @@ import {
   computeIslandsForLane,
   ensureSpawnAndGoalOnIslandsImmutable,
 } from "./islands";
+import { pickMapCages } from "./mapCages";
 import { pickPondsLayout } from "./pondLayout";
 import { isValidBiomeId } from "./biomes";
 import {
@@ -61,6 +62,7 @@ export function createInitialGameState(opts?: {
     goalCenter,
     spawnCenter
   );
+  const mapCages = pickMapCages(islands, spawnCenter, goalCenter, ponds, 2);
   return {
     spawnCenter,
     goalWorldZ,
@@ -70,6 +72,7 @@ export function createInitialGameState(opts?: {
     miniVillage,
     biome,
     goalEnemies,
+    mapCages,
   };
 }
 
@@ -81,6 +84,9 @@ export function withDefaultBiome(state: GameState): GameState {
   }
   if (!Array.isArray(next.goalEnemies) || next.goalEnemies.length === 0) {
     next = { ...next, goalEnemies: [{ colorHex: "#0099ff" }] };
+  }
+  if (!Array.isArray(next.mapCages)) {
+    next = { ...next, mapCages: [] };
   }
   return next;
 }
@@ -99,6 +105,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
   let nextIslands = state.islands;
   let nextMiniVillage = state.miniVillage;
+  let nextMapCages = state.mapCages;
 
   if (action.outcome === "hit" || action.outcome === "enemy_loss") {
     next = snapBlockCenterToGrid([
@@ -122,6 +129,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     const lane = computeIslandsForLane(INITIAL_LANE_ORIGIN, goalCenter, next);
     nextIslands = lane.islands;
     nextMiniVillage = lane.miniVillage;
+    nextMapCages = pickMapCages(nextIslands, next, goalCenter, nextPonds, 2);
   } else if (action.outcome === "penalty" && action.revertSpawn) {
     next = snapBlockCenterToGrid(action.revertSpawn);
     const goalCenter: Vec3 = [
@@ -160,5 +168,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     miniVillage: nextMiniVillage,
     biome: state.biome,
     goalEnemies: state.goalEnemies,
+    mapCages: nextMapCages,
   };
 }

@@ -1,9 +1,5 @@
 "use client";
 
-import { useFrame } from "@react-three/fiber";
-import { useRef } from "react";
-import * as THREE from "three";
-
 import {
   BLOCK_SIZE,
   GOAL_PYRAMID_COLOR,
@@ -15,29 +11,7 @@ import type { Vec3 } from "@/lib/game/types";
 const PYRAMID_BASE_RADIUS = (2 * BLOCK_SIZE) / Math.sqrt(2);
 const PYRAMID_HEIGHT = 2 * BLOCK_SIZE;
 
-function SpinningGoalSphere({ color }: { color: string }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const r = 0.22;
-  useFrame((_, delta) => {
-    if (meshRef.current) meshRef.current.rotation.y += delta * 1.4;
-  });
-  const y = PYRAMID_HEIGHT / 2 + r + 0.04;
-  return (
-    <mesh ref={meshRef} position={[0, y, 0]} castShadow>
-      <sphereGeometry args={[r, 8, 6]} />
-      <meshStandardMaterial
-        color={color}
-        roughness={0.35}
-        metalness={0.12}
-        transparent
-        opacity={0.48}
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
-export function Block({ center, color }: { center: Vec3; color: string }) {
+export function Block({ center }: { center: Vec3 }) {
   /** Cylinder is centered on Y; sit the base on the turf plane (not block center y = 0). */
   const y = center[1] + GOAL_PYRAMID_Y_OFFSET;
   return (
@@ -50,7 +24,6 @@ export function Block({ center, color }: { center: Vec3; color: string }) {
           metalness={0.04}
         />
       </mesh>
-      <SpinningGoalSphere color={color} />
     </group>
   );
 }

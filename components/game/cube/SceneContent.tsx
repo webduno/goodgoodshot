@@ -21,6 +21,7 @@ import {
 import * as THREE from "three";
 
 import { Block } from "@/components/game/cube/meshes/Block";
+import { GoalCageDecor } from "@/components/game/cube/meshes/GoalCageDecor";
 import { GoalMessengerCharacter } from "@/components/game/cube/meshes/GoalMessengerCharacter";
 import { AimYawPrism } from "@/components/game/cube/meshes/AimYawPrism";
 import { SpawnTeePad } from "@/components/game/cube/meshes/SpawnTeePad";
@@ -39,7 +40,6 @@ import {
 import {
   BLOCK_SIZE,
   CHARGE_HOLD_REPEAT_MS,
-  GOAL_BLOCK_COLOR,
   FIELD_PLANE_HALF_WIDTH_X,
   FIELD_PLANE_Z_BEFORE_SPAWN,
   FIELD_PLANE_Z_PAST_GOAL,
@@ -55,6 +55,11 @@ import {
   hudAimYawToWorldYawRad,
   spawnTopYFromBlockCenterY,
 } from "@/lib/game/math";
+import {
+  EMPTY_MAP_CAGES_BROKEN,
+  mapCageKey,
+  NO_MAP_CAGES,
+} from "@/lib/game/mapCages";
 import { coinCellKey, coinCentersForIslands } from "@/lib/game/path";
 import type { IslandRect } from "@/lib/game/islands";
 import {
@@ -312,6 +317,11 @@ export function SceneContent({
   hubMode = false,
   onEnemyLossAnimatingChange,
   equippedHatId = null,
+  mapCages = NO_MAP_CAGES,
+  goalCagesBroken = EMPTY_MAP_CAGES_BROKEN,
+  cageEscapeNextShot = false,
+  onCageTrapped,
+  onBreakGoalCageFromShot,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -377,7 +387,20 @@ export function SceneContent({
   onEnemyLossAnimatingChange?: (active: boolean) => void;
   /** Cosmetic glass hat from the plaza shop (local player). */
   equippedHatId?: HatId | null;
+  /** Trap dome positions for this hole (course only). */
+  mapCages?: readonly Vec3[];
+  /** Cage keys already broken this hole (course only). */
+  goalCagesBroken?: ReadonlySet<string>;
+  /** After landing in an intact corner cage, next launch uses 15% strength and breaks that cage. */
+  cageEscapeNextShot?: boolean;
+  onCageTrapped?: () => void;
+  onBreakGoalCageFromShot?: (cellKey: string) => void;
 }) {
+  const mapCagesRef = useRef(mapCages);
+  mapCagesRef.current = mapCages;
+  const goalCagesBrokenRef = useRef(goalCagesBroken);
+  goalCagesBrokenRef.current = goalCagesBroken;
+
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
   const shotWindAccelRef = useRef({ x: 0, z: 0 });
@@ -455,8 +478,9 @@ export function SceneContent({
     const clicks = charging
       ? chargeHudForGuideline.clicks
       : guidelinePreviewClicks;
-    const force =
+    let force =
       launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
+    if (cageEscapeNextShot) force *= 0.15;
     return sampleFirstSegmentGuideline(
       spawnCenter,
       goalCenter,
@@ -477,6 +501,7 @@ export function SceneContent({
     spawnCenter,
     vehicle,
     worldAimYawRad,
+    cageEscapeNextShot,
   ]);
 
   const fireProjectile = useCallback(
@@ -484,8 +509,14 @@ export function SceneContent({
       onGuidelineConsumedForShot();
       const w = prepareShotWind();
       shotWindAccelRef.current = { x: w.ax, z: w.az };
-      const force =
+      let force =
         launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
+      if (cageEscapeNextShot) {
+        force *= 0.15;
+        onBreakGoalCageFromShot?.(
+          mapCageKey(spawnCenter[0], spawnCenter[2])
+        );
+      }
       const noBounceShot = getNoBounceActive();
       resetPowerupStack();
       const launchAngleRad = vehicle.launchAngleRad + aimPitchOffsetRad;
@@ -524,6 +555,8 @@ export function SceneContent({
       resetPowerupStack,
       spawnCenter,
       vehicle,
+      cageEscapeNextShot,
+      onBreakGoalCageFromShot,
     ]
   );
 
@@ -895,7 +928,10 @@ export function SceneContent({
         />
         </group>
       </SpawnVisualGroup>
-      {!hubMode && <Block center={goalCenter} color={GOAL_BLOCK_COLOR} />}
+      {!hubMode && <Block center={goalCenter} />}
+      {!hubMode && mapCages.length > 0 && (
+        <GoalCageDecor cages={mapCages} brokenKeys={goalCagesBroken} />
+      )}
       {!hubMode &&
         goalEnemies.map((spec, i) => (
           <GoalMessengerCharacter
@@ -938,6 +974,10 @@ export function SceneContent({
         onCoinCollected={onCoinCollected}
         enemySimRef={enemySimRef}
         onEnemyKilledByBall={onEnemyKilledByBall}
+        hubMode={hubMode}
+        mapCagesRef={mapCagesRef}
+        goalCagesBrokenRef={goalCagesBrokenRef}
+        onCageTrapped={onCageTrapped}
       />
       {guidelinePoints.length >= 2 && (
         <ShotGuidelineArc points={guidelinePoints} />

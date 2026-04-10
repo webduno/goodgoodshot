@@ -164,16 +164,6 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     INITIAL_LANE_ORIGIN[1],
     game.goalWorldZ,
   ];
-  const pvpOrbitPivot = useMemo((): Vec3 => {
-    const sx = game.spawnCenter[0];
-    const sy = game.spawnCenter[1];
-    const sz = game.spawnCenter[2];
-    return [
-      (sx + game.goalWorldX) / 2,
-      (sy + INITIAL_LANE_ORIGIN[1]) / 2,
-      (sz + game.goalWorldZ) / 2,
-    ];
-  }, [game.spawnCenter, game.goalWorldX, game.goalWorldZ]);
   const islands = game.islands;
   const holePar = useMemo(
     () => parCoinCountForIslands(islands, INITIAL_LANE_ORIGIN[1], goalCenter),
@@ -732,8 +722,6 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           gameSpawn={game.spawnCenter}
           followBallActive={followBallCamera}
           ballFollowStateRef={ballFollowStateRef}
-          orbitPivot={pvpOrbitPivot}
-          maxOrbitDistance={240}
         >
           <SceneContent
             spawnCenter={game.spawnCenter}

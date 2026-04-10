@@ -63,17 +63,12 @@ export function TeleportOrbitRig({
   children,
   followBallActive = false,
   ballFollowStateRef,
-  orbitPivot = null,
-  maxOrbitDistance = 120,
 }: {
   gameSpawn: Vec3;
   children: ReactNode;
   /** When true with valid ball position, orbit is disabled and the camera uses a fixed offset from the ball. */
   followBallActive?: boolean;
   ballFollowStateRef?: BallFollowStateRef;
-  /** When set (e.g. PvP), orbit pivots here so spawn and goal both stay in frame. */
-  orbitPivot?: Vec3 | null;
-  maxOrbitDistance?: number;
 }) {
   const { camera, gl } = useThree();
   const controlsRef = useRef<OrbitControls | null>(null);
@@ -93,22 +88,20 @@ export function TeleportOrbitRig({
   const followBallWasActiveRef = useRef(false);
   /** True while follow-ball mode is actively tracking a projectile (cleared when ball ends or follow toggles off). */
   const followBallWasTrackingRef = useRef(false);
-  const orbitPivotRef = useRef<Vec3 | null>(null);
-  orbitPivotRef.current = orbitPivot;
 
   useLayoutEffect(() => {
     const controls = new OrbitControls(camera, gl.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.22;
     controls.minDistance = 2.1;
-    controls.maxDistance = maxOrbitDistance;
+    controls.maxDistance = 120;
     controls.enablePan = false;
     controlsRef.current = controls;
     return () => {
       controls.dispose();
       controlsRef.current = null;
     };
-  }, [camera, gl, maxOrbitDistance]);
+  }, [camera, gl]);
 
   useLayoutEffect(() => {
     const controls = controlsRef.current;
@@ -118,16 +111,12 @@ export function TeleportOrbitRig({
       const sx = gameSpawn[0];
       const sy = gameSpawn[1];
       const sz = gameSpawn[2];
-      const p = orbitPivot ?? gameSpawn;
-      const px = p[0];
-      const py = p[1];
-      const pz = p[2];
       camera.position.set(
-        px + INTRO_CAMERA_OFFSET_FROM_SPAWN[0],
-        py + INTRO_CAMERA_OFFSET_FROM_SPAWN[1],
-        pz + INTRO_CAMERA_OFFSET_FROM_SPAWN[2]
+        sx + INTRO_CAMERA_OFFSET_FROM_SPAWN[0],
+        sy + INTRO_CAMERA_OFFSET_FROM_SPAWN[1],
+        sz + INTRO_CAMERA_OFFSET_FROM_SPAWN[2]
       );
-      controls.target.set(px, py + ORBIT_TARGET_Y_OFFSET, pz);
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
       visualRef.current.set(sx, sy, sz);
       introProgressRef.current = 0;
       introDoneRef.current = false;
@@ -150,22 +139,21 @@ export function TeleportOrbitRig({
     deltaVRef.current.subVectors(toRef.current, fromRef.current);
     controls.enabled = false;
     prevGameRef.current = [...gameSpawn];
-  }, [camera, gameSpawn, orbitPivot]);
+  }, [camera, gameSpawn]);
 
   useLayoutEffect(() => {
     const controls = controlsRef.current;
     if (!controls) return;
     if (followBallWasActiveRef.current && !followBallActive) {
-      const p = orbitPivot ?? gameSpawn;
-      const px = p[0];
-      const py = p[1];
-      const pz = p[2];
+      const sx = gameSpawn[0];
+      const sy = gameSpawn[1];
+      const sz = gameSpawn[2];
       camera.position.set(
-        px + CAMERA_OFFSET_FROM_SPAWN[0],
-        py + CAMERA_OFFSET_FROM_SPAWN[1],
-        pz + CAMERA_OFFSET_FROM_SPAWN[2]
+        sx + CAMERA_OFFSET_FROM_SPAWN[0],
+        sy + CAMERA_OFFSET_FROM_SPAWN[1],
+        sz + CAMERA_OFFSET_FROM_SPAWN[2]
       );
-      controls.target.set(px, py + ORBIT_TARGET_Y_OFFSET, pz);
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
       controls.enabled = true;
       controls.update();
       clampCameraAboveGround(camera, controls.target);
@@ -173,7 +161,7 @@ export function TeleportOrbitRig({
       camera.updateMatrixWorld();
     }
     followBallWasActiveRef.current = followBallActive;
-  }, [followBallActive, gameSpawn, orbitPivot, camera]);
+  }, [followBallActive, gameSpawn, camera]);
 
   useFrame((_, delta) => {
     const controls = controlsRef.current;
@@ -216,17 +204,16 @@ export function TeleportOrbitRig({
       !transitioningRef.current
     ) {
       followBallWasTrackingRef.current = false;
-      const p = orbitPivot ?? gameSpawn;
-      const px = p[0];
-      const py = p[1];
-      const pz = p[2];
+      const sx = gameSpawn[0];
+      const sy = gameSpawn[1];
+      const sz = gameSpawn[2];
       controls.enabled = true;
       camera.position.set(
-        px + CAMERA_OFFSET_FROM_SPAWN[0],
-        py + CAMERA_OFFSET_FROM_SPAWN[1],
-        pz + CAMERA_OFFSET_FROM_SPAWN[2]
+        sx + CAMERA_OFFSET_FROM_SPAWN[0],
+        sy + CAMERA_OFFSET_FROM_SPAWN[1],
+        sz + CAMERA_OFFSET_FROM_SPAWN[2]
       );
-      controls.target.set(px, py + ORBIT_TARGET_Y_OFFSET, pz);
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
       controls.update();
       clampCameraAboveGround(camera, controls.target);
       camera.updateProjectionMatrix();
@@ -239,14 +226,10 @@ export function TeleportOrbitRig({
       const t = Math.min(1, progressRef.current / TELEPORT_DURATION_SEC);
       visualRef.current.lerpVectors(fromRef.current, toRef.current, t);
       deltaVRef.current.subVectors(toRef.current, fromRef.current);
-      const pivotT =
-        orbitPivotRef.current != null && orbitPivotRef.current !== undefined
-          ? t * 0.5
-          : t;
       camera.position.copy(camStartRef.current).addScaledVector(deltaVRef.current, t);
       controls.target
         .copy(tgtStartRef.current)
-        .addScaledVector(deltaVRef.current, pivotT);
+        .addScaledVector(deltaVRef.current, t);
       controls.update();
       clampCameraAboveGround(camera, controls.target);
       camera.updateProjectionMatrix();
@@ -263,18 +246,17 @@ export function TeleportOrbitRig({
       const introDur = Math.max(INTRO_CAMERA_DURATION_SEC, 1e-6);
       const rawT = Math.min(1, introProgressRef.current / introDur);
       const t = rawT * rawT * (3 - 2 * rawT);
-      const p = orbitPivot ?? gameSpawn;
-      const px = p[0];
-      const py = p[1];
-      const pz = p[2];
+      const sx = gameSpawn[0];
+      const sy = gameSpawn[1];
+      const sz = gameSpawn[2];
       const i0 = INTRO_CAMERA_OFFSET_FROM_SPAWN;
       const i1 = CAMERA_OFFSET_FROM_SPAWN;
       camera.position.set(
-        px + i0[0] + (i1[0] - i0[0]) * t,
-        py + i0[1] + (i1[1] - i0[1]) * t,
-        pz + i0[2] + (i1[2] - i0[2]) * t
+        sx + i0[0] + (i1[0] - i0[0]) * t,
+        sy + i0[1] + (i1[1] - i0[1]) * t,
+        sz + i0[2] + (i1[2] - i0[2]) * t
       );
-      controls.target.set(px, py + ORBIT_TARGET_Y_OFFSET, pz);
+      controls.target.set(sx, sy + ORBIT_TARGET_Y_OFFSET, sz);
       controls.update();
       clampCameraAboveGround(camera, controls.target);
       camera.updateProjectionMatrix();

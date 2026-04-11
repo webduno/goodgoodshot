@@ -126,6 +126,39 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   const { room, userId, initialFetchDone, error: roomError, refreshRoom } =
     usePvpRoom(roomId);
 
+  /** Host: full reload when a guest joins so canvas/state match the two-player room. */
+  const hostOpponentJoinReloadRef = useRef<{
+    roomId: string | null;
+    sawNoGuest: boolean;
+  } | null>(null);
+  useEffect(() => {
+    if (!room?.id || !userId) return;
+    if (userId !== room.host_user_id) return;
+
+    const guestId = room.guest_user_id ?? null;
+    const rid = room.id;
+
+    if (
+      hostOpponentJoinReloadRef.current === null ||
+      hostOpponentJoinReloadRef.current.roomId !== rid
+    ) {
+      hostOpponentJoinReloadRef.current = {
+        roomId: rid,
+        sawNoGuest: guestId === null,
+      };
+      return;
+    }
+
+    if (hostOpponentJoinReloadRef.current.sawNoGuest && guestId !== null) {
+      window.location.reload();
+      return;
+    }
+
+    if (guestId !== null) {
+      hostOpponentJoinReloadRef.current.sawNoGuest = false;
+    }
+  }, [room?.id, room?.guest_user_id, room?.host_user_id, userId]);
+
   const isPve = (room?.match_mode ?? "pvp") === "pve";
 
   const pveSpawns = useMemo(() => {

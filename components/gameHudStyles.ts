@@ -13,6 +13,10 @@ const glassFace =
 const glassDisabled =
   "linear-gradient(165deg, #e4e8ec 0%, #b0b8c4 100%)";
 
+/** Glossy violet / orchid — multiplayer / online (Frutiger Aero; contrasts cyan solo tiles). */
+export const glassFaceMultiplayer =
+  "linear-gradient(165deg, #ffffff 0%, #f3e8ff 14%, #d8b4fe 38%, #9333ea 66%, #6b21a8 100%)";
+
 /** Glossy red glass for primary Fire control. */
 const glassFaceRed =
   "linear-gradient(165deg, #ffffff 0%, #fecaca 16%, #fb7185 44%, #dc2626 78%, #991b1b 100%)";

@@ -116,6 +116,7 @@ import { stepWind } from "@/lib/game/wind";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { parCoinCountForIslands } from "@/lib/game/path";
 import { SESSION_SKIP_START_MODAL_KEY } from "@/lib/game/startWarSession";
+import { PVP_PENDING_NAV_SESSION_KEY } from "@/lib/pvp/pvpNavigate";
 import {
   INITIAL_LANE_ORIGIN,
   type PowerupSlotId,
@@ -201,6 +202,14 @@ export default function CubeScene() {
   useEffect(() => {
     setPlaySession(loadActivePlaySession());
     setSessionReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const path = sessionStorage.getItem(PVP_PENDING_NAV_SESSION_KEY);
+    if (!path) return;
+    sessionStorage.removeItem(PVP_PENDING_NAV_SESSION_KEY);
+    window.location.replace(path);
   }, []);
 
   const sessionMapHydrationKeyRef = useRef<string | null>(null);

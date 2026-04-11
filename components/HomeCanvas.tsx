@@ -7,7 +7,7 @@ const CubeScene = dynamic(() => import("@/components/CubeScene"), {
   ssr: false,
   loading: () => (
     <div
-      className="flex items-center justify-center"
+      className="flex flex-col items-center justify-center gap-4"
       style={{
         width: "100vw",
         height: "100vh",
@@ -17,7 +17,8 @@ const CubeScene = dynamic(() => import("@/components/CubeScene"), {
         textShadow: "0 1px 0 rgba(255,255,255,0.5)",
       }}
     >
-      Loading scene…
+      <div className="scene-loading-spinner" aria-hidden />
+      <span>Loading scene…</span>
     </div>
   ),
 });

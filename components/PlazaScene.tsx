@@ -140,6 +140,10 @@ import {
   joinFirstOpenPvpRoom,
   joinPvpRoomById,
 } from "@/lib/pvp/plazaActions";
+import {
+  PVP_PENDING_NAV_SESSION_KEY,
+  schedulePvpNavigateWithReload,
+} from "@/lib/pvp/pvpNavigate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
@@ -162,15 +166,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
     if (typeof message === "string" && message.trim()) return message;
   }
   return fallback;
-}
-
-/** Full document reload, then navigate — needed so WebGL / client state resets cleanly. */
-const PVP_PENDING_NAV_SESSION_KEY = "gg_pvp_pending_nav";
-
-function schedulePvpNavigateWithReload(path: string) {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(PVP_PENDING_NAV_SESSION_KEY, path);
-  window.location.reload();
 }
 
 export default function PlazaScene() {

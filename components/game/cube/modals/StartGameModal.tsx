@@ -7,17 +7,21 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import {
+  glassFaceMultiplayer,
   goldPillButtonStyle,
   hudColors,
   hudFont,
   hudMiniPanel,
   modalBackdrop,
   plazaHubButtonStyle,
+  plazaPvpDockButtonStyle,
   POWERUP_SLOT_ACCENT,
 } from "@/components/gameHudStyles";
+import { PvpOpenRoomsList } from "@/components/game/cube/modals/PvpOpenRoomsList";
 import {
   PREDETERMINED_VEHICLES,
   rgbTupleToCss,
+  type PlayerVehicleConfig,
   vehicleIdForQueryString,
 } from "@/components/playerVehicleConfig";
 import {
@@ -34,6 +38,13 @@ import {
   type SessionBattleCount,
 } from "@/lib/game/playSession";
 import type { SessionBiomeChoice } from "@/lib/game/sessionBattleMaps";
+import {
+  createPvpRoom,
+  joinFirstOpenPvpRoom,
+  joinPvpRoomById,
+} from "@/lib/pvp/plazaActions";
+import { schedulePvpNavigateWithReload } from "@/lib/pvp/pvpNavigate";
+import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
 
 const BATTLE_OPTIONS: SessionBattleCount[] = [3, 5, 9];
 
@@ -95,9 +106,9 @@ const startModalShell: CSSProperties = {
   overflow: "visible",
   backdropFilter: "blur(18px) saturate(1.15)",
   WebkitBackdropFilter: "blur(18px) saturate(1.15)",
-  maxWidth: 364,
-  width: "min(92vw, 364px)",
-  padding: "24px 20px 40px",
+  maxWidth: 400,
+  width: "min(94vw, 400px)",
+  padding: "24px 20px 28px",
   borderRadius: "38px 30px 42px 34px",
   border: "1px solid rgba(255,255,255,0.95)",
   boxShadow: [
@@ -158,6 +169,13 @@ const rulesWelcomePanel: CSSProperties = (() => {
       "inset 0 1px 0 rgba(255,255,255,0.92), 0 1px 8px rgba(0, 82, 130, 0.06)",
   };
 })();
+
+/** Top pitch + links — no inset “card”; reads as one band under the title (wireframe top strip). */
+const welcomeIntroFlat: CSSProperties = {
+  margin: "0 0 14px",
+  padding: "0 0 12px",
+  borderBottom: "1px solid rgba(0, 114, 188, 0.14)",
+};
 
 const statLabel: CSSProperties = {
   color: hudColors.muted,
@@ -222,12 +240,406 @@ const linkButtonStyle: CSSProperties = {
 
 const newSessionIntroSteps = 4;
 
+function getPvpErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+type WelcomeStartMode = null | "single" | "multi";
+
+function WelcomeModeFlow({
+  mode,
+  onModeChange,
+  biomeChoice,
+  onStartSession,
+  selectedVehicle,
+  pvpLobbyBusy,
+  pvpLobbyError,
+  onCreatePvp,
+  onCreatePve,
+  onQuickPlay,
+  onJoinRoom,
+  goToPlaza,
+  plazaButtonLabel,
+  topMargin = 12,
+}: {
+  mode: WelcomeStartMode;
+  onModeChange: (m: WelcomeStartMode) => void;
+  /** Space below intro; use 0 when intro is hidden (drill-in views). */
+  topMargin?: number;
+  biomeChoice: SessionBiomeChoice;
+  onStartSession: (
+    battleCount: SessionBattleCount,
+    biomeChoice: SessionBiomeChoice
+  ) => void;
+  selectedVehicle: PlayerVehicleConfig;
+  pvpLobbyBusy: boolean;
+  pvpLobbyError: string | null;
+  onCreatePvp: () => void | Promise<void>;
+  onCreatePve: () => void | Promise<void>;
+  onQuickPlay: () => void | Promise<void>;
+  onJoinRoom: (roomId: string) => void | Promise<void>;
+  goToPlaza: () => void;
+  plazaButtonLabel: string;
+}) {
+  const modeTileBtn = (): CSSProperties => ({
+    ...goldPillButtonStyle({
+      disabled: pvpLobbyBusy,
+      fullWidth: false,
+    }),
+    flex: 1,
+    minWidth: 0,
+    minHeight: 120,
+    borderRadius: 22,
+    padding: "14px 8px",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    boxShadow: [
+      "inset 0 2px 0 rgba(255,255,255,0.55)",
+      "0 5px 0 rgba(0, 60, 100, 0.16)",
+      "0 14px 28px rgba(0, 82, 130, 0.24)",
+    ].join(", "),
+  });
+
+  const modeTileBtnMultiplayer = (): CSSProperties => ({
+    ...modeTileBtn(),
+    ...(pvpLobbyBusy
+      ? {}
+      : {
+          backgroundImage: glassFaceMultiplayer,
+          border: "1px solid rgba(255,255,255,0.92)",
+          boxShadow: [
+            "inset 0 2px 0 rgba(255,255,255,0.58)",
+            "0 5px 0 rgba(75, 25, 120, 0.22)",
+            "0 14px 32px rgba(88, 28, 135, 0.38)",
+          ].join(", "),
+        }),
+  });
+
+  if (mode === null) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          marginTop: topMargin,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 10,
+            alignItems: "stretch",
+          }}
+        >
+          <button
+            type="button"
+            disabled={pvpLobbyBusy}
+            onClick={() => onModeChange("single")}
+            style={modeTileBtn()}
+          >
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: "#ffffff",
+                textShadow: "0 1px 2px rgba(0, 45, 95, 0.45)",
+              }}
+            >
+              Singleplayer
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                opacity: 0.92,
+                color: "rgba(255,255,255,0.95)",
+              }}
+            >
+              Solo wars
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={pvpLobbyBusy}
+            onClick={() => onModeChange("multi")}
+            style={modeTileBtnMultiplayer()}
+          >
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: "#ffffff",
+                textShadow:
+                  "0 1px 2px rgba(40, 0, 80, 0.55), 0 0 1px rgba(0, 0, 0, 0.35)",
+              }}
+            >
+              Multiplayer
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                opacity: 0.94,
+                color: "rgba(255,255,255,0.97)",
+                textShadow: "0 1px 2px rgba(40, 0, 80, 0.45)",
+              }}
+            >
+              Online
+            </span>
+          </button>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <button
+            type="button"
+            onClick={goToPlaza}
+            style={plazaHubButtonStyle({
+              variant: "chip",
+            })}
+          >
+            {plazaButtonLabel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "single") {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          marginTop: topMargin,
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontSize: 12,
+            fontWeight: 600,
+            color: hudColors.label,
+            lineHeight: 1.45,
+            textAlign: "left",
+          }}
+        >
+          New war — pick length
+        </p>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 8,
+          }}
+        >
+          {BATTLE_OPTIONS.map((battleCount) => (
+            <button
+              key={battleCount}
+              type="button"
+              className="ggsBattleLenBtn"
+              onClick={() => {
+                burstVehicleStartConfetti(
+                  selectedVehicle.mainRgb,
+                  selectedVehicle.accentRgb
+                );
+                onStartSession(battleCount, biomeChoice);
+              }}
+              style={{
+                ...goldPillButtonStyle({
+                  disabled: false,
+                  fullWidth: true,
+                }),
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                padding: "10px 6px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 20,
+                  fontWeight: 800,
+                  lineHeight: 1,
+                }}
+              >
+                {battleCount}
+              </span>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  opacity: 0.92,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                battles
+              </span>
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={goToPlaza}
+          style={plazaHubButtonStyle({
+            variant: "full",
+            fullWidth: true,
+          })}
+        >
+          {plazaButtonLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => onModeChange(null)}
+          style={{ ...linkButtonStyle, alignSelf: "center" }}
+        >
+          Back
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        marginTop: topMargin,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          fontWeight: 600,
+          color: hudColors.label,
+          lineHeight: 1.45,
+          textAlign: "left",
+        }}
+      >
+        Create or join lobbies
+      </p>
+      {pvpLobbyError ? (
+        <p
+          style={{
+            margin: 0,
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#b42318",
+            lineHeight: 1.35,
+          }}
+        >
+          {pvpLobbyError}
+        </p>
+      ) : null}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
+        }}
+      >
+        <button
+          type="button"
+          disabled={pvpLobbyBusy}
+          onClick={() => void onCreatePvp()}
+          style={{
+            ...plazaPvpDockButtonStyle({
+              variant: "create",
+              disabled: pvpLobbyBusy,
+            }),
+            flex: "1 1 calc(50% - 4px)",
+            minWidth: 120,
+            boxSizing: "border-box",
+          }}
+        >
+          New PvP
+        </button>
+        <button
+          type="button"
+          disabled={pvpLobbyBusy}
+          onClick={() => void onCreatePve()}
+          style={{
+            ...plazaPvpDockButtonStyle({
+              variant: "create",
+              disabled: pvpLobbyBusy,
+            }),
+            flex: "1 1 calc(50% - 4px)",
+            minWidth: 120,
+            boxSizing: "border-box",
+          }}
+        >
+          New PvE
+        </button>
+      </div>
+      <button
+        type="button"
+        disabled={pvpLobbyBusy}
+        onClick={() => void onQuickPlay()}
+        style={{
+          ...plazaPvpDockButtonStyle({
+            variant: "quick",
+            disabled: pvpLobbyBusy,
+          }),
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        Quick match
+      </button>
+      <PvpOpenRoomsList
+        enabled={mode === "multi"}
+        busy={pvpLobbyBusy}
+        onJoinRoom={onJoinRoom}
+        compactTitle
+      />
+      <button
+        type="button"
+        onClick={goToPlaza}
+        style={plazaHubButtonStyle({
+          variant: "full",
+          fullWidth: true,
+        })}
+      >
+        {plazaButtonLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => onModeChange(null)}
+        style={{ ...linkButtonStyle, alignSelf: "center" }}
+      >
+        Back
+      </button>
+    </div>
+  );
+}
+
 /** ~5 words per line — artillery / vehicle battles (Gunbound-style), not golf. */
 function WelcomePitchBlurb() {
   const lines: { icon: string; text: string }[] = [
     { icon: "🎯", text: "Aim angle and power, then shoot." },
     { icon: "⚔️", text: "Win more battles than losses." },
-    { icon: "🚀", text: "Pick war length below to start." },
+    {
+      icon: "🚀",
+      text: "Tap Singleplayer or Multiplayer below — then pick how to play.",
+    },
   ];
   return (
     <div>
@@ -350,6 +762,10 @@ export function StartGameModal({
   const [gameConfigOpen, setGameConfigOpen] = useState(false);
   const [biomeChoice, setBiomeChoice] =
     useState<SessionBiomeChoice>("random");
+  const [welcomeStartMode, setWelcomeStartMode] =
+    useState<WelcomeStartMode>(null);
+  const [pvpLobbyBusy, setPvpLobbyBusy] = useState(false);
+  const [pvpLobbyError, setPvpLobbyError] = useState<string | null>(null);
 
   const setVehicleInUrl = useCallback(
     (vehicleId: string) => {
@@ -379,13 +795,104 @@ export function StartGameModal({
     router.push(qs ? `/plaza?${qs}` : "/plaza");
   }, [router, selectedVehicle]);
 
+  const onPvpCreateRoom = useCallback(async () => {
+    if (pvpLobbyBusy) return;
+    setPvpLobbyBusy(true);
+    setPvpLobbyError(null);
+    try {
+      await ensureSupabaseSession();
+      const id = await createPvpRoom("pvp");
+      const p = new URLSearchParams();
+      const v = vehicleIdForQueryString(selectedVehicle);
+      if (v) p.set("vehicle", v);
+      const qs = p.toString();
+      schedulePvpNavigateWithReload(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+    } catch (e) {
+      setPvpLobbyError(getPvpErrorMessage(e, "PvP setup failed"));
+    } finally {
+      setPvpLobbyBusy(false);
+    }
+  }, [pvpLobbyBusy, selectedVehicle]);
+
+  const onPveCreateRoom = useCallback(async () => {
+    if (pvpLobbyBusy) return;
+    setPvpLobbyBusy(true);
+    setPvpLobbyError(null);
+    try {
+      await ensureSupabaseSession();
+      const id = await createPvpRoom("pve");
+      const p = new URLSearchParams();
+      const v = vehicleIdForQueryString(selectedVehicle);
+      if (v) p.set("vehicle", v);
+      const qs = p.toString();
+      schedulePvpNavigateWithReload(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+    } catch (e) {
+      setPvpLobbyError(getPvpErrorMessage(e, "PvE setup failed"));
+    } finally {
+      setPvpLobbyBusy(false);
+    }
+  }, [pvpLobbyBusy, selectedVehicle]);
+
+  const onPvpQuickPlay = useCallback(async () => {
+    if (pvpLobbyBusy) return;
+    setPvpLobbyBusy(true);
+    setPvpLobbyError(null);
+    try {
+      await ensureSupabaseSession();
+      const id = await joinFirstOpenPvpRoom();
+      if (!id) {
+        setPvpLobbyError("No open room — create one");
+        return;
+      }
+      const p = new URLSearchParams();
+      const v = vehicleIdForQueryString(selectedVehicle);
+      if (v) p.set("vehicle", v);
+      const qs = p.toString();
+      schedulePvpNavigateWithReload(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+    } catch (e) {
+      setPvpLobbyError(getPvpErrorMessage(e, "PvP join failed"));
+    } finally {
+      setPvpLobbyBusy(false);
+    }
+  }, [pvpLobbyBusy, selectedVehicle]);
+
+  const onJoinRoomFromList = useCallback(
+    async (roomId: string) => {
+      if (pvpLobbyBusy) return;
+      setPvpLobbyBusy(true);
+      setPvpLobbyError(null);
+      try {
+        await ensureSupabaseSession();
+        await joinPvpRoomById(roomId);
+        const p = new URLSearchParams();
+        const v = vehicleIdForQueryString(selectedVehicle);
+        if (v) p.set("vehicle", v);
+        const qs = p.toString();
+        schedulePvpNavigateWithReload(
+          qs ? `/pvp/${roomId}?${qs}` : `/pvp/${roomId}`
+        );
+      } catch (e) {
+        setPvpLobbyError(getPvpErrorMessage(e, "Could not join room"));
+      } finally {
+        setPvpLobbyBusy(false);
+      }
+    },
+    [pvpLobbyBusy, selectedVehicle]
+  );
+
   useEffect(() => {
     if (open) {
       setNewSessionStep(0);
       setGameConfigOpen(false);
       setBiomeChoice("random");
+      setWelcomeStartMode(null);
+      setPvpLobbyError(null);
     }
   }, [open]);
+
+  useEffect(() => {
+    setPvpLobbyError(null);
+  }, [welcomeStartMode]);
 
   if (!open) return null;
 
@@ -776,15 +1283,59 @@ export function StartGameModal({
                   style={{
                     position: "relative",
                     width: "100%",
-                    paddingBottom:108,
                   }}
                 >
-                  <div
-                    style={{
-                      ...rulesWelcomePanel,
-                      marginBottom: 0,
-                    }}
-                  >
+                  {welcomeStartMode === null ? (
+                    <div style={welcomeIntroFlat}>
+                      <WelcomePitchBlurb />
+                      <div
+                        style={{
+                          margin: "10px 0 0",
+                          fontSize: 11,
+                          lineHeight: 1.4,
+                          color: hudColors.muted,
+                          paddingTop: 10,
+                          borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGameConfigOpen(true);
+                            setNewSessionStep(0);
+                          }}
+                          style={{
+                            ...linkButtonStyle,
+                            display: "inline",
+                            fontSize: 11,
+                          }}
+                        >
+                          Change Game Config
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <WelcomeModeFlow
+                    mode={welcomeStartMode}
+                    onModeChange={setWelcomeStartMode}
+                    topMargin={welcomeStartMode === null ? 12 : 0}
+                    biomeChoice={biomeChoice}
+                    onStartSession={onStartSession}
+                    selectedVehicle={selectedVehicle}
+                    pvpLobbyBusy={pvpLobbyBusy}
+                    pvpLobbyError={pvpLobbyError}
+                    onCreatePvp={onPvpCreateRoom}
+                    onCreatePve={onPveCreateRoom}
+                    onQuickPlay={onPvpQuickPlay}
+                    onJoinRoom={onJoinRoomFromList}
+                    goToPlaza={goToPlaza}
+                    plazaButtonLabel="Tutorial plaza"
+                  />
+                </div>
+              ) : (
+              <>
+                {welcomeStartMode === null ? (
+                  <div style={{ ...welcomeIntroFlat, marginBottom: 14 }}>
                     <WelcomePitchBlurb />
                     <div
                       style={{
@@ -796,126 +1347,26 @@ export function StartGameModal({
                         borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
                       }}
                     >
+                      Tap <strong style={{ color: hudColors.value }}>i</strong>{" "}
+                      for full rules — or{" "}
                       <button
                         type="button"
                         onClick={() => {
                           setGameConfigOpen(true);
                           setNewSessionStep(0);
                         }}
-                        style={{ ...linkButtonStyle, display: "inline", fontSize: 11 }}
+                        style={{
+                          ...linkButtonStyle,
+                          display: "inline",
+                          fontSize: 11,
+                        }}
                       >
-                        Change Game Config
+                        change game config
                       </button>
                     </div>
                   </div>
-                  <div style={startModalActionsAnchor}>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: hudColors.label,
-                        lineHeight: 1.45,
-                        textAlign: "left",
-                      }}
-                    >
-                      New war — pick length
-                    </p>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "row",
-                        gap: 8,
-                      }}
-                    >
-                      {BATTLE_OPTIONS.map((battleCount) => (
-                        <button
-                          key={battleCount}
-                          type="button"
-                          className="ggsBattleLenBtn"
-                          onClick={() => {
-                            burstVehicleStartConfetti(
-                              selectedVehicle.mainRgb,
-                              selectedVehicle.accentRgb
-                            );
-                            onStartSession(battleCount, biomeChoice);
-                          }}
-                          style={{
-                            ...goldPillButtonStyle({
-                              disabled: false,
-                              fullWidth: true,
-                            }),
-                            flex: 1,
-                            minWidth: 0,
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 2,
-                            padding: "10px 6px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 20,
-                              fontWeight: 800,
-                              lineHeight: 1,
-                            }}
-                          >
-                            {battleCount}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 700,
-                              opacity: 0.92,
-                              letterSpacing: "0.04em",
-                            }}
-                          >
-                            battles
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={goToPlaza}
-                      style={plazaHubButtonStyle({
-                        variant: "full",
-                        fullWidth: true,
-                      })}
-                    >
-                      Tutorial plaza
-                    </button>
-                  </div>
-                </div>
-              ) : (
-              <div style={{ ...rulesWelcomePanel, marginBottom: 14 }}>
-                <WelcomePitchBlurb />
-                <div
-                  style={{
-                    margin: "10px 0 0",
-                    fontSize: 11,
-                    lineHeight: 1.4,
-                    color: hudColors.muted,
-                    paddingTop: 10,
-                    borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
-                  }}
-                >
-                  Tap <strong style={{ color: hudColors.value }}>i</strong> for
-                  full rules — or{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGameConfigOpen(true);
-                      setNewSessionStep(0);
-                    }}
-                    style={{ ...linkButtonStyle, display: "inline", fontSize: 11 }}
-                  >
-                    change game config
-                  </button>
-                </div>
-              </div>
+                ) : null}
+              </>
               )
             ) : (
             <div style={rulesPanelContinue}>
@@ -1318,89 +1769,24 @@ export function StartGameModal({
                   position: "relative",
                   width: "100%",
                   marginTop: 8,
-                  paddingBottom: 96,
                 }}
               >
-                <div style={startModalActionsAnchor}>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: hudColors.label,
-                      lineHeight: 1.45,
-                      textAlign: "left",
-                    }}
-                  >
-                    New war — pick length
-                  </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      gap: 8,
-                    }}
-                  >
-                    {BATTLE_OPTIONS.map((battleCount) => (
-                      <button
-                        key={battleCount}
-                        type="button"
-                        className="ggsBattleLenBtn"
-                        onClick={() => {
-                          burstVehicleStartConfetti(
-                            selectedVehicle.mainRgb,
-                            selectedVehicle.accentRgb
-                          );
-                          onStartSession(battleCount, biomeChoice);
-                        }}
-                        style={{
-                          ...goldPillButtonStyle({
-                            disabled: false,
-                            fullWidth: true,
-                          }),
-                          flex: 1,
-                          minWidth: 0,
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 2,
-                          padding: "10px 6px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 20,
-                            fontWeight: 800,
-                            lineHeight: 1,
-                          }}
-                        >
-                          {battleCount}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 700,
-                            opacity: 0.92,
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          battles
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={goToPlaza}
-                    style={plazaHubButtonStyle({
-                      variant: "full",
-                      fullWidth: true,
-                    })}
-                  >
-                    Go to plaza
-                  </button>
-                </div>
+                <WelcomeModeFlow
+                  mode={welcomeStartMode}
+                  onModeChange={setWelcomeStartMode}
+                  topMargin={welcomeStartMode === null ? 12 : 0}
+                  biomeChoice={biomeChoice}
+                  onStartSession={onStartSession}
+                  selectedVehicle={selectedVehicle}
+                  pvpLobbyBusy={pvpLobbyBusy}
+                  pvpLobbyError={pvpLobbyError}
+                  onCreatePvp={onPvpCreateRoom}
+                  onCreatePve={onPveCreateRoom}
+                  onQuickPlay={onPvpQuickPlay}
+                  onJoinRoom={onJoinRoomFromList}
+                  goToPlaza={goToPlaza}
+                  plazaButtonLabel="Go to plaza"
+                />
               </div>
             ) : null}
           </>

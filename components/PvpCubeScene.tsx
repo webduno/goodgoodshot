@@ -114,7 +114,8 @@ function pvpGameStateMatchesRoomCourse(
 }
 
 export default function PvpCubeScene({ roomId }: { roomId: string }) {
-  const { recordGoldCoin, spendGoldCoin, stats } = usePlayerStats();
+  const { recordGoldCoin, recordGoldCoins, spendGoldCoin, stats } =
+    usePlayerStats();
   const {
     inventory: shopInventory,
     setStrengthCharges,
@@ -504,6 +505,46 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     },
     []
   );
+
+  useEffect(() => {
+    if (!room?.id || !userId) return;
+    const matchFinished =
+      room.status === "finished" || room.winner_user_id != null;
+    if (!matchFinished || room.winner_user_id !== userId) return;
+    const mode = room.match_mode ?? "pvp";
+    if (mode !== "pvp" && mode !== "pve") return;
+
+    const storageKey = `pvp_pve_win_coins_${room.id}`;
+    try {
+      if (
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem(storageKey)
+      ) {
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(storageKey, "1");
+      }
+    } catch {
+      // ignore
+    }
+
+    recordGoldCoins(10);
+    pushHudToast("Victory — +10 coins");
+  }, [
+    room?.id,
+    room?.status,
+    room?.winner_user_id,
+    room?.match_mode,
+    userId,
+    recordGoldCoins,
+    pushHudToast,
+  ]);
 
   useEffect(() => {
     if (!showProfileModal) return;

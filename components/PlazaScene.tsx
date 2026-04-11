@@ -163,6 +163,15 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/** Full document reload, then navigate — needed so WebGL / client state resets cleanly. */
+const PVP_PENDING_NAV_SESSION_KEY = "gg_pvp_pending_nav";
+
+function schedulePvpNavigateWithReload(path: string) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(PVP_PENDING_NAV_SESSION_KEY, path);
+  window.location.reload();
+}
+
 export default function PlazaScene() {
   const { spendGoldCoin, spendGoldCoins, recordGoldCoins, stats } =
     usePlayerStats();
@@ -280,6 +289,14 @@ export default function PlazaScene() {
     setAimControlMode(loadAimControlMode());
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const path = sessionStorage.getItem(PVP_PENDING_NAV_SESSION_KEY);
+    if (!path) return;
+    sessionStorage.removeItem(PVP_PENDING_NAV_SESSION_KEY);
+    window.location.replace(path);
+  }, []);
+
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
   const [hudToastToken, setHudToastToken] = useState(0);
   const [hudToastMessage, setHudToastMessage] = useState("");
@@ -321,7 +338,7 @@ export default function PlazaScene() {
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
-      window.location.assign(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+      schedulePvpNavigateWithReload(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
       pushHudToast(getErrorMessage(e, "PvP setup failed"));
     } finally {
@@ -339,7 +356,7 @@ export default function PlazaScene() {
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
-      window.location.assign(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+      schedulePvpNavigateWithReload(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
       pushHudToast(getErrorMessage(e, "PvE setup failed"));
     } finally {
@@ -361,7 +378,7 @@ export default function PlazaScene() {
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
-      window.location.assign(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+      schedulePvpNavigateWithReload(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
       pushHudToast(getErrorMessage(e, "PvP join failed"));
     } finally {
@@ -381,7 +398,9 @@ export default function PlazaScene() {
         if (v) p.set("vehicle", v);
         const qs = p.toString();
         setShowPvpJoinModal(false);
-        window.location.assign(qs ? `/pvp/${roomId}?${qs}` : `/pvp/${roomId}`);
+        schedulePvpNavigateWithReload(
+          qs ? `/pvp/${roomId}?${qs}` : `/pvp/${roomId}`
+        );
       } catch (e) {
         pushHudToast(getErrorMessage(e, "Could not join room"));
       } finally {

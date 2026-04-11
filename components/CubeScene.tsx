@@ -272,6 +272,8 @@ export default function CubeScene() {
   const [finishLossReason, setFinishLossReason] = useState<"par" | "enemy">(
     "par"
   );
+  /** How the battle was won when `finishBattleWon` (goal under par vs. virus hit). */
+  const [finishWinKind, setFinishWinKind] = useState<"goal" | "virus">("goal");
   /** Gold coins granted for this battle win (war battle index: 1st → 1, 5th → 5). */
   const [finishBattleCoinsEarned, setFinishBattleCoinsEarned] = useState(0);
   const [showStartGameModal, setShowStartGameModal] = useState(true);
@@ -761,7 +763,8 @@ export default function CubeScene() {
           );
           const shots = sessionShotsRef.current;
           const battleWon =
-            outcome === "hit" && shots <= par;
+            outcome === "enemy_loss" ||
+            (outcome === "hit" && shots <= par);
           if (battleWon) {
             playSfx(SFX.conff);
           }
@@ -821,6 +824,7 @@ export default function CubeScene() {
           }
           setFinishBattleWon(battleWon);
           setFinishPar(par);
+          setFinishWinKind(outcome === "enemy_loss" ? "virus" : "goal");
           setFinishLossReason(outcome === "enemy_loss" ? "enemy" : "par");
           setFinishBattleCoinsEarned(
             battleWon && session && warBattleIndex > 0 ? warBattleIndex : 0
@@ -1765,6 +1769,7 @@ export default function CubeScene() {
         sessionShots={sessionShots}
         par={finishPar}
         battleWon={finishBattleWon}
+        winKind={finishWinKind}
         lossReason={finishLossReason}
         coinsEarned={finishBattleCoinsEarned}
         warBattlesPlayed={

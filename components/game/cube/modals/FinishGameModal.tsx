@@ -52,9 +52,15 @@ const finishActionsAnchor: CSSProperties = {
 
 function outcomeSubtitle(
   battleWon: boolean,
-  lossReason: "par" | "enemy"
+  lossReason: "par" | "enemy",
+  winKind: "goal" | "virus"
 ): string {
-  if (battleWon) return "Congratulations! 🎉 You reached the goal under the shot limit.";
+  if (battleWon) {
+    if (winKind === "virus") {
+      return "Congratulations! 🎉 You destroyed the Enemy Virus.";
+    }
+    return "Congratulations! 🎉 You reached the goal under the shot limit.";
+  }
   if (lossReason === "enemy") return "An Enemy Virus attacked your vehicle.";
   return "You lost! 😭 Sorry, you reached the goal over the shot limit.";
 }
@@ -64,6 +70,7 @@ export function FinishGameModal({
   sessionShots,
   par,
   battleWon,
+  winKind = "goal",
   lossReason = "par",
   coinsEarned = 0,
   warBattlesPlayed,
@@ -76,6 +83,8 @@ export function FinishGameModal({
   sessionShots: number;
   par: number;
   battleWon: boolean;
+  /** Singleplayer: win by sinking under par vs. by hitting the Enemy Virus. */
+  winKind?: "goal" | "virus";
   lossReason?: "par" | "enemy";
   /** Gold coins granted for this win (war battle index). */
   coinsEarned?: number;
@@ -94,7 +103,7 @@ export function FinishGameModal({
 
   if (!open) return null;
 
-  const subtitle = outcomeSubtitle(battleWon, lossReason);
+  const subtitle = outcomeSubtitle(battleWon, lossReason, winKind);
 
   return (
     <div

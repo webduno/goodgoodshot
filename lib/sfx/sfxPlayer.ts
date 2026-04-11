@@ -19,6 +19,7 @@ export const SFX = {
   shoot: "/sfx/short/shoot1.mp3",
   slash: "/sfx/short/slash.mp3",
   coinCollect: "/sfx/coinss.mp3",
+  land: "/sfx/land.mp3",
 } as const;
 
 export function playSfx(src: string): void {

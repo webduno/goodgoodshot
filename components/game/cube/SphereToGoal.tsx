@@ -20,6 +20,7 @@ import { mapCageKey, sphereTouchesMapCage } from "@/lib/game/mapCages";
 import { coinCellKey } from "@/lib/game/path";
 import { spawnTopYFromBlockCenterY } from "@/lib/game/math";
 import type { IslandRect } from "@/lib/game/islands";
+import { SFX, playSfx } from "@/lib/sfx/sfxPlayer";
 import { type Projectile, type Vec3 } from "@/lib/game/types";
 
 export function SphereToGoal({
@@ -280,6 +281,7 @@ export function SphereToGoal({
       vyAfterGravity < 0 &&
       bounceRestitution > 0;
     if (canBounce) {
+      playSfx(SFX.land);
       p.x = landingX;
       p.y = FLOOR_CONTACT_CENTER_Y;
       p.z = landingZ;

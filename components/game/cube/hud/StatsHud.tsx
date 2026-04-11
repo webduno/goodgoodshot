@@ -9,10 +9,16 @@ import { useEffect, useState, type CSSProperties, type MutableRefObject } from "
 
 import type { RendererStatsSnapshot } from "@/components/game/cube/RendererStatsCollector";
 
-import { hudColors, hudFont, hudMiniPanel } from "@/components/gameHudStyles";
+import {
+  goldChipButtonStyle,
+  hudColors,
+  hudFont,
+  hudMiniPanel,
+} from "@/components/gameHudStyles";
 import { isLocalhostHostname } from "@/lib/isLocalhost";
 
 import { HudIdleClockIcon } from "@/components/game/cube/hud/HudIdleIcons";
+import { usePlayerStats } from "@/components/PlayerStatsProvider";
 
 export function StatsHud({
   holePar,
@@ -30,6 +36,8 @@ export function StatsHud({
   onScoreClick,
   rendererStatsRef,
   onOpenMyVehicles,
+  onOpenProfile,
+  profileButtonDisabled,
 }: {
   /** Max strokes (inclusive) to count as a battle win when you hole out — same as lane bonus coin count. */
   holePar: number;
@@ -49,7 +57,11 @@ export function StatsHud({
   rendererStatsRef: MutableRefObject<RendererStatsSnapshot | null>;
   /** When set, Vehicle panel shows a "change" control that opens the my-vehicles picker (e.g. plaza). */
   onOpenMyVehicles?: () => void;
+  /** When set, a Profile chip is shown above the Vehicle panel. */
+  onOpenProfile?: () => void;
+  profileButtonDisabled?: boolean;
 }) {
+  const { stats } = usePlayerStats();
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const [drawCalls, setDrawCalls] = useState<number | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
@@ -107,6 +119,42 @@ export function StatsHud({
         maxWidth: "min(94vw, 168px)",
       }}
     >
+      {onOpenProfile ? (
+        <div
+          style={{
+            pointerEvents: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Open profile"
+            onClick={onOpenProfile}
+            disabled={profileButtonDisabled}
+            style={goldChipButtonStyle()}
+          >
+            Profile
+          </button>
+          <span
+            aria-label={`${stats.totalGoldCoins} gold coins`}
+            title="Gold coins"
+            style={{
+              ...hudFont,
+              fontSize: 11,
+              fontWeight: 800,
+              fontVariantNumeric: "tabular-nums",
+              color: hudColors.accent,
+              textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🪙 {stats.totalGoldCoins}
+          </span>
+        </div>
+      ) : null}
       <div
         style={{
           pointerEvents: "auto",

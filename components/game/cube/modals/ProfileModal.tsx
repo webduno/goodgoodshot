@@ -3,14 +3,19 @@
 import { useMemo, type CSSProperties } from "react";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
-import { PREDETERMINED_VEHICLES } from "@/components/playerVehicleConfig";
 import {
+  DEFAULT_V_ID,
+  PREDETERMINED_VEHICLES,
+} from "@/components/playerVehicleConfig";
+import {
+  goldChipButtonStyle,
   goldPillButtonStyle,
   helpModalCard,
   hudColors,
   hudFont,
   modalBackdrop,
 } from "@/components/gameHudStyles";
+import { writePreferredVehicleId } from "@/lib/game/preferredVehicleStorage";
 import { isVehicleUnlocked } from "@/lib/game/vehicleUnlock";
 import { FISH_SHOP_ITEMS, AQUARIUM_SHOP_ITEMS } from "@/lib/shop/aquariumCatalog";
 import { BIRD_SHOP_ITEMS } from "@/lib/shop/birdCatalog";
@@ -44,12 +49,29 @@ function vehicleOwnedInShop(
   return inv.ownedVehicleIds.some((id) => id.trim().toLowerCase() === needle);
 }
 
+function vehicleIdEq(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+function equipVehicleAndReload(vId: string) {
+  writePreferredVehicleId(vId);
+  const url = new URL(window.location.href);
+  if (vId === DEFAULT_V_ID) {
+    url.searchParams.delete("vehicle");
+  } else {
+    url.searchParams.set("vehicle", vId);
+  }
+  window.location.assign(url.toString());
+}
+
 type ProfileInvRow = {
   key: string;
   emoji: string;
   title: string;
   detail: string;
   accent?: string;
+  /** Set for vehicle rows — used for Equip / Unequip. */
+  vehicleId?: string;
 };
 
 const invGridStyle: CSSProperties = {
@@ -81,12 +103,19 @@ const invCellStyle: CSSProperties = {
 export function ProfileModal({
   open,
   onClose,
+  currentVehicleId,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Active hull (from URL / preference) — only one vehicle is equipped at a time. */
+  currentVehicleId: string;
 }) {
   const { stats } = usePlayerStats();
-  const { inventory: shopInventory } = usePlayerShopInventory();
+  const {
+    inventory: shopInventory,
+    setEquippedHatId,
+    setEquippedFishId,
+  } = usePlayerShopInventory();
 
   const powerupRows = useMemo<ProfileInvRow[]>(
     () => [
@@ -118,12 +147,11 @@ export function ProfileModal({
   const hatRows = useMemo((): ProfileInvRow[] => {
     return shopInventory.ownedHats.map((hatId) => {
       const row = HAT_CATALOG.find((h) => h.id === hatId);
-      const equipped = shopInventory.equippedHatId === hatId;
       return {
         key: `hat-${hatId}`,
         emoji: HAT_SHOP_EMOJI[hatId],
         title: row?.displayName ?? hatId,
-        detail: equipped ? "Equipped" : "Owned",
+        detail: "Owned",
       };
     });
   }, [shopInventory]);
@@ -135,6 +163,7 @@ export function ProfileModal({
       const owned = vehicleOwnedInShop(row.id, shopInventory);
       return {
         key: `veh-${row.id}`,
+        vehicleId: row.id,
         emoji: vehicleShopEmoji(row.id),
         title: row.displayName,
         detail: owned ? "Owned" : "Unlocked",
@@ -145,12 +174,11 @@ export function ProfileModal({
   const fishRows = useMemo((): ProfileInvRow[] => {
     return shopInventory.ownedFishIds.map((fishId) => {
       const row = FISH_SHOP_ITEMS.find((f) => f.id === fishId);
-      const equipped = shopInventory.equippedFishId === fishId;
       return {
         key: `fish-${fishId}`,
         emoji: row?.emoji ?? "🐟",
         title: row?.label ?? fishId,
-        detail: equipped ? "Equipped" : "Owned",
+        detail: "Owned",
       };
     });
   }, [shopInventory]);
@@ -341,8 +369,9 @@ export function ProfileModal({
               lineHeight: 1.4,
             }}
           >
-            Power-up charges on this device; other subsections list only what you
-            own (hats, vehicles, fish, birds, aquariums).
+            Power-up charges on this device; other subsections list what you own
+            or have unlocked. You can equip one hat, one fish, and one vehicle at
+            a time.
           </p>
 
           <h4 style={{ ...subsectionHeaderStyle, margin: "0 0 8px" }}>
@@ -398,47 +427,95 @@ export function ProfileModal({
                 Hats
               </h4>
               <ul style={invGridStyle}>
-                {hatRows.map((row) => (
-                  <li key={row.key} style={invCellStyle}>
-                    <span
+                {hatRows.map((row) => {
+                  const hatId = row.key.slice("hat-".length) as HatId;
+                  const equipped = shopInventory.equippedHatId === hatId;
+                  return (
+                    <li
+                      key={row.key}
                       style={{
-                        fontSize: 26,
-                        lineHeight: 1,
-                        textAlign: "center",
-                      }}
-                      aria-hidden
-                    >
-                      {row.emoji}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: hudColors.value,
-                        textAlign: "center",
-                        lineHeight: 1.25,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
+                        ...invCellStyle,
+                        ...(equipped
+                          ? {
+                              border: "1px solid rgba(34, 197, 94, 0.45)",
+                              boxShadow:
+                                "0 0 10px rgba(34, 197, 94, 0.18), inset 0 1px 0 rgba(255,255,255,0.85)",
+                              background:
+                                "linear-gradient(180deg, rgba(220, 252, 231, 0.55) 0%, rgba(232, 246, 255, 0.75) 100%)",
+                            }
+                          : {}),
                       }}
                     >
-                      {row.title}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 800,
-                        fontVariantNumeric: "tabular-nums",
-                        color: row.accent ?? hudColors.accent,
-                        textAlign: "center",
-                        marginTop: "auto",
-                      }}
-                    >
-                      {row.detail}
-                    </span>
-                  </li>
-                ))}
+                      <span
+                        style={{
+                          fontSize: 26,
+                          lineHeight: 1,
+                          textAlign: "center",
+                        }}
+                        aria-hidden
+                      >
+                        {row.emoji}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: hudColors.value,
+                          textAlign: "center",
+                          lineHeight: 1.25,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {row.title}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: hudColors.muted,
+                          textAlign: "center",
+                        }}
+                      >
+                        {row.detail}
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap",
+                          justifyContent: "center",
+                          marginTop: "auto",
+                          width: "100%",
+                        }}
+                      >
+                        {equipped ? (
+                          <button
+                            type="button"
+                            onClick={() => setEquippedHatId(null)}
+                            style={goldChipButtonStyle()}
+                          >
+                            Unequip
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setEquippedHatId(hatId)}
+                            style={{
+                              ...goldChipButtonStyle(),
+                              boxShadow:
+                                "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34, 197, 94, 0.65)",
+                            }}
+                          >
+                            Equip
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           ) : null}
@@ -449,47 +526,95 @@ export function ProfileModal({
                 Vehicles
               </h4>
               <ul style={invGridStyle}>
-                {vehicleRows.map((row) => (
-                  <li key={row.key} style={invCellStyle}>
-                    <span
+                {vehicleRows.map((row) => {
+                  const vid = row.vehicleId ?? "";
+                  const equipped = vehicleIdEq(currentVehicleId, vid);
+                  return (
+                    <li
+                      key={row.key}
                       style={{
-                        fontSize: 26,
-                        lineHeight: 1,
-                        textAlign: "center",
-                      }}
-                      aria-hidden
-                    >
-                      {row.emoji}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: hudColors.value,
-                        textAlign: "center",
-                        lineHeight: 1.25,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
+                        ...invCellStyle,
+                        ...(equipped
+                          ? {
+                              border: "1px solid rgba(34, 197, 94, 0.45)",
+                              boxShadow:
+                                "0 0 10px rgba(34, 197, 94, 0.18), inset 0 1px 0 rgba(255,255,255,0.85)",
+                              background:
+                                "linear-gradient(180deg, rgba(220, 252, 231, 0.55) 0%, rgba(232, 246, 255, 0.75) 100%)",
+                            }
+                          : {}),
                       }}
                     >
-                      {row.title}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 800,
-                        fontVariantNumeric: "tabular-nums",
-                        color: row.accent ?? hudColors.accent,
-                        textAlign: "center",
-                        marginTop: "auto",
-                      }}
-                    >
-                      {row.detail}
-                    </span>
-                  </li>
-                ))}
+                      <span
+                        style={{
+                          fontSize: 26,
+                          lineHeight: 1,
+                          textAlign: "center",
+                        }}
+                        aria-hidden
+                      >
+                        {row.emoji}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: hudColors.value,
+                          textAlign: "center",
+                          lineHeight: 1.25,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {row.title}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: hudColors.muted,
+                          textAlign: "center",
+                        }}
+                      >
+                        {row.detail}
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap",
+                          justifyContent: "center",
+                          marginTop: "auto",
+                          width: "100%",
+                        }}
+                      >
+                        {equipped ? (
+                          <button
+                            type="button"
+                            onClick={() => equipVehicleAndReload(DEFAULT_V_ID)}
+                            style={goldChipButtonStyle()}
+                          >
+                            Unequip
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => equipVehicleAndReload(vid)}
+                            style={{
+                              ...goldChipButtonStyle(),
+                              boxShadow:
+                                "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34, 197, 94, 0.65)",
+                            }}
+                          >
+                            Equip
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           ) : null}
@@ -546,16 +671,46 @@ export function ProfileModal({
                     </span>
                     <span
                       style={{
-                        fontSize: 12,
-                        fontWeight: 800,
-                        fontVariantNumeric: "tabular-nums",
-                        color: row.accent ?? hudColors.accent,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: hudColors.muted,
                         textAlign: "center",
-                        marginTop: "auto",
                       }}
                     >
                       {row.detail}
                     </span>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        flexWrap: "wrap",
+                        justifyContent: "center",
+                        marginTop: "auto",
+                        width: "100%",
+                      }}
+                    >
+                      {equipped ? (
+                        <button
+                          type="button"
+                          onClick={() => setEquippedFishId(null)}
+                          style={goldChipButtonStyle()}
+                        >
+                          Unequip
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEquippedFishId(fishId)}
+                          style={{
+                            ...goldChipButtonStyle(),
+                            boxShadow:
+                              "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34, 197, 94, 0.65)",
+                          }}
+                        >
+                          Equip
+                        </button>
+                      )}
+                    </div>
                   </li>
                   );
                 })}

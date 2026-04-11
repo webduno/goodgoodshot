@@ -40,6 +40,7 @@ export function HelpModal({
   onClose,
   onOpenProfile,
   onGoToPlaza,
+  showProfileButton = true,
   vehicle,
   retroTvEnabled,
   onRetroTvChange,
@@ -53,6 +54,8 @@ export function HelpModal({
   onOpenProfile: () => void;
   /** When set, shows a chip next to Profile that navigates to the plaza hub. */
   onGoToPlaza?: () => void;
+  /** When false, Profile is omitted from the menu header (e.g. shown on the vehicle HUD instead). */
+  showProfileButton?: boolean;
   vehicle: PlayerVehicleConfig;
   retroTvEnabled: boolean;
   onRetroTvChange: (next: boolean) => void;
@@ -208,14 +211,16 @@ export function HelpModal({
                 Plaza
               </button>
             ) : null}
-            <button
-              type="button"
-              aria-label="Open profile"
-              onClick={onOpenProfile}
-              style={goldChipButtonStyle()}
-            >
-              Profile
-            </button>
+            {showProfileButton ? (
+              <button
+                type="button"
+                aria-label="Open profile"
+                onClick={onOpenProfile}
+                style={goldChipButtonStyle()}
+              >
+                Profile
+              </button>
+            ) : null}
           </div>
         </div>
         <details>

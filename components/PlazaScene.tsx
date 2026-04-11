@@ -1260,6 +1260,7 @@ export default function PlazaScene() {
           onScoreClick={() => setShowProfileModal(true)}
           rendererStatsRef={rendererStatsRef}
           onOpenMyVehicles={() => setShowMyVehiclesModal(true)}
+          onOpenProfile={() => setShowProfileModal(true)}
         />
       )}
       {!modalBlocksHud && (
@@ -1814,6 +1815,7 @@ export default function PlazaScene() {
           setShowHelpModal(false);
           setShowProfileModal(true);
         }}
+        showProfileButton={false}
         vehicle={playerVehicle}
         retroTvEnabled={retroTvEnabled}
         onRetroTvChange={onRetroTvChange}
@@ -1825,6 +1827,7 @@ export default function PlazaScene() {
       <ProfileModal
         open={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+        currentVehicleId={playerVehicle.id}
       />
       <ShopModal
         open={showShopModal}

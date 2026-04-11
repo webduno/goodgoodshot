@@ -1227,6 +1227,11 @@ export default function CubeScene() {
           }}
           rendererStatsRef={rendererStatsRef}
           onOpenMyVehicles={() => setShowMyVehiclesModal(true)}
+          onOpenProfile={() => {
+            if (enemyLossAnimating) return;
+            setShowProfileModal(true);
+          }}
+          profileButtonDisabled={enemyLossAnimating}
         />
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
@@ -1787,6 +1792,7 @@ export default function CubeScene() {
           setShowHelpModal(false);
           setShowProfileModal(true);
         }}
+        showProfileButton={false}
         onGoToPlaza={goToPlazaFromMenu}
         vehicle={playerVehicle}
         retroTvEnabled={retroTvEnabled}
@@ -1799,6 +1805,7 @@ export default function CubeScene() {
       <ProfileModal
         open={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+        currentVehicleId={playerVehicle.id}
       />
       <MyVehiclesModal
         open={showMyVehiclesModal}

@@ -6,6 +6,7 @@ import {
 } from "@/components/tool/VehicleBuilderScene";
 import {
   DEFAULT_PLAYER_VEHICLE,
+  vehicleIdForQueryString,
   type PlayerVehicleConfig,
   type VehicleBodyPart,
 } from "@/components/playerVehicleConfig";
@@ -13,7 +14,7 @@ import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { useResolvedPlayerVehicle } from "@/lib/game/useResolvedPlayerVehicle";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { Canvas } from "@react-three/fiber";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type PartRow = VehicleBodyPart & { id: string };
@@ -235,6 +236,7 @@ function colorMode(
 }
 
 export default function VehicleBuilderClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
   const { stats } = usePlayerStats();
@@ -402,6 +404,29 @@ export default function VehicleBuilderClient() {
     []
   );
 
+  const vehicleForQuery = useMemo(
+    () => ({
+      ...playerVehicle,
+      id: exportVId.trim() || playerVehicle.id,
+    }),
+    [playerVehicle, exportVId]
+  );
+  const vehicleQuery = vehicleIdForQueryString(vehicleForQuery);
+
+  const goHome = useCallback(() => {
+    router.push(
+      vehicleQuery ? `/?vehicle=${encodeURIComponent(vehicleQuery)}` : "/"
+    );
+  }, [router, vehicleQuery]);
+
+  const goPlaza = useCallback(() => {
+    router.push(
+      vehicleQuery
+        ? `/plaza?vehicle=${encodeURIComponent(vehicleQuery)}`
+        : "/plaza"
+    );
+  }, [router, vehicleQuery]);
+
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <Canvas
@@ -439,6 +464,23 @@ export default function VehicleBuilderClient() {
           exports into{" "}
           <code className="rounded bg-slate-200/80 px-1">data/defaultVehicles.json</code>
         </p>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="rounded-md bg-slate-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+            onClick={goHome}
+          >
+            Home
+          </button>
+          <button
+            type="button"
+            className="rounded-md bg-slate-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+            onClick={goPlaza}
+          >
+            Plaza
+          </button>
+        </div>
 
         <section className="space-y-2 border-t border-slate-200/80 pt-2">
           <div className="text-xs font-medium text-slate-700">3D gizmo</div>

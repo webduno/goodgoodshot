@@ -10,7 +10,6 @@ import { GuidelinePreviewPowerSlider } from "@/components/game/cube/hud/Guidelin
 import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { WindHud } from "@/components/game/cube/hud/WindHud";
-import { MyVehiclesModal } from "@/components/game/cube/modals/MyVehiclesModal";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
 import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
 import { IslandMiniVillage } from "@/components/game/cube/meshes/IslandMiniVillage";
@@ -22,6 +21,7 @@ import {
   RendererStatsCollector,
   type RendererStatsSnapshot,
 } from "@/components/game/cube/RendererStatsCollector";
+import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { SceneContent } from "@/components/game/cube/SceneContent";
 import { TeleportOrbitRig } from "@/components/game/cube/TeleportOrbitRig";
 import { StaticSceneLights } from "@/components/game/cube/StaticSceneLights";
@@ -459,8 +459,8 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   sessionShotsRef.current = sessionShots;
 
   const [enemyLossAnimating, setEnemyLossAnimating] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showMyVehiclesModal, setShowMyVehiclesModal] = useState(false);
   const [retroTvEnabled, setRetroTvEnabled] = useState(false);
   const [guidelineEnabled, setGuidelineEnabled] = useState(true);
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
@@ -483,6 +483,15 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     },
     []
   );
+
+  useEffect(() => {
+    if (!showProfileModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowProfileModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showProfileModal]);
 
   const onCageTrapped = useCallback(() => {
     setCageEscapeNextShot(true);
@@ -1101,25 +1110,27 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         top={16}
         accent={hudToastAccent}
       />
-      {!showMyVehiclesModal && (
-        <StatsHud
-          holePar={holePar}
-          sessionShots={sessionShots}
-          chargeHud={chargeHud}
-          shotInFlight={shotInFlight}
-          cooldownUntil={cooldownUntil}
-          strengthCharges={strengthCharges}
-          noBounceCharges={noBounceCharges}
-          noWindCharges={noWindCharges}
-          powerupStackCount={powerupStackCount}
-          noBounceActive={noBounceActive}
-          noWindActive={noWindActive}
-          vehicle={playerVehicle}
-          onScoreClick={() => {}}
-          rendererStatsRef={rendererStatsRef}
-          onOpenMyVehicles={() => setShowMyVehiclesModal(true)}
-        />
-      )}
+      <StatsHud
+        holePar={holePar}
+        sessionShots={sessionShots}
+        chargeHud={chargeHud}
+        shotInFlight={shotInFlight}
+        cooldownUntil={cooldownUntil}
+        strengthCharges={strengthCharges}
+        noBounceCharges={noBounceCharges}
+        noWindCharges={noWindCharges}
+        powerupStackCount={powerupStackCount}
+        noBounceActive={noBounceActive}
+        noWindActive={noWindActive}
+        vehicle={playerVehicle}
+        onScoreClick={() => {}}
+        rendererStatsRef={rendererStatsRef}
+        onOpenProfile={() => {
+          if (enemyLossAnimating) return;
+          setShowProfileModal(true);
+        }}
+        profileButtonDisabled={enemyLossAnimating}
+      />
       <div
         style={{
           position: "absolute",
@@ -1215,10 +1226,10 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      <MyVehiclesModal
-        open={showMyVehiclesModal}
-        onClose={() => setShowMyVehiclesModal(false)}
-        currentVehicle={playerVehicle}
+      <ProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        currentVehicleId={playerVehicle.id}
       />
 
       <div

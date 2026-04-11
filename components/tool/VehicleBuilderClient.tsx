@@ -6,10 +6,15 @@ import {
 } from "@/components/tool/VehicleBuilderScene";
 import {
   DEFAULT_PLAYER_VEHICLE,
+  type PlayerVehicleConfig,
   type VehicleBodyPart,
 } from "@/components/playerVehicleConfig";
+import { usePlayerStats } from "@/components/PlayerStatsProvider";
+import { useResolvedPlayerVehicle } from "@/lib/game/useResolvedPlayerVehicle";
+import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { Canvas } from "@react-three/fiber";
-import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type PartRow = VehicleBodyPart & { id: string };
 
@@ -35,8 +40,8 @@ function newId(): string {
   return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function cloneDefaultParts(): PartRow[] {
-  const raw = DEFAULT_PLAYER_VEHICLE.bodyParts;
+function clonePartsFromVehicle(v: PlayerVehicleConfig): PartRow[] {
+  const raw = v.bodyParts;
   if (raw?.length) {
     return raw.map((p, i) => ({
       id: `p-init-${i}`,
@@ -230,6 +235,17 @@ function colorMode(
 }
 
 export default function VehicleBuilderClient() {
+  const searchParams = useSearchParams();
+  const vehicleParam = searchParams.get("vehicle");
+  const { stats } = usePlayerStats();
+  const { inventory: shopInventory } = usePlayerShopInventory();
+  const { playerVehicle, preferenceHydrated } = useResolvedPlayerVehicle(
+    vehicleParam,
+    stats,
+    shopInventory.ownedVehicleIds
+  );
+  const appliedResolvedVehicleRef = useRef(false);
+
   const [mainRgb, setMainRgb] = useState<[number, number, number]>(() => [
     DEFAULT_PLAYER_VEHICLE.mainRgb[0],
     DEFAULT_PLAYER_VEHICLE.mainRgb[1],
@@ -240,7 +256,9 @@ export default function VehicleBuilderClient() {
     DEFAULT_PLAYER_VEHICLE.accentRgb[1],
     DEFAULT_PLAYER_VEHICLE.accentRgb[2],
   ]);
-  const [parts, setParts] = useState<PartRow[]>(cloneDefaultParts);
+  const [parts, setParts] = useState<PartRow[]>(() =>
+    clonePartsFromVehicle(DEFAULT_PLAYER_VEHICLE)
+  );
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     parts[0] ? parts[0].id : null
   );
@@ -251,6 +269,20 @@ export default function VehicleBuilderClient() {
   const [importText, setImportText] = useState("");
   const [importHint, setImportHint] = useState<string | null>(null);
   const [gizmoMode, setGizmoMode] = useState<GizmoMode>("translate");
+
+  useEffect(() => {
+    if (!preferenceHydrated) return;
+    if (appliedResolvedVehicleRef.current) return;
+    appliedResolvedVehicleRef.current = true;
+    const v = playerVehicle;
+    setMainRgb([v.mainRgb[0], v.mainRgb[1], v.mainRgb[2]]);
+    setAccentRgb([v.accentRgb[0], v.accentRgb[1], v.accentRgb[2]]);
+    const nextParts = clonePartsFromVehicle(v);
+    setParts(nextParts);
+    setSelectedId(nextParts[0]?.id ?? null);
+    setExportVId(v.id);
+    setExportName(v.name);
+  }, [preferenceHydrated, playerVehicle]);
 
   const selected = parts.find((p) => p.id === selectedId) ?? null;
 

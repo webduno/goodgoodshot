@@ -1,5 +1,6 @@
 "use client";
 
+import { PlayerStatsProvider } from "@/components/PlayerStatsProvider";
 import dynamic from "next/dynamic";
 
 const VehicleBuilderClient = dynamic(
@@ -25,5 +26,9 @@ const VehicleBuilderClient = dynamic(
 );
 
 export function VehicleBuilderShell() {
-  return <VehicleBuilderClient />;
+  return (
+    <PlayerStatsProvider>
+      <VehicleBuilderClient />
+    </PlayerStatsProvider>
+  );
 }

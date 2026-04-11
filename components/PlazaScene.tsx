@@ -216,7 +216,7 @@ export default function PlazaScene() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const vehicleParam = searchParams.get("vehicle");
-  const playerVehicle = useResolvedPlayerVehicle(
+  const { playerVehicle } = useResolvedPlayerVehicle(
     vehicleParam,
     stats,
     shopInventory.ownedVehicleIds

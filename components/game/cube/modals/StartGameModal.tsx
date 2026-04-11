@@ -365,7 +365,7 @@ export function StartGameModal({
     [pathname, router, searchParams]
   );
 
-  const selectedVehicle = useResolvedPlayerVehicle(
+  const { playerVehicle: selectedVehicle } = useResolvedPlayerVehicle(
     searchParams.get("vehicle"),
     stats,
     shopInventory.ownedVehicleIds

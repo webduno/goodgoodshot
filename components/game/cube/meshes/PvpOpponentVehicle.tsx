@@ -80,7 +80,7 @@ export function PvpOpponentVehicle({
             whiteSpace: "nowrap",
           }}
         >
-          Opponent
+          {vehicle.name}
         </span>
       </Html>
       <group scale={2.35}>

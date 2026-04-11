@@ -148,7 +148,7 @@ export default function CubeScene() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
-  const playerVehicle = useResolvedPlayerVehicle(
+  const { playerVehicle } = useResolvedPlayerVehicle(
     vehicleParam,
     stats,
     shopInventory.ownedVehicleIds

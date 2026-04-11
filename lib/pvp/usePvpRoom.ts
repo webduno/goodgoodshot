@@ -83,7 +83,11 @@ export function usePvpRoom(roomId: string | null) {
           },
           (payload) => {
             if (payload.new && typeof payload.new === "object") {
-              setRoom(payload.new as PvpRoomRow);
+              setRoom((prev) => {
+                const incoming = payload.new as Partial<PvpRoomRow>;
+                if (!prev) return incoming as PvpRoomRow;
+                return { ...prev, ...incoming };
+              });
             }
           }
         )

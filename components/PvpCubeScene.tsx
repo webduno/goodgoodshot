@@ -109,7 +109,9 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
-  const playerVehicle = useResolvedPlayerVehicle(
+  const hasExplicitVehicleInUrl =
+    vehicleParam != null && vehicleParam.trim() !== "";
+  const { playerVehicle, preferenceHydrated } = useResolvedPlayerVehicle(
     vehicleParam,
     stats,
     shopInventory.ownedVehicleIds
@@ -130,12 +132,19 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
   useEffect(() => {
     if (!room?.id || !userId) return;
+    if (!hasExplicitVehicleInUrl && !preferenceHydrated) return;
     const supabase = createSupabaseBrowserClient();
     void supabase.rpc("set_pvp_room_vehicle", {
       p_room_id: room.id,
       p_vehicle_id: playerVehicle.id,
     });
-  }, [room?.id, userId, playerVehicle.id]);
+  }, [
+    room?.id,
+    userId,
+    playerVehicle.id,
+    preferenceHydrated,
+    hasExplicitVehicleInUrl,
+  ]);
 
   const [game, dispatch] = useReducer(
     pvpGameReducer,

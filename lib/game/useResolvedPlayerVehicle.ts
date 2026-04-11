@@ -20,7 +20,11 @@ export function useResolvedPlayerVehicle(
   vehicleParam: string | null,
   stats: PlayerStatsState,
   ownedVehicleIds: readonly string[] | undefined
-): PlayerVehicleConfig {
+): {
+  playerVehicle: PlayerVehicleConfig;
+  /** True after localStorage preference has been read (needed before trusting URL-less resolution). */
+  preferenceHydrated: boolean;
+} {
   const [storedId, setStoredId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
@@ -44,5 +48,5 @@ export function useResolvedPlayerVehicle(
     writePreferredVehicleId(playerVehicle.id);
   }, [hydrated, playerVehicle.id]);
 
-  return playerVehicle;
+  return { playerVehicle, preferenceHydrated: hydrated };
 }

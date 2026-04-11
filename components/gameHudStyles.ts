@@ -197,6 +197,55 @@ export function goldChipButtonStyle(): CSSProperties {
   };
 }
 
+/** Glossy Frutiger Aero gradients — plaza PvP dock only; each action reads distinct in-game. */
+const pvpGlassCreate =
+  "linear-gradient(165deg, #ffffff 0%, #cffafe 14%, #22d3ee 42%, #0891b2 72%, #155e75 100%)";
+const pvpGlassJoin =
+  "linear-gradient(165deg, #ffffff 0%, #dbeafe 14%, #38bdf8 44%, #0284c7 74%, #075985 100%)";
+const pvpGlassQuick =
+  "linear-gradient(165deg, #ffffff 0%, #ecfccb 10%, #a3e635 38%, #65a30d 68%, #3f6212 100%)";
+
+const pvpEdgeLight = "inset 0 1px 0 rgba(255,255,255,0.62)";
+const pvpDrop = "0 4px 14px rgba(0, 55, 95, 0.28)";
+const pvpDropGreen = "0 4px 14px rgba(55, 95, 20, 0.32)";
+
+/**
+ * Plaza top-right PvP trio — chunky glossy pills, distinct per action (Frutiger Aero).
+ */
+export function plazaPvpDockButtonStyle(opts: {
+  variant: "create" | "join" | "quick";
+  disabled: boolean;
+}): CSSProperties {
+  const { variant, disabled } = opts;
+  const face =
+    variant === "create"
+      ? pvpGlassCreate
+      : variant === "join"
+        ? pvpGlassJoin
+        : pvpGlassQuick;
+  const drop = variant === "quick" ? pvpDropGreen : pvpDrop;
+  return {
+    ...hudFont,
+    ...(disabled ? textOnGlossButtonDisabled : textOnGlossButton),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: "7px 14px",
+    minHeight: 30,
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: "0.02em",
+    borderRadius: 999,
+    border: disabled ? "1px solid #9ca8b4" : "1px solid rgba(255,255,255,0.92)",
+    backgroundImage: disabled ? glassDisabled : face,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.72 : 1,
+    boxShadow: `${pvpEdgeLight}, ${drop}`,
+    textTransform: "none" as const,
+  };
+}
+
 const plazaHubGlassText: CSSProperties = {
   ...hudFont,
   color: "#ffffff",

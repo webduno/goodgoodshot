@@ -34,6 +34,7 @@ import { PlazaHubFillLights } from "@/components/game/cube/meshes/PlazaHubFillLi
 import {
   goldChipButtonStyle,
   goldIconButtonStyle,
+  plazaPvpDockButtonStyle,
   hudBottomPanel,
   hudFont,
   hudMiniPanel,
@@ -1258,30 +1259,102 @@ export default function PlazaScene() {
             <button
               type="button"
               disabled={pvpLobbyBusy}
+              aria-label="PvP: create room"
               onClick={() => void onPvpCreateRoom()}
-              style={goldChipButtonStyle()}
+              style={plazaPvpDockButtonStyle({
+                variant: "create",
+                disabled: pvpLobbyBusy,
+              })}
             >
-              PvP: Create room
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  background:
+                    "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, rgba(0,80,100,0.35) 100%)",
+                  border: "1px solid rgba(255,255,255,0.75)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+                }}
+              >
+                +
+              </span>
+              New PvP
             </button>
             <button
               type="button"
               disabled={pvpLobbyBusy}
+              aria-label="PvP: join PvP"
               onClick={() => {
                 setShowProfileModal(false);
                 setShowHelpModal(false);
                 setShowPvpJoinModal(true);
               }}
-              style={goldChipButtonStyle()}
+              style={plazaPvpDockButtonStyle({
+                variant: "join",
+                disabled: pvpLobbyBusy,
+              })}
             >
-              PvP: Join room
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  background:
+                    "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.18) 48%, rgba(0,60,120,0.35) 100%)",
+                  border: "1px solid rgba(255,255,255,0.78)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
+                }}
+              >
+                #
+              </span>
+              Join PvP
             </button>
             <button
               type="button"
               disabled={pvpLobbyBusy}
+              aria-label="PvP: quick match"
               onClick={() => void onPvpQuickPlay()}
-              style={goldChipButtonStyle()}
+              style={plazaPvpDockButtonStyle({
+                variant: "quick",
+                disabled: pvpLobbyBusy,
+              })}
             >
-              PvP: Quick play
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  background:
+                    "radial-gradient(circle at 30% 22%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.25) 42%, rgba(60,100,20,0.4) 100%)",
+                  border: "1px solid rgba(255,255,255,0.8)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+                }}
+              >
+                ▶
+              </span>
+              Quick match
             </button>
           </div>
         </div>
@@ -1631,7 +1704,7 @@ export default function PlazaScene() {
         style={{
           position: "absolute",
           right: 12,
-          bottom: 12,
+          bottom: 75,
           zIndex: 41,
           pointerEvents: "auto",
         }}

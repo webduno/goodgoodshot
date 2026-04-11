@@ -191,6 +191,7 @@ export default function PlazaScene() {
     setNoBounceCharges,
     setNoWindCharges,
     setEquippedHatId,
+    setEquippedFishId,
     addOwnedHat,
     addOwnedVehicle,
     addOwnedFish,
@@ -1120,6 +1121,7 @@ export default function PlazaScene() {
             goalEnemies={[]}
             hubMode
             equippedHatId={shopInventory.equippedHatId}
+            equippedFishId={shopInventory.equippedFishId}
             powerupVehicleBurstSeq={powerupVehicleBurst.seq}
             powerupVehicleBurstSlot={powerupVehicleBurst.slot}
           />
@@ -1730,6 +1732,8 @@ export default function PlazaScene() {
         onClose={() => setShowAquariumShopModal(false)}
         goldCoins={stats.totalGoldCoins}
         ownedFishIds={shopInventory.ownedFishIds}
+        equippedFishId={shopInventory.equippedFishId}
+        onEquipFish={setEquippedFishId}
         ownedAquariumIds={shopInventory.ownedAquariumIds}
         onBuyFish={buyFishFromAquariumShop}
         onBuyAquarium={buyAquariumFromShop}

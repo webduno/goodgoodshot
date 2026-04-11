@@ -122,6 +122,18 @@ export function usePlayerShopInventory() {
     [patch]
   );
 
+  const setEquippedFishId = useCallback(
+    (id: FishId | null) => {
+      patch((prev) => {
+        if (id !== null && !prev.ownedFishIds.includes(id)) {
+          return prev;
+        }
+        return { ...prev, equippedFishId: id };
+      });
+    },
+    [patch]
+  );
+
   const addOwnedHat = useCallback(
     (id: HatId) => {
       patch((prev) => {
@@ -188,6 +200,7 @@ export function usePlayerShopInventory() {
     setNoBounceCharges,
     setNoWindCharges,
     setEquippedHatId,
+    setEquippedFishId,
     addOwnedHat,
     addOwnedVehicle,
     addOwnedFish,

@@ -1168,6 +1168,7 @@ export default function CubeScene() {
             goalEnemies={game.goalEnemies}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
             equippedHatId={shopInventory.equippedHatId}
+            equippedFishId={shopInventory.equippedFishId}
             mapCages={game.mapCages}
             goalCagesBroken={goalCagesBroken}
             cageEscapeNextShot={cageEscapeNextShot}

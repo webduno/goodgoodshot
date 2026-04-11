@@ -15,7 +15,7 @@ import { isVehicleUnlocked } from "@/lib/game/vehicleUnlock";
 import { FISH_SHOP_ITEMS, AQUARIUM_SHOP_ITEMS } from "@/lib/shop/aquariumCatalog";
 import { BIRD_SHOP_ITEMS } from "@/lib/shop/birdCatalog";
 import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
-import type { HatId, PlayerShopInventory } from "@/lib/shop/playerInventory";
+import type { FishId, HatId, PlayerShopInventory } from "@/lib/shop/playerInventory";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { VEHICLE_SHOP_CATALOG } from "@/lib/shop/vehicleCatalog";
 
@@ -145,11 +145,12 @@ export function ProfileModal({
   const fishRows = useMemo((): ProfileInvRow[] => {
     return shopInventory.ownedFishIds.map((fishId) => {
       const row = FISH_SHOP_ITEMS.find((f) => f.id === fishId);
+      const equipped = shopInventory.equippedFishId === fishId;
       return {
         key: `fish-${fishId}`,
         emoji: row?.emoji ?? "🐟",
         title: row?.label ?? fishId,
-        detail: "Owned",
+        detail: equipped ? "Equipped" : "Owned",
       };
     });
   }, [shopInventory]);
@@ -499,8 +500,25 @@ export function ProfileModal({
                 Fish
               </h4>
               <ul style={invGridStyle}>
-                {fishRows.map((row) => (
-                  <li key={row.key} style={invCellStyle}>
+                {fishRows.map((row) => {
+                  const fishId = row.key.slice("fish-".length) as FishId;
+                  const equipped = shopInventory.equippedFishId === fishId;
+                  return (
+                  <li
+                    key={row.key}
+                    style={{
+                      ...invCellStyle,
+                      ...(equipped
+                        ? {
+                            border: "1px solid rgba(34, 197, 94, 0.45)",
+                            boxShadow:
+                              "0 0 10px rgba(34, 197, 94, 0.18), inset 0 1px 0 rgba(255,255,255,0.85)",
+                            background:
+                              "linear-gradient(180deg, rgba(220, 252, 231, 0.55) 0%, rgba(232, 246, 255, 0.75) 100%)",
+                          }
+                        : {}),
+                    }}
+                  >
                     <span
                       style={{
                         fontSize: 26,
@@ -539,7 +557,8 @@ export function ProfileModal({
                       {row.detail}
                     </span>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </>
           ) : null}

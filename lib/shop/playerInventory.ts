@@ -28,6 +28,8 @@ export type PlayerShopInventory = {
   /** Lowercase `v_id` strings from `data/defaultVehicles.json` (excludes free `default`). */
   ownedVehicleIds: string[];
   ownedFishIds: FishId[];
+  /** At most one cosmetic fish orbits the vehicle in-game (plaza + course + PvP). */
+  equippedFishId: FishId | null;
   ownedPlazaBirdIds: PlazaBirdId[];
   ownedAquariumIds: AquariumId[];
 };
@@ -41,6 +43,7 @@ export function defaultPlayerShopInventory(): PlayerShopInventory {
     equippedHatId: null,
     ownedVehicleIds: [],
     ownedFishIds: [],
+    equippedFishId: null,
     ownedPlazaBirdIds: [],
     ownedAquariumIds: [],
   };
@@ -134,6 +137,16 @@ export function loadPlayerShopInventory(): PlayerShopInventory {
       }
     }
 
+    let equippedFishId: FishId | null = null;
+    if (p.equippedFishId === null) {
+      equippedFishId = null;
+    } else if (isFishId(p.equippedFishId)) {
+      equippedFishId = p.equippedFishId;
+    }
+    if (equippedFishId !== null && !ownedFishIds.includes(equippedFishId)) {
+      equippedFishId = null;
+    }
+
     let ownedPlazaBirdIds: PlazaBirdId[] = [];
     if (Array.isArray(p.ownedPlazaBirdIds)) {
       const seen = new Set<PlazaBirdId>();
@@ -164,6 +177,7 @@ export function loadPlayerShopInventory(): PlayerShopInventory {
       equippedHatId,
       ownedVehicleIds,
       ownedFishIds,
+      equippedFishId,
       ownedPlazaBirdIds,
       ownedAquariumIds,
     };

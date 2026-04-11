@@ -915,6 +915,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             goalEnemies={[...PVP_OPPONENT_ENEMY]}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
             equippedHatId={shopInventory.equippedHatId}
+            equippedFishId={shopInventory.equippedFishId}
             mapCages={game.mapCages}
             goalCagesBroken={goalCagesBroken}
             cageEscapeNextShot={cageEscapeNextShot}

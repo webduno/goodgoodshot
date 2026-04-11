@@ -1,5 +1,12 @@
 import type { AquariumId, FishId } from "@/lib/shop/playerInventory";
 
+/** Hex colors for simple 3D fish decorations (matches plaza aquarium swatches). */
+export const FISH_COLOR_HEX: Record<FishId, string> = {
+  fishYellow: "#facc15",
+  fishBlue: "#38bdf8",
+  fishRed: "#ef4444",
+};
+
 export const FISH_SHOP_ITEMS: {
   id: FishId;
   label: string;

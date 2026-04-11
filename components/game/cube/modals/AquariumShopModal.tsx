@@ -9,6 +9,7 @@ import {
 } from "@/components/gameHudStyles";
 import {
   AQUARIUM_SHOP_ITEMS,
+  FISH_COLOR_HEX,
   FISH_SHOP_ITEMS,
 } from "@/lib/shop/aquariumCatalog";
 import type { AquariumId, FishId } from "@/lib/shop/playerInventory";
@@ -73,12 +74,6 @@ const shopItemEmojiStyle: CSSProperties = {
   display: "block",
 };
 
-const FISH_SWATCH: Record<FishId, string> = {
-  fishYellow: "#facc15",
-  fishBlue: "#38bdf8",
-  fishRed: "#ef4444",
-};
-
 function coinButtonLabel(priceCoins: number): string {
   return priceCoins === 1 ? "1 coin" : `${priceCoins} coins`;
 }
@@ -88,6 +83,8 @@ export function AquariumShopModal({
   onClose,
   goldCoins,
   ownedFishIds,
+  equippedFishId,
+  onEquipFish,
   ownedAquariumIds,
   onBuyFish,
   onBuyAquarium,
@@ -96,6 +93,8 @@ export function AquariumShopModal({
   onClose: () => void;
   goldCoins: number;
   ownedFishIds: readonly FishId[];
+  equippedFishId: FishId | null;
+  onEquipFish: (id: FishId | null) => void;
   ownedAquariumIds: readonly AquariumId[];
   onBuyFish: (id: FishId) => void;
   onBuyAquarium: (id: AquariumId) => void;
@@ -165,8 +164,8 @@ export function AquariumShopModal({
             lineHeight: 1.45,
           }}
         >
-          Fish and cube aquariums are stored in your plaza inventory. Placement
-          in the scene can be wired up later.
+          Fish and cube aquariums are stored in your plaza inventory. Equip one
+          fish to show a small companion orbiting your vehicle in play.
         </p>
 
         <div
@@ -199,6 +198,7 @@ export function AquariumShopModal({
           <ul style={shopGridStyle}>
             {FISH_SHOP_ITEMS.map((row) => {
               const owned = fishOwned(row.id);
+              const equipped = equippedFishId === row.id;
               return (
                 <li
                   key={row.id}
@@ -210,9 +210,16 @@ export function AquariumShopModal({
                     minHeight: 96,
                     padding: "8px 8px",
                     borderRadius: 12,
-                    border: "1px solid rgba(0, 55, 95, 0.18)",
-                    background: "rgba(255,255,255,0.55)",
+                    border: equipped
+                      ? "1px solid rgba(34, 197, 94, 0.55)"
+                      : "1px solid rgba(0, 55, 95, 0.18)",
+                    background: equipped
+                      ? "linear-gradient(180deg, rgba(220, 252, 231, 0.65) 0%, rgba(255,255,255,0.72) 100%)"
+                      : "rgba(255,255,255,0.55)",
                     boxSizing: "border-box",
+                    boxShadow: equipped
+                      ? "0 0 12px rgba(34, 197, 94, 0.22), inset 0 1px 0 rgba(255,255,255,0.9)"
+                      : undefined,
                   }}
                 >
                   <span
@@ -230,7 +237,7 @@ export function AquariumShopModal({
                         width: 14,
                         height: 14,
                         borderRadius: 999,
-                        background: FISH_SWATCH[row.id],
+                        background: FISH_COLOR_HEX[row.id],
                         boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
                       }}
                     />
@@ -248,17 +255,37 @@ export function AquariumShopModal({
                     {row.label}
                   </span>
                   {owned ? (
-                    <span
+                    <div
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#15803d",
-                        textAlign: "center",
+                        display: "flex",
+                        gap: 6,
+                        flexWrap: "wrap",
+                        justifyContent: "center",
                         marginTop: "auto",
                       }}
                     >
-                      In inventory
-                    </span>
+                      {equipped ? (
+                        <button
+                          type="button"
+                          onClick={() => onEquipFish(null)}
+                          style={goldChipButtonStyle()}
+                        >
+                          Unequip
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onEquipFish(row.id)}
+                          style={{
+                            ...goldChipButtonStyle(),
+                            boxShadow:
+                              "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34, 197, 94, 0.65)",
+                          }}
+                        >
+                          Equip
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <button
                       type="button"

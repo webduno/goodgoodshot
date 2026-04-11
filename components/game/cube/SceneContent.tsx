@@ -32,6 +32,7 @@ import { ShootTriggerCube } from "@/components/game/cube/meshes/ShootTriggerCube
 import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
 import { VehicleCornerBlock } from "@/components/game/cube/meshes/VehicleCornerBlock";
 import { VehicleGlassHat } from "@/components/game/cube/meshes/VehicleGlassHat";
+import { VehicleOrbitingFish } from "@/components/game/cube/meshes/VehicleOrbitingFish";
 import { VehicleObjMesh } from "@/components/game/cube/meshes/VehicleObjMesh";
 import {
   VehiclePowerupBurst,
@@ -78,7 +79,7 @@ import {
   type Vec3,
 } from "@/lib/game/types";
 import { TerrainTextured } from "../TerrainTextured";
-import type { HatId } from "@/lib/shop/playerInventory";
+import type { FishId, HatId } from "@/lib/shop/playerInventory";
 import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
 import { POWERUP_SLOT_ACCENT } from "@/components/gameHudStyles";
 import { EarthTextured } from "../EarthTextured";
@@ -275,6 +276,7 @@ export function SceneContent({
   pvpOpponentFacingToward = null,
   onEnemyLossAnimatingChange,
   equippedHatId = null,
+  equippedFishId = null,
   mapCages = NO_MAP_CAGES,
   goalCagesBroken = EMPTY_MAP_CAGES_BROKEN,
   cageEscapeNextShot = false,
@@ -349,6 +351,8 @@ export function SceneContent({
   onEnemyLossAnimatingChange?: (active: boolean) => void;
   /** Cosmetic glass hat from the plaza shop (local player). */
   equippedHatId?: HatId | null;
+  /** Cosmetic fish orbiting the vehicle (plaza shop; at most one). */
+  equippedFishId?: FishId | null;
   /** Trap dome positions for this hole (course only). */
   mapCages?: readonly Vec3[];
   /** Cage keys already broken this hole (course only). */
@@ -880,6 +884,9 @@ export function SceneContent({
             noWindActive={noWindActive}
           />
           <VehicleGlassHat hatId={equippedHatId} />
+          {equippedFishId != null ? (
+            <VehicleOrbitingFish fishId={equippedFishId} />
+          ) : null}
           <VehiclePowerupBurst
             burstSeq={powerupVehicleBurstSeq}
             slot={powerupVehicleBurstSlot}

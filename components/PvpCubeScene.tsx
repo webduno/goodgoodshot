@@ -81,6 +81,7 @@ import { pveSideBySideSpawnsFromSeed } from "@/lib/game/pvpTeeSpawns";
 import { pvpGameReducer } from "@/lib/game/pvpGameState";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
+import type { PvpRoomRow } from "@/lib/pvp/types";
 import { usePvpRoom } from "@/lib/pvp/usePvpRoom";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { stepWindFromSeed } from "@/lib/game/wind";
@@ -97,6 +98,20 @@ import {
 import * as THREE from "three";
 
 const PVP_OPPONENT_ENEMY = [{ colorHex: "#e11d48" }] as const;
+
+/** Avoid spawn sync reading stale `gameRef` in the same effect flush as course hydration (would spread seed-1 layout over the real room course). */
+function pvpGameStateMatchesRoomCourse(
+  g: { goalWorldX: number; goalWorldZ: number },
+  room: Pick<PvpRoomRow, "course_seed" | "match_mode"> | null
+): boolean {
+  if (!room || room.course_seed == null) return true;
+  const seed = Number(room.course_seed);
+  const pve = (room.match_mode ?? "pvp") === "pve";
+  const expected = createInitialGameStateFromSeed(seed, {
+    goalEnemies: pve ? [] : [...PVP_OPPONENT_ENEMY],
+  });
+  return g.goalWorldX === expected.goalWorldX && g.goalWorldZ === expected.goalWorldZ;
+}
 
 export default function PvpCubeScene({ roomId }: { roomId: string }) {
   const { recordGoldCoin, spendGoldCoin, stats } = usePlayerStats();
@@ -351,6 +366,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
       Number(room.guest_spawn_z),
     ];
     const g = gameRef.current;
+    if (!pvpGameStateMatchesRoomCourse(g, room)) return;
     if (
       g.spawnCenter[0] === next[0] &&
       g.spawnCenter[1] === next[1] &&
@@ -380,6 +396,8 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     room?.guest_user_id,
     userId,
     dispatch,
+    game.goalWorldX,
+    game.goalWorldZ,
   ]);
 
   const lastHostSpawnSyncKeyRef = useRef("");
@@ -395,6 +413,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
     const next: Vec3 = [hx, hy, hz];
     const g = gameRef.current;
+    if (!pvpGameStateMatchesRoomCourse(g, room)) return;
     if (
       g.spawnCenter[0] === next[0] &&
       g.spawnCenter[1] === next[1] &&
@@ -424,6 +443,8 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     room?.host_user_id,
     userId,
     dispatch,
+    game.goalWorldX,
+    game.goalWorldZ,
   ]);
 
   const islands = game.islands;
@@ -641,7 +662,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     windRef.current = stepWindFromSeed(seed, 1);
     setWindHud({ x: w0.x, y: 0, z: w0.z });
     maybeWindToast(w0.x, w0.z, true);
-  }, [room?.id, maybeWindToast]);
+  }, [room?.id, room?.course_seed, maybeWindToast]);
 
   useEffect(() => {
     setAimPitchOffsetRad(0);

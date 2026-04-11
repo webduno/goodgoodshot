@@ -23,6 +23,7 @@ import { PlazaFrutigerAeroDecor } from "@/components/game/cube/meshes/PlazaFruti
 import { PlazaHillDecorIslands } from "@/components/game/cube/meshes/PlazaHillDecorIslands";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
+import { PlazaPvpLeaderboard } from "@/components/game/cube/meshes/PlazaPvpLeaderboard";
 import { PlazaPortalTorus } from "@/components/game/cube/meshes/PlazaWarPortalTorus";
 import { RetroTvPostFx } from "@/components/game/cube/effects/RetroTvPostFx";
 import {
@@ -1180,6 +1181,7 @@ export default function PlazaScene() {
           onPointerDownBirdShop={() => setShowBirdShopModal(true)}
         />
         <PlazaShopBuilding onPointerDownOpen={() => setShowShopModal(true)} />
+        <PlazaPvpLeaderboard />
         <PlazaPortalTorus
           worldX={0}
           worldZ={PLAZA_PORTAL_ORBIT}

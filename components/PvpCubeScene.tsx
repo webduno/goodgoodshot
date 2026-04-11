@@ -10,9 +10,11 @@ import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHu
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { WindHud } from "@/components/game/cube/hud/WindHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
-import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
-import { IslandMiniVillage } from "@/components/game/cube/meshes/IslandMiniVillage";
-import { IslandTrees } from "@/components/game/cube/meshes/IslandTrees";
+import { PlazaShopBuilding } from "@/components/game/cube/meshes/PlazaShopBuilding";
+import { PlazaHubRoads } from "@/components/game/cube/meshes/PlazaHubRoads";
+import { PlazaFrutigerAeroDecor } from "@/components/game/cube/meshes/PlazaFrutigerAeroDecor";
+import { PlazaHillDecorIslands } from "@/components/game/cube/meshes/PlazaHillDecorIslands";
+import { PlazaHubFillLights } from "@/components/game/cube/meshes/PlazaHubFillLights";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
 import { RetroTvPostFx } from "@/components/game/cube/effects/RetroTvPostFx";
@@ -81,6 +83,7 @@ import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/t
 import { usePvpRoom } from "@/lib/pvp/usePvpRoom";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { stepWindFromSeed } from "@/lib/game/wind";
+import { PLAZA_HUB_TURF_GREEN } from "@/lib/game/plazaHub";
 import { Canvas } from "@react-three/fiber";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -945,7 +948,8 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         dpr={[1, 2]}
         shadows="soft"
       >
-        <StaticSceneLights />
+        <StaticSceneLights omitGoalDirectional />
+        <PlazaHubFillLights />
         <SkyClouds />
         <SkySun />
         <TeleportOrbitRig
@@ -1005,10 +1009,24 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             pvpOpponentFacingToward={game.spawnCenter}
           />
         </TeleportOrbitRig>
-        <InitialFieldGround islands={islands} biome={game.biome} />
-        <IslandMiniVillage miniVillage={game.miniVillage} />
-        <IslandBushes islands={islands} biome={game.biome} />
-        <IslandTrees islands={islands} biome={game.biome} />
+        <InitialFieldGround
+          islands={islands}
+          biome={game.biome}
+          turfColorOverride={PLAZA_HUB_TURF_GREEN}
+        />
+        <PlazaHillDecorIslands />
+        <PlazaHubRoads />
+        {islands[0] != null ? (
+          <PlazaFrutigerAeroDecor
+            wx={islands[0].worldX}
+            wz={islands[0].worldZ}
+            walk={islands[0].walkableHalfX ?? islands[0].halfX}
+            outer={islands[0].halfX}
+            onPointerDownAquariumShop={() => {}}
+            onPointerDownBirdShop={() => {}}
+          />
+        ) : null}
+        <PlazaShopBuilding onPointerDownOpen={() => {}} />
         <RetroTvPostFx enabled={retroTvEnabled} />
         <RendererStatsCollector statsRef={rendererStatsRef} />
       </Canvas>

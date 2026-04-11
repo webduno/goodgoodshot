@@ -1,5 +1,6 @@
 "use client";
 
+import { MatchChatPanel } from "@/components/MatchChatPanel";
 import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { AimHud } from "@/components/game/cube/hud/AimHud";
@@ -516,6 +517,27 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
       goToPlaza();
     })();
   }, [roomId, goToPlaza, pushHudToast]);
+
+  const sendMatchChat = useCallback(
+    async (message: string) => {
+      if (!room?.id) return;
+      const supabase = createSupabaseBrowserClient();
+      const { error: chatErr } = await supabase.rpc("append_pvp_room_chat", {
+        p_room_id: room.id,
+        p_message: message,
+      });
+      if (chatErr) {
+        pushHudToast(chatErr.message);
+        return;
+      }
+      await refreshRoom();
+    },
+    [room?.id, refreshRoom, pushHudToast]
+  );
+
+  const pollRoomForChat = useCallback(() => {
+    void refreshRoom();
+  }, [refreshRoom]);
 
   const prevWindMagRef = useRef<number | null>(null);
   const maybeWindToast = useCallback(
@@ -1122,6 +1144,28 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           <WindHud windHud={windHud} />
         </div>
       </div>
+
+      {room?.id && initialFetchDone ? (
+        <div
+          style={{
+            position: "absolute",
+            left: 8,
+            bottom: 100,
+            zIndex: 41,
+            pointerEvents: "none",
+            transform: "translateZ(0)",
+          }}
+        >
+          <div style={{ pointerEvents: "auto" }}>
+            <MatchChatPanel
+              chatText={room.chat_text ?? ""}
+              onSend={sendMatchChat}
+              onPoll={pollRoomForChat}
+              disabled={!userId}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {showHelpModal && (
         <div

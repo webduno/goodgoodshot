@@ -22,6 +22,8 @@ export type PvpRoomRow = {
   guest_spawn_z?: number | null;
   created_at: string;
   updated_at: string;
+  /** Newline-separated log; omitted before chat migration. */
+  chat_text?: string;
 };
 
 /** Row from `pvp_player_ratings` (Elo + aggregate record). */

@@ -788,6 +788,7 @@ export default function PlazaScene() {
       setShotInFlight(false);
       const prev = spawnBeforeShotRef.current;
       if (outcome === "penalty") {
+        playSfx(SFX.errorBip);
         pushHudToast("Out of bounds");
         setSpawnCenter(snapBlockCenterToGrid(prev));
       } else if (outcome === "miss" && landing) {

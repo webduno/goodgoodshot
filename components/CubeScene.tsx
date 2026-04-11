@@ -730,6 +730,7 @@ export default function CubeScene() {
       if (outcome === "penalty") {
         setCageEscapeNextShot(false);
         waterPenaltiesRoundRef.current += 1;
+        playSfx(SFX.errorBip);
         pushHudToast("Out of bounds");
         dispatch({
           type: "PROJECTILE_END",
@@ -752,6 +753,9 @@ export default function CubeScene() {
           const shots = sessionShotsRef.current;
           const battleWon =
             outcome === "hit" && shots <= par;
+          if (battleWon) {
+            playSfx(SFX.conff);
+          }
           const session = loadPlaySession();
           const warBattleIndex =
             session != null

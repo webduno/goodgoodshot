@@ -788,11 +788,19 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           return;
         }
 
+        if (
+          (outcome === "enemy_loss" && !isPve) ||
+          (outcome === "hit" && isPve)
+        ) {
+          playSfx(SFX.conff);
+        }
+
         if (outcome === "enemy_loss") {
           onEnemyKillReward();
         }
 
         if (outcome === "penalty") {
+          playSfx(SFX.errorBip);
           setCageEscapeNextShot(false);
           dispatch({
             type: "PROJECTILE_END",
@@ -810,7 +818,14 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
       })();
     },
-    [maybeWindToast, onEnemyKillReward, playerVehicle, pushHudToast, room?.id]
+    [
+      isPve,
+      maybeWindToast,
+      onEnemyKillReward,
+      playerVehicle,
+      pushHudToast,
+      room?.id,
+    ]
   );
 
   useEffect(() => {

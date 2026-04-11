@@ -20,6 +20,8 @@ export const SFX = {
   slash: "/sfx/short/slash.mp3",
   coinCollect: "/sfx/coinss.mp3",
   land: "/sfx/boin.mp3",
+  /** Ground contact when bounces are exhausted and the ball begins rolling. */
+  rollLand: "/sfx/land.mp3",
   errorBip: "/sfx/short/errorbip.mp3",
   conff: "/sfx/short/conff.mp3",
 } as const;

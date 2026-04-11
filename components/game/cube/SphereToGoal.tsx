@@ -297,6 +297,7 @@ export function SphereToGoal({
       rollDeceleration > 0 &&
       hPlan > ROLL_STOP_SPEED
     ) {
+      playSfx(SFX.rollLand);
       p.x = landingX;
       p.y = FLOOR_CONTACT_CENTER_Y;
       p.z = landingZ;

@@ -43,12 +43,12 @@
           "pos": [
             0,
             0.02,
-            0
+            -0.09532202342953144
           ],
           "size": [
             0.72,
             0.52,
-            0.76
+            1
           ],
           "color": "main"
         },
@@ -483,12 +483,12 @@
       "name": "Drift Sprinter",
       "mainRgb": [196, 28, 112],
       "accentRgb": [255, 120, 200],
-      "strengthPerBaseClick": 4,
+      "strengthPerBaseClick": 7,
       "extraClickStrengthFraction": 0.18,
       "secondsBeforeShotTrigger": 1,
       "shotCooldownSeconds": 3.5,
       "gravityY": -20,
-      "launchAngleDeg": 62,
+      "launchAngleDeg": 50,
       "landingBounces": 3,
       "bounceRestitution": 0.58,
       "rollDeceleration": 5.5,

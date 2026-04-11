@@ -321,13 +321,13 @@ export default function PlazaScene() {
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
-      router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+      window.location.assign(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
       pushHudToast(getErrorMessage(e, "PvP setup failed"));
     } finally {
       setPvpLobbyBusy(false);
     }
-  }, [pvpLobbyBusy, playerVehicle, router, pushHudToast]);
+  }, [pvpLobbyBusy, playerVehicle, pushHudToast]);
 
   const onPveCreateRoom = useCallback(async () => {
     if (pvpLobbyBusy) return;
@@ -339,13 +339,13 @@ export default function PlazaScene() {
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
-      router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+      window.location.assign(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
       pushHudToast(getErrorMessage(e, "PvE setup failed"));
     } finally {
       setPvpLobbyBusy(false);
     }
-  }, [pvpLobbyBusy, playerVehicle, router, pushHudToast]);
+  }, [pvpLobbyBusy, playerVehicle, pushHudToast]);
 
   const onPvpQuickPlay = useCallback(async () => {
     if (pvpLobbyBusy) return;
@@ -361,13 +361,13 @@ export default function PlazaScene() {
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
-      router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+      window.location.assign(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
       pushHudToast(getErrorMessage(e, "PvP join failed"));
     } finally {
       setPvpLobbyBusy(false);
     }
-  }, [pvpLobbyBusy, playerVehicle, router, pushHudToast]);
+  }, [pvpLobbyBusy, playerVehicle, pushHudToast]);
 
   const onPvpJoinRoomFromList = useCallback(
     async (roomId: string) => {
@@ -381,14 +381,14 @@ export default function PlazaScene() {
         if (v) p.set("vehicle", v);
         const qs = p.toString();
         setShowPvpJoinModal(false);
-        router.push(qs ? `/pvp/${roomId}?${qs}` : `/pvp/${roomId}`);
+        window.location.assign(qs ? `/pvp/${roomId}?${qs}` : `/pvp/${roomId}`);
       } catch (e) {
         pushHudToast(getErrorMessage(e, "Could not join room"));
       } finally {
         setPvpLobbyBusy(false);
       }
     },
-    [pvpLobbyBusy, playerVehicle, router, pushHudToast]
+    [pvpLobbyBusy, playerVehicle, pushHudToast]
   );
 
   const onRetroTvChange = useCallback((next: boolean) => {

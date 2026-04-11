@@ -3,6 +3,7 @@
 import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
+import { MyVehiclesModal } from "@/components/game/cube/modals/MyVehiclesModal";
 import { PvpJoinRoomModal } from "@/components/game/cube/modals/PvpJoinRoomModal";
 import { VibeJamPortalModal } from "@/components/game/cube/modals/VibeJamPortalModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
@@ -294,6 +295,7 @@ export default function PlazaScene() {
   const [showBirdShopModal, setShowBirdShopModal] = useState(false);
   const [showPvpJoinModal, setShowPvpJoinModal] = useState(false);
   const [showVibeJamPortalModal, setShowVibeJamPortalModal] = useState(false);
+  const [showMyVehiclesModal, setShowMyVehiclesModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -1072,7 +1074,8 @@ export default function PlazaScene() {
     showAquariumShopModal ||
     showBirdShopModal ||
     showPvpJoinModal ||
-    showVibeJamPortalModal;
+    showVibeJamPortalModal ||
+    showMyVehiclesModal;
 
   const modalBlocksHud =
     showHelpModal ||
@@ -1081,7 +1084,8 @@ export default function PlazaScene() {
     showAquariumShopModal ||
     showBirdShopModal ||
     showPvpJoinModal ||
-    showVibeJamPortalModal;
+    showVibeJamPortalModal ||
+    showMyVehiclesModal;
 
   return (
     <div
@@ -1255,6 +1259,7 @@ export default function PlazaScene() {
           vehicle={playerVehicle}
           onScoreClick={() => setShowProfileModal(true)}
           rendererStatsRef={rendererStatsRef}
+          onOpenMyVehicles={() => setShowMyVehiclesModal(true)}
         />
       )}
       {!modalBlocksHud && (
@@ -1796,6 +1801,11 @@ export default function PlazaScene() {
           setShowVibeJamPortalModal(false);
           navigateToVibeJamPortal(u);
         }}
+      />
+      <MyVehiclesModal
+        open={showMyVehiclesModal}
+        onClose={() => setShowMyVehiclesModal(false)}
+        currentVehicle={playerVehicle}
       />
       <HelpModal
         open={showHelpModal}

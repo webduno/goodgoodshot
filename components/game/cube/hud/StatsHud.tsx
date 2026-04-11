@@ -29,6 +29,7 @@ export function StatsHud({
   vehicle,
   onScoreClick,
   rendererStatsRef,
+  onOpenMyVehicles,
 }: {
   /** Max strokes (inclusive) to count as a battle win when you hole out — same as lane bonus coin count. */
   holePar: number;
@@ -46,6 +47,8 @@ export function StatsHud({
   onScoreClick: () => void;
   /** Filled each frame inside `<Canvas>` from `WebGLRenderer.info` (draw calls / triangles). */
   rendererStatsRef: MutableRefObject<RendererStatsSnapshot | null>;
+  /** When set, Vehicle panel shows a "change" control that opens the my-vehicles picker (e.g. plaza). */
+  onOpenMyVehicles?: () => void;
 }) {
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const [drawCalls, setDrawCalls] = useState<number | null>(null);
@@ -203,25 +206,61 @@ export function StatsHud({
               {baseLaunchStrength.toFixed(2)}
             </div>
             <div
-              role="status"
-              aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds`}
               style={{
                 marginTop: 8,
                 paddingTop: 8,
                 borderTop: "1px solid rgba(255,255,255,0.28)",
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                gap: 4,
-                color: "rgba(255,255,255,0.95)",
-                fontSize: 10,
-                lineHeight: 1,
-                fontVariantNumeric: "tabular-nums",
-                textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                justifyContent: "space-between",
+                gap: 8,
               }}
-              title="Charge window length"
             >
-              <HudIdleClockIcon color="rgba(255,255,255,0.95)" />
-              {vehicle.secondsBeforeShotTrigger}s
+              <div
+                role="status"
+                aria-label={`Charge window ${vehicle.secondsBeforeShotTrigger} seconds`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  color: "rgba(255,255,255,0.95)",
+                  fontSize: 10,
+                  lineHeight: 1,
+                  fontVariantNumeric: "tabular-nums",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                }}
+                title="Charge window length"
+              >
+                <HudIdleClockIcon color="rgba(255,255,255,0.95)" />
+                {vehicle.secondsBeforeShotTrigger}s
+              </div>
+              {onOpenMyVehicles ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenMyVehicles();
+                  }}
+                  aria-haspopup="dialog"
+                  style={{
+                    flexShrink: 0,
+                    margin: 0,
+                    padding: 0,
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    color: "rgba(255,255,255,0.95)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.02em",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 2,
+                    textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                  }}
+                >
+                  change
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}

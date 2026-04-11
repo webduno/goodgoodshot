@@ -117,7 +117,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     shopInventory.ownedVehicleIds
   );
 
-  const { room, userId, initialFetchDone, error: roomError } =
+  const { room, userId, initialFetchDone, error: roomError, refreshRoom } =
     usePvpRoom(roomId);
 
   const opponentVehicle = useMemo(() => {
@@ -126,7 +126,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
       userId === room.host_user_id
         ? room.guest_vehicle_id
         : room.host_vehicle_id;
-    const raw = oid?.trim() || "default";
+    const raw = String(oid ?? "default").trim().toLowerCase() || "default";
     return getVehicleByVId(raw) ?? DEFAULT_PLAYER_VEHICLE;
   }, [room, userId]);
 
@@ -134,16 +134,20 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     if (!room?.id || !userId) return;
     if (!hasExplicitVehicleInUrl && !preferenceHydrated) return;
     const supabase = createSupabaseBrowserClient();
-    void supabase.rpc("set_pvp_room_vehicle", {
-      p_room_id: room.id,
-      p_vehicle_id: playerVehicle.id,
-    });
+    void (async () => {
+      const { error } = await supabase.rpc("set_pvp_room_vehicle", {
+        p_room_id: room.id,
+        p_vehicle_id: playerVehicle.id,
+      });
+      if (!error) await refreshRoom();
+    })();
   }, [
     room?.id,
     userId,
     playerVehicle.id,
     preferenceHydrated,
     hasExplicitVehicleInUrl,
+    refreshRoom,
   ]);
 
   const [game, dispatch] = useReducer(
@@ -181,33 +185,93 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   const gameRef = useRef(game);
   gameRef.current = game;
 
-  /** Opponent vehicle world position — from room row only (updates when their shot finishes). */
+  /** Tee spawn for this course seed (host side) — used until `host_spawn_*` is persisted. */
+  const teeSpawnFromSeed = useMemo((): Vec3 | null => {
+    if (room?.course_seed == null) return null;
+    const seed = Number(room.course_seed);
+    return createInitialGameStateFromSeed(seed, {
+      goalEnemies: [...PVP_OPPONENT_ENEMY],
+    }).spawnCenter;
+  }, [room?.course_seed]);
+
+  /** Opponent world position: host sees guest at goal; guest sees host at tee (DB or seed). */
   const pvpOpponentWorldPos = useMemo((): Vec3 => {
     if (!room || !userId) return goalCenter;
     const isHost = userId === room.host_user_id;
-    const ox = isHost ? room.guest_spawn_x : room.host_spawn_x;
-    const oy = isHost ? room.guest_spawn_y : room.host_spawn_y;
-    const oz = isHost ? room.guest_spawn_z : room.host_spawn_z;
-    if (ox == null || oy == null || oz == null) return goalCenter;
-    return [Number(ox), Number(oy), Number(oz)];
+    if (isHost) {
+      const gx = room.guest_spawn_x;
+      const gy = room.guest_spawn_y;
+      const gz = room.guest_spawn_z;
+      if (gx == null || gy == null || gz == null) {
+        return goalCenter;
+      }
+      return [Number(gx), Number(gy), Number(gz)];
+    }
+    const hx = Number(room.host_spawn_x ?? 0);
+    const hy = Number(room.host_spawn_y ?? 0);
+    const hz = Number(room.host_spawn_z ?? 0);
+    if (hx === 0 && hy === 0 && hz === 0 && teeSpawnFromSeed != null) {
+      return teeSpawnFromSeed;
+    }
+    return [hx, hy, hz];
+  }, [room, userId, goalCenter, teeSpawnFromSeed]);
+
+  const hostTeeRpcSentRef = useRef(false);
+  useEffect(() => {
+    hostTeeRpcSentRef.current = false;
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!room?.id || room.host_user_id !== userId) return;
+    if (room.guest_user_id == null) return;
+    if (room.status !== "playing") return;
+    const hx = Number(room.host_spawn_x ?? 0);
+    const hy = Number(room.host_spawn_y ?? 0);
+    const hz = Number(room.host_spawn_z ?? 0);
+    if (hx !== 0 || hy !== 0 || hz !== 0) return;
+    if (hostTeeRpcSentRef.current) return;
+    hostTeeRpcSentRef.current = true;
+    const supabase = createSupabaseBrowserClient();
+    const s = game.spawnCenter;
+    void (async () => {
+      const { error } = await supabase.rpc("set_pvp_host_spawn_if_default", {
+        p_room_id: room.id,
+        p_x: Math.round(s[0]),
+        p_y: Math.round(s[1]),
+        p_z: Math.round(s[2]),
+      });
+      if (error) {
+        hostTeeRpcSentRef.current = false;
+        return;
+      }
+      await refreshRoom();
+    })();
   }, [
-    room,
+    room?.id,
+    room?.status,
+    room?.guest_user_id,
+    room?.host_user_id,
+    room?.host_spawn_x,
+    room?.host_spawn_y,
+    room?.host_spawn_z,
     userId,
-    goalCenter[0],
-    goalCenter[1],
-    goalCenter[2],
+    game.spawnCenter,
+    refreshRoom,
   ]);
 
   useEffect(() => {
     if (!room?.id || room.status !== "playing" || room.guest_user_id == null) return;
     if (room.guest_spawn_x != null) return;
     const supabase = createSupabaseBrowserClient();
-    void supabase.rpc("set_pvp_guest_start_if_null", {
-      p_room_id: room.id,
-      p_x: Math.round(game.goalWorldX),
-      p_y: Math.round(INITIAL_LANE_ORIGIN[1]),
-      p_z: Math.round(game.goalWorldZ),
-    });
+    void (async () => {
+      const { error } = await supabase.rpc("set_pvp_guest_start_if_null", {
+        p_room_id: room.id,
+        p_x: Math.round(game.goalWorldX),
+        p_y: Math.round(INITIAL_LANE_ORIGIN[1]),
+        p_z: Math.round(game.goalWorldZ),
+      });
+      if (!error) await refreshRoom();
+    })();
   }, [
     room?.id,
     room?.status,
@@ -215,6 +279,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     room?.guest_spawn_x,
     game.goalWorldX,
     game.goalWorldZ,
+    refreshRoom,
   ]);
 
   const lastGuestSpawnSyncKeyRef = useRef("");
@@ -265,14 +330,15 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   const lastHostSpawnSyncKeyRef = useRef("");
   useEffect(() => {
     if (!room || !userId || room.host_user_id !== userId) return;
-    const key = `${room.host_spawn_x ?? 0},${room.host_spawn_y ?? 0},${room.host_spawn_z ?? 0}`;
+    const hx = Number(room.host_spawn_x ?? 0);
+    const hy = Number(room.host_spawn_y ?? 0);
+    const hz = Number(room.host_spawn_z ?? 0);
+    if (hx === 0 && hy === 0 && hz === 0) return;
+
+    const key = `${hx},${hy},${hz}`;
     if (key === lastHostSpawnSyncKeyRef.current) return;
 
-    const next: Vec3 = [
-      Number(room.host_spawn_x ?? 0),
-      Number(room.host_spawn_y ?? 0),
-      Number(room.host_spawn_z ?? 0),
-    ];
+    const next: Vec3 = [hx, hy, hz];
     const g = gameRef.current;
     if (
       g.spawnCenter[0] === next[0] &&

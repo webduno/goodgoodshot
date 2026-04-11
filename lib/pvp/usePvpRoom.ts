@@ -81,14 +81,8 @@ export function usePvpRoom(roomId: string | null) {
             table: "pvp_rooms",
             filter: `id=eq.${roomId}`,
           },
-          (payload) => {
-            if (payload.new && typeof payload.new === "object") {
-              setRoom((prev) => {
-                const incoming = payload.new as Partial<PvpRoomRow>;
-                if (!prev) return incoming as PvpRoomRow;
-                return { ...prev, ...incoming };
-              });
-            }
+          () => {
+            void refreshRoom();
           }
         )
         .subscribe();

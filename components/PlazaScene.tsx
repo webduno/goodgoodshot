@@ -4,6 +4,7 @@ import { ToastNotif } from "@/components/ToastNotif";
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { PvpJoinRoomModal } from "@/components/game/cube/modals/PvpJoinRoomModal";
+import { VibeJamPortalModal } from "@/components/game/cube/modals/VibeJamPortalModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { AquariumShopModal } from "@/components/game/cube/modals/AquariumShopModal";
 import { BirdShopModal } from "@/components/game/cube/modals/BirdShopModal";
@@ -287,6 +288,7 @@ export default function PlazaScene() {
   const [showAquariumShopModal, setShowAquariumShopModal] = useState(false);
   const [showBirdShopModal, setShowBirdShopModal] = useState(false);
   const [showPvpJoinModal, setShowPvpJoinModal] = useState(false);
+  const [showVibeJamPortalModal, setShowVibeJamPortalModal] = useState(false);
 
   useEffect(() => {
     setRetroTvEnabled(loadRetroTvEnabled());
@@ -712,27 +714,34 @@ export default function PlazaScene() {
     [searchParams]
   );
 
+  const navigateToVibeJamPortal = useCallback(
+    (username: string) => {
+      if (typeof window === "undefined") return;
+      const st = ballFollowStateRef.current;
+      const speed = st.valid ? Math.hypot(st.vx, st.vy, st.vz) : 0;
+      const refUrl = buildPlazaCanonicalRefUrl({
+        origin: window.location.origin,
+        pathname: window.location.pathname,
+        vehicleId: searchParams.get("vehicle"),
+      });
+      const url = buildVibeJamExitUrl({
+        username: username.slice(0, 64),
+        colorHex: rgbTupleToHex(
+          playerVehicle.mainRgb[0],
+          playerVehicle.mainRgb[1],
+          playerVehicle.mainRgb[2]
+        ),
+        speedMps: speed,
+        refUrl,
+      });
+      window.location.href = url;
+    },
+    [playerVehicle, searchParams]
+  );
+
   const onVibeJamExitPortalEnter = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const st = ballFollowStateRef.current;
-    const speed = st.valid ? Math.hypot(st.vx, st.vy, st.vz) : 0;
-    const refUrl = buildPlazaCanonicalRefUrl({
-      origin: window.location.origin,
-      pathname: window.location.pathname,
-      vehicleId: searchParams.get("vehicle"),
-    });
-    const url = buildVibeJamExitUrl({
-      username: playerVehicle.name.slice(0, 64),
-      colorHex: rgbTupleToHex(
-        playerVehicle.mainRgb[0],
-        playerVehicle.mainRgb[1],
-        playerVehicle.mainRgb[2]
-      ),
-      speedMps: speed,
-      refUrl,
-    });
-    window.location.href = url;
-  }, [playerVehicle, searchParams]);
+    setShowVibeJamPortalModal(true);
+  }, []);
 
   const onVibeJamReturnPortalEnter = useCallback(() => {
     const ref = searchParams.get("ref");
@@ -869,7 +878,8 @@ export default function PlazaScene() {
       showShopModal ||
       showAquariumShopModal ||
       showBirdShopModal ||
-      showPvpJoinModal
+      showPvpJoinModal ||
+      showVibeJamPortalModal
     ) {
       return;
     }
@@ -991,6 +1001,7 @@ export default function PlazaScene() {
     showAquariumShopModal,
     showBirdShopModal,
     showPvpJoinModal,
+    showVibeJamPortalModal,
     inCooldown,
     chargeHud,
     activatePowerup,
@@ -1050,7 +1061,8 @@ export default function PlazaScene() {
     showShopModal ||
     showAquariumShopModal ||
     showBirdShopModal ||
-    showPvpJoinModal;
+    showPvpJoinModal ||
+    showVibeJamPortalModal;
 
   const modalBlocksHud =
     showHelpModal ||
@@ -1058,7 +1070,8 @@ export default function PlazaScene() {
     showShopModal ||
     showAquariumShopModal ||
     showBirdShopModal ||
-    showPvpJoinModal;
+    showPvpJoinModal ||
+    showVibeJamPortalModal;
 
   return (
     <div
@@ -1755,6 +1768,15 @@ export default function PlazaScene() {
         onClose={() => setShowPvpJoinModal(false)}
         busy={pvpLobbyBusy}
         onJoinRoom={(roomId) => void onPvpJoinRoomFromList(roomId)}
+      />
+      <VibeJamPortalModal
+        open={showVibeJamPortalModal}
+        onClose={() => setShowVibeJamPortalModal(false)}
+        vehicleName={playerVehicle.name}
+        onContinueToPortal={(u) => {
+          setShowVibeJamPortalModal(false);
+          navigateToVibeJamPortal(u);
+        }}
       />
       <HelpModal
         open={showHelpModal}

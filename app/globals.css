@@ -25,7 +25,7 @@
 
 @media (max-width: 640px) {
   .hud-bottom-dock {
-    bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(125px + env(safe-area-inset-bottom, 0px));
   }
 }
 

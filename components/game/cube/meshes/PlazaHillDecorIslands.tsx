@@ -7,12 +7,15 @@ import { TURF_TOP_Y } from "@/lib/game/constants";
 import {
   PLAZA_DECOR_HILL_CENTERS,
   PLAZA_DECOR_HILL_HALF_EXTENT,
+  PLAZA_HUB_FOUNDATION_FRUSTUM,
   PLAZA_HUB_TURF_GREEN,
 } from "@/lib/game/plazaHub";
 
 const SEGMENTS = 56;
 /** Vertical thickness of the solid base below the turf rim (world units). */
 const BASE_THICKNESS = 1.35;
+/** Same as `InitialFieldGround`: frustum top nudges slightly into the green to hide seams. */
+const GRASS_STONE_OVERLAP_Y = 0.06;
 /** Scale for the tallest bump after weighting. */
 const PEAK_Y = 5.0;
 
@@ -166,22 +169,58 @@ export function PlazaHillDecorIslands() {
 
   return (
     <group>
-      {PLAZA_DECOR_HILL_CENTERS.map((c, i) => (
-        <mesh
-          key={`plaza-hill-${c.x.toFixed(1)}-${c.z.toFixed(1)}`}
-          geometry={geometries[i]!}
-          position={[c.x, TURF_TOP_Y, c.z]}
-          rotation={[0, i * 0.55, 0]}
-          castShadow
-          receiveShadow
-        >
-          <meshStandardMaterial
-            color={PLAZA_HUB_TURF_GREEN}
-            roughness={0.9}
-            metalness={0}
-          />
-        </mesh>
-      ))}
+      {PLAZA_DECOR_HILL_CENTERS.map((c, i) => {
+        const hillYaw = i * 0.55;
+        const half = PLAZA_DECOR_HILL_HALF_EXTENT;
+        const stoneDepth =
+          9 + (i % 3) * 1.2 + Math.min(6, (half + half) * 0.28);
+        const slabBottomY = TURF_TOP_Y - BASE_THICKNESS;
+        const stoneTopY = slabBottomY + GRASS_STONE_OVERLAP_Y;
+        const stoneCenterY = stoneTopY - stoneDepth / 2;
+        const foundationTopRadius = half * 1.02 * Math.SQRT2 * 0.94;
+        const foundationBottomRadius = Math.max(
+          0.14,
+          foundationTopRadius * 0.1
+        );
+
+        return (
+          <group key={`plaza-hill-${c.x.toFixed(1)}-${c.z.toFixed(1)}`}>
+            <mesh
+              geometry={geometries[i]!}
+              position={[c.x, TURF_TOP_Y, c.z]}
+              rotation={[0, hillYaw, 0]}
+              castShadow
+              receiveShadow
+            >
+              <meshStandardMaterial
+                color={PLAZA_HUB_TURF_GREEN}
+                roughness={0.9}
+                metalness={0}
+              />
+            </mesh>
+            <mesh
+              position={[c.x, stoneCenterY, c.z]}
+              rotation={[0, Math.PI / 4 + hillYaw, 0]}
+              castShadow
+              receiveShadow
+            >
+              <cylinderGeometry
+                args={[
+                  foundationTopRadius,
+                  foundationBottomRadius,
+                  stoneDepth,
+                  4,
+                ]}
+              />
+              <meshStandardMaterial
+                color={PLAZA_HUB_FOUNDATION_FRUSTUM}
+                roughness={0.48}
+                metalness={0.12}
+              />
+            </mesh>
+          </group>
+        );
+      })}
     </group>
   );
 }

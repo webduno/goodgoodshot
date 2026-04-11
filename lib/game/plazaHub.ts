@@ -9,8 +9,8 @@ export const PLAZA_WALKABLE_HALF = 40;
 export const PLAZA_PORTAL_ORBIT = 32;
 
 /** Vibe Jam webring exit — east-northeast inside walkable (cardinals use ±32 on axes). */
-export const PLAZA_VIBE_JAM_PORTAL_EXIT_X = 30;
-export const PLAZA_VIBE_JAM_PORTAL_EXIT_Z = 22;
+export const PLAZA_VIBE_JAM_PORTAL_EXIT_X = 15;
+export const PLAZA_VIBE_JAM_PORTAL_EXIT_Z = 12;
 
 /** Return portal (shown when `?portal=true` & `?ref=`) — southwest, mirrored. */
 export const PLAZA_VIBE_JAM_PORTAL_RETURN_X = -30;
@@ -32,7 +32,7 @@ export const PLAZA_VIBE_JAM_SPAWN_Z =
 
 /** Same convention as other plaza torus portals: `rotationY = -atan2(px, pz)`. */
 export function plazaVibeJamExitRotationY(): number {
-  return -Math.atan2(PLAZA_VIBE_JAM_PORTAL_EXIT_X, PLAZA_VIBE_JAM_PORTAL_EXIT_Z);
+  return -Math.atan2(-PLAZA_VIBE_JAM_PORTAL_EXIT_X, PLAZA_VIBE_JAM_PORTAL_EXIT_Z);
 }
 
 export function plazaVibeJamReturnRotationY(): number {

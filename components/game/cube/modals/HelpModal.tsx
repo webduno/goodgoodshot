@@ -24,6 +24,7 @@ import {
   INITIAL_POWERUP_CHARGES,
 } from "@/lib/game/constants";
 import type { AimControlMode } from "@/lib/game/aimControlSettings";
+import { clearPreferredVehicleId } from "@/lib/game/preferredVehicleStorage";
 import { clearPlaySession } from "@/lib/game/playSession";
 import { clearPlayerStats } from "@/lib/playerStats/storage";
 import { clearFreeShopClaims } from "@/lib/shop/freeShopClaims";
@@ -96,6 +97,7 @@ export function HelpModal({
     clearPlayerStats();
     clearPlayerShopInventory();
     clearFreeShopClaims();
+    clearPreferredVehicleId();
     const url = new URL(window.location.href);
     url.searchParams.delete("vehicle");
     window.location.assign(url.toString());

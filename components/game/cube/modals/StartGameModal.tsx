@@ -18,14 +18,15 @@ import {
 import {
   PREDETERMINED_VEHICLES,
   rgbTupleToCss,
+  vehicleIdForQueryString,
 } from "@/components/playerVehicleConfig";
 import {
   isVehicleUnlocked,
   lockedVehicleSelectionHint,
   PREMIUM_RATATA_VEHICLE_ID,
-  resolvePlayerVehicle,
   shouldShowRatataBetaTag,
 } from "@/lib/game/vehicleUnlock";
+import { useResolvedPlayerVehicle } from "@/lib/game/useResolvedPlayerVehicle";
 import { burstVehicleStartConfetti } from "@/lib/game/confetti";
 import {
   formatSessionScoreHud,
@@ -364,19 +365,19 @@ export function StartGameModal({
     [pathname, router, searchParams]
   );
 
-  const goToPlaza = useCallback(() => {
-    const p = new URLSearchParams();
-    const v = searchParams.get("vehicle");
-    if (v) p.set("vehicle", v);
-    const qs = p.toString();
-    router.push(qs ? `/plaza?${qs}` : "/plaza");
-  }, [router, searchParams]);
-
-  const selectedVehicle = resolvePlayerVehicle(
+  const selectedVehicle = useResolvedPlayerVehicle(
     searchParams.get("vehicle"),
     stats,
     shopInventory.ownedVehicleIds
   );
+
+  const goToPlaza = useCallback(() => {
+    const p = new URLSearchParams();
+    const v = vehicleIdForQueryString(selectedVehicle);
+    if (v) p.set("vehicle", v);
+    const qs = p.toString();
+    router.push(qs ? `/plaza?${qs}` : "/plaza");
+  }, [router, selectedVehicle]);
 
   useEffect(() => {
     if (open) {

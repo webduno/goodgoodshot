@@ -50,6 +50,21 @@ export function isVehicleUnlocked(
 }
 
 /**
+ * When the URL has no `vehicle` query (or empty), fall back to the last saved preference.
+ * If the URL has a non-empty `vehicle` value, that wins.
+ */
+export function effectiveVehicleParam(
+  urlParam: string | null | undefined,
+  storedId: string | null | undefined
+): string | null {
+  const u = urlParam?.trim() ?? "";
+  if (u !== "") return u;
+  const s = storedId?.trim() ?? "";
+  if (s !== "") return s;
+  return null;
+}
+
+/**
  * Resolves URL vehicle selection and enforces premium unlock (falls back to default).
  */
 export function resolvePlayerVehicle(

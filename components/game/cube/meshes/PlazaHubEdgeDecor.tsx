@@ -12,7 +12,13 @@ import {
   type PlazaVoxelHouseKind,
   type PlazaVoxelHouseSpec,
 } from "@/components/game/cube/meshes/PlazaInstancedVoxelHouses";
-import { PLAZA_PORTAL_ORBIT } from "@/lib/game/plazaHub";
+import {
+  PLAZA_PORTAL_ORBIT,
+  PLAZA_VIBE_JAM_PORTAL_EXIT_X,
+  PLAZA_VIBE_JAM_PORTAL_EXIT_Z,
+  PLAZA_VEHICLE_TOOL_PORTAL_X,
+  PLAZA_VEHICLE_TOOL_PORTAL_Z,
+} from "@/lib/game/plazaHub";
 
 /** Porcelain / mist “buildings” — Frutiger Aero (avoid dark brown stone). */
 const STONE = "#f2f6fb";
@@ -71,6 +77,8 @@ function clearOfPortals(
     [0, -o],
     [o, 0],
     [-o, 0],
+    [PLAZA_VIBE_JAM_PORTAL_EXIT_X, PLAZA_VIBE_JAM_PORTAL_EXIT_Z],
+    [PLAZA_VEHICLE_TOOL_PORTAL_X, PLAZA_VEHICLE_TOOL_PORTAL_Z],
   ];
   for (const [kx, kz] of anchors) {
     if (Math.hypot(px - kx, pz - kz) < PORTAL_EXCLUSION_R) return false;

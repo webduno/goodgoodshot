@@ -12,6 +12,10 @@ export const PLAZA_PORTAL_ORBIT = 32;
 export const PLAZA_VIBE_JAM_PORTAL_EXIT_X = 15;
 export const PLAZA_VIBE_JAM_PORTAL_EXIT_Z = 12;
 
+/** Vehicle builder (`/tool`) — northwest sector, clear of cardinals and Vibe Jam exit. */
+export const PLAZA_VEHICLE_TOOL_PORTAL_X = -22;
+export const PLAZA_VEHICLE_TOOL_PORTAL_Z = 20;
+
 /** Return portal (shown when `?portal=true` & `?ref=`) — southwest, mirrored. */
 export const PLAZA_VIBE_JAM_PORTAL_RETURN_X = -30;
 export const PLAZA_VIBE_JAM_PORTAL_RETURN_Z = -22;
@@ -39,6 +43,13 @@ export function plazaVibeJamReturnRotationY(): number {
   return -Math.atan2(
     PLAZA_VIBE_JAM_PORTAL_RETURN_X,
     PLAZA_VIBE_JAM_PORTAL_RETURN_Z
+  );
+}
+
+export function plazaVehicleToolPortalRotationY(): number {
+  return -Math.atan2(
+    -PLAZA_VEHICLE_TOOL_PORTAL_X,
+    PLAZA_VEHICLE_TOOL_PORTAL_Z
   );
 }
 

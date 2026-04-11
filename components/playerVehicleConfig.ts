@@ -132,6 +132,11 @@ export const DEFAULT_V_ID = "default" as const;
 export const DEFAULT_PLAYER_VEHICLE: PlayerVehicleConfig =
   byVId.get(DEFAULT_V_ID) ?? jsonVehicleToConfig(data.vehicles[0]);
 
+/** Use for `?vehicle=` links: omit when the player is on the default build. */
+export function vehicleIdForQueryString(v: PlayerVehicleConfig): string | null {
+  return v.id === DEFAULT_V_ID ? null : v.id;
+}
+
 /** All rows from the JSON file, ready for UI or validation. */
 export const PREDETERMINED_VEHICLES: PlayerVehicleConfig[] =
   data.vehicles.map(jsonVehicleToConfig);

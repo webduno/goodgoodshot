@@ -47,9 +47,11 @@ import {
   DEFAULT_PLAYER_VEHICLE,
   halfClicksForStrengthBarRef,
   maxClicksForStrengthBarRef,
+  vehicleIdForQueryString,
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
-import { isVehicleUnlocked, resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
+import { isVehicleUnlocked } from "@/lib/game/vehicleUnlock";
+import { useResolvedPlayerVehicle } from "@/lib/game/useResolvedPlayerVehicle";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
   burstPowerupBuyConfetti,
@@ -98,8 +100,11 @@ import {
   PLAZA_VIBE_JAM_PORTAL_RETURN_Z,
   PLAZA_VIBE_JAM_SPAWN_X,
   PLAZA_VIBE_JAM_SPAWN_Z,
+  PLAZA_VEHICLE_TOOL_PORTAL_X,
+  PLAZA_VEHICLE_TOOL_PORTAL_Z,
   plazaVibeJamExitRotationY,
   plazaVibeJamReturnRotationY,
+  plazaVehicleToolPortalRotationY,
 } from "@/lib/game/plazaHub";
 import {
   buildPlazaCanonicalRefUrl,
@@ -211,10 +216,10 @@ export default function PlazaScene() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const vehicleParam = searchParams.get("vehicle");
-  const playerVehicle = useMemo(
-    () =>
-      resolvePlayerVehicle(vehicleParam, stats, shopInventory.ownedVehicleIds),
-    [vehicleParam, stats, shopInventory.ownedVehicleIds]
+  const playerVehicle = useResolvedPlayerVehicle(
+    vehicleParam,
+    stats,
+    shopInventory.ownedVehicleIds
   );
 
   const [pvpLobbyBusy, setPvpLobbyBusy] = useState(false);
@@ -338,7 +343,7 @@ export default function PlazaScene() {
       await ensureSupabaseSession();
       const id = await createPvpRoom();
       const p = new URLSearchParams();
-      const v = searchParams.get("vehicle");
+      const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
       router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
@@ -347,7 +352,7 @@ export default function PlazaScene() {
     } finally {
       setPvpLobbyBusy(false);
     }
-  }, [pvpLobbyBusy, searchParams, router, pushHudToast]);
+  }, [pvpLobbyBusy, playerVehicle, router, pushHudToast]);
 
   const onPvpQuickPlay = useCallback(async () => {
     if (pvpLobbyBusy) return;
@@ -360,7 +365,7 @@ export default function PlazaScene() {
         return;
       }
       const p = new URLSearchParams();
-      const v = searchParams.get("vehicle");
+      const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
       const qs = p.toString();
       router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
@@ -369,7 +374,7 @@ export default function PlazaScene() {
     } finally {
       setPvpLobbyBusy(false);
     }
-  }, [pvpLobbyBusy, searchParams, router, pushHudToast]);
+  }, [pvpLobbyBusy, playerVehicle, router, pushHudToast]);
 
   const onPvpJoinRoomFromList = useCallback(
     async (roomId: string) => {
@@ -379,7 +384,7 @@ export default function PlazaScene() {
         await ensureSupabaseSession();
         await joinPvpRoomById(roomId);
         const p = new URLSearchParams();
-        const v = searchParams.get("vehicle");
+        const v = vehicleIdForQueryString(playerVehicle);
         if (v) p.set("vehicle", v);
         const qs = p.toString();
         setShowPvpJoinModal(false);
@@ -390,7 +395,7 @@ export default function PlazaScene() {
         setPvpLobbyBusy(false);
       }
     },
-    [pvpLobbyBusy, searchParams, router, pushHudToast]
+    [pvpLobbyBusy, playerVehicle, router, pushHudToast]
   );
 
   const onRetroTvChange = useCallback((next: boolean) => {
@@ -695,9 +700,14 @@ export default function PlazaScene() {
   }, []);
 
   const onHomePortalEnter = useCallback(() => {
-    const v = searchParams.get("vehicle");
+    const v = vehicleIdForQueryString(playerVehicle);
     router.push(v ? `/?vehicle=${encodeURIComponent(v)}` : "/");
-  }, [router, searchParams]);
+  }, [router, playerVehicle]);
+
+  const onVehicleToolPortalEnter = useCallback(() => {
+    const v = vehicleIdForQueryString(playerVehicle);
+    router.push(v ? `/tool?vehicle=${encodeURIComponent(v)}` : "/tool");
+  }, [router, playerVehicle]);
 
   const onNineBattlePortalEnter = useCallback(() => {
     startWarSessionAndRedirectHome(9, "random");
@@ -722,7 +732,7 @@ export default function PlazaScene() {
       const refUrl = buildPlazaCanonicalRefUrl({
         origin: window.location.origin,
         pathname: window.location.pathname,
-        vehicleId: searchParams.get("vehicle"),
+        vehicleId: vehicleIdForQueryString(playerVehicle),
       });
       const url = buildVibeJamExitUrl({
         username: username.slice(0, 64),
@@ -736,7 +746,7 @@ export default function PlazaScene() {
       });
       window.location.href = url;
     },
-    [playerVehicle, searchParams]
+    [playerVehicle]
   );
 
   const onVibeJamExitPortalEnter = useCallback(() => {
@@ -749,7 +759,7 @@ export default function PlazaScene() {
     const currentGameRefUrl = buildPlazaCanonicalRefUrl({
       origin: window.location.origin,
       pathname: window.location.pathname,
-      vehicleId: searchParams.get("vehicle"),
+      vehicleId: vehicleIdForQueryString(playerVehicle),
     });
     const url = buildVibeJamReturnNavigationUrl({
       previousGameRef: ref,
@@ -758,7 +768,7 @@ export default function PlazaScene() {
       baseOrigin: window.location.origin,
     });
     if (url) window.location.href = url;
-  }, [searchParams]);
+  }, [searchParams, playerVehicle]);
 
   const onProjectileEnd = useCallback(
     (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
@@ -1190,6 +1200,15 @@ export default function PlazaScene() {
           ballFollowStateRef={ballFollowStateRef}
           shotInFlight={shotInFlight}
           onBallEnter={onFiveBattlePortalEnter}
+        />
+        <PlazaPortalTorus
+          worldX={PLAZA_VEHICLE_TOOL_PORTAL_X}
+          worldZ={PLAZA_VEHICLE_TOOL_PORTAL_Z}
+          rotationY={plazaVehicleToolPortalRotationY()}
+          label="Vehicle Builder"
+          ballFollowStateRef={ballFollowStateRef}
+          shotInFlight={shotInFlight}
+          onBallEnter={onVehicleToolPortalEnter}
         />
         <PlazaPortalTorus
           worldX={PLAZA_VIBE_JAM_PORTAL_EXIT_X}

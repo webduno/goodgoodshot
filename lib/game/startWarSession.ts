@@ -1,14 +1,20 @@
 import {
+  DEFAULT_V_ID,
+  resolveVehicleFromUrlParam,
+} from "@/components/playerVehicleConfig";
+import {
   clearSessionBattleMaps,
   generateSessionBattleMaps,
   saveSessionBattleMaps,
   type SessionBiomeChoice,
 } from "@/lib/game/sessionBattleMaps";
+import { readPreferredVehicleId } from "@/lib/game/preferredVehicleStorage";
 import {
   defaultPlaySession,
   savePlaySession,
   type SessionBattleCount,
 } from "@/lib/game/playSession";
+import { effectiveVehicleParam } from "@/lib/game/vehicleUnlock";
 
 /** After war end → new war + reload, skip the start modal on the next load (same as `CubeScene`). */
 export const SESSION_SKIP_START_MODAL_KEY = "goodgoodshot.skipStartModal";
@@ -40,9 +46,12 @@ export function startWarSessionAndRedirectHome(
   }
 
   const url = new URL("/", window.location.origin);
-  const v = new URLSearchParams(window.location.search).get("vehicle");
-  if (v) {
-    url.searchParams.set("vehicle", v);
+  const fromUrl = new URLSearchParams(window.location.search).get("vehicle");
+  const stored = readPreferredVehicleId();
+  const effective = effectiveVehicleParam(fromUrl, stored);
+  const cfg = resolveVehicleFromUrlParam(effective);
+  if (cfg.id !== DEFAULT_V_ID) {
+    url.searchParams.set("vehicle", cfg.id);
   }
   window.location.assign(url.toString());
 }

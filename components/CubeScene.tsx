@@ -48,9 +48,10 @@ import {
   DEFAULT_PLAYER_VEHICLE,
   halfClicksForStrengthBarRef,
   maxClicksForStrengthBarRef,
+  vehicleIdForQueryString,
   vehicleShotCooldownMs,
 } from "@/components/playerVehicleConfig";
-import { resolvePlayerVehicle } from "@/lib/game/vehicleUnlock";
+import { useResolvedPlayerVehicle } from "@/lib/game/useResolvedPlayerVehicle";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { onCanvasCreated } from "@/lib/game/canvas";
 import {
@@ -147,10 +148,10 @@ export default function CubeScene() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const vehicleParam = searchParams.get("vehicle");
-  const playerVehicle = useMemo(
-    () =>
-      resolvePlayerVehicle(vehicleParam, stats, shopInventory.ownedVehicleIds),
-    [vehicleParam, stats, shopInventory.ownedVehicleIds]
+  const playerVehicle = useResolvedPlayerVehicle(
+    vehicleParam,
+    stats,
+    shopInventory.ownedVehicleIds
   );
 
   const [game, dispatch] = useReducer(
@@ -408,33 +409,33 @@ export default function CubeScene() {
   const goToPlazaFromMenu = useCallback(() => {
     setShowHelpModal(false);
     const p = new URLSearchParams();
-    const v = searchParams.get("vehicle");
+    const v = vehicleIdForQueryString(playerVehicle);
     if (v) p.set("vehicle", v);
     const qs = p.toString();
     router.push(qs ? `/plaza?${qs}` : "/plaza");
-  }, [router, searchParams]);
+  }, [router, playerVehicle]);
 
   const goToPlazaAfterSessionEnd = useCallback(() => {
     setShowSessionEndModal(false);
     clearSessionBattleMaps();
     clearPlaySession();
     const p = new URLSearchParams();
-    const v = searchParams.get("vehicle");
+    const v = vehicleIdForQueryString(playerVehicle);
     if (v) p.set("vehicle", v);
     const qs = p.toString();
     router.push(qs ? `/plaza?${qs}` : "/plaza");
-  }, [router, searchParams]);
+  }, [router, playerVehicle]);
 
   const onFinishBattleGoToPlaza = useCallback(() => {
     setShowFinishModal(false);
     clearSessionBattleMaps();
     clearPlaySession();
     const p = new URLSearchParams();
-    const v = searchParams.get("vehicle");
+    const v = vehicleIdForQueryString(playerVehicle);
     if (v) p.set("vehicle", v);
     const qs = p.toString();
     router.push(qs ? `/plaza?${qs}` : "/plaza");
-  }, [router, searchParams]);
+  }, [router, playerVehicle]);
 
   const prevWindMagRef = useRef<number | null>(null);
   const maybeWindToast = useCallback(

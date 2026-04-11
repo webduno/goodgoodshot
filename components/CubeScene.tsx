@@ -5,6 +5,7 @@ import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { CourseMapModal } from "@/components/game/cube/modals/CourseMapModal";
 import { FinishGameModal } from "@/components/game/cube/modals/FinishGameModal";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
+import { MyVehiclesModal } from "@/components/game/cube/modals/MyVehiclesModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { SessionStatsModal } from "@/components/game/cube/modals/SessionStatsModal";
 import { SessionEndModal } from "@/components/game/cube/modals/SessionEndModal";
@@ -282,6 +283,7 @@ export default function CubeScene() {
   const [guidelineEnabled, setGuidelineEnabled] = useState(true);
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showMyVehiclesModal, setShowMyVehiclesModal] = useState(false);
   const [showSessionStatsModal, setShowSessionStatsModal] = useState(false);
   const [showCourseMapModal, setShowCourseMapModal] = useState(false);
   const [courseMapPlayerXZ, setCourseMapPlayerXZ] = useState({
@@ -861,6 +863,7 @@ export default function CubeScene() {
     if (showFinishModal || showSessionEndModal) {
       setShowHelpModal(false);
       setShowProfileModal(false);
+      setShowMyVehiclesModal(false);
     }
   }, [showFinishModal, showSessionEndModal]);
 
@@ -896,6 +899,15 @@ export default function CubeScene() {
   }, [showProfileModal]);
 
   useEffect(() => {
+    if (!showMyVehiclesModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowMyVehiclesModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showMyVehiclesModal]);
+
+  useEffect(() => {
     if (
       shotInFlight ||
       showFinishModal ||
@@ -903,6 +915,7 @@ export default function CubeScene() {
       showSessionEndModal ||
       showHelpModal ||
       showProfileModal ||
+      showMyVehiclesModal ||
       enemyLossAnimating
     ) {
       return;
@@ -1039,6 +1052,7 @@ export default function CubeScene() {
     showSessionEndModal,
     showHelpModal,
     showProfileModal,
+    showMyVehiclesModal,
     inCooldown,
     chargeHud,
     activatePowerup,
@@ -1193,7 +1207,7 @@ export default function CubeScene() {
         top={16}
         accent={hudToastAccent}
       />
-      {!showStartGameModal && !showSessionEndModal && (
+      {!showStartGameModal && !showSessionEndModal && !showMyVehiclesModal && (
         <StatsHud
           holePar={holePar}
           sessionShots={sessionShots}
@@ -1212,6 +1226,7 @@ export default function CubeScene() {
             setShowSessionStatsModal(true);
           }}
           rendererStatsRef={rendererStatsRef}
+          onOpenMyVehicles={() => setShowMyVehiclesModal(true)}
         />
       )}
       {!showFinishModal && !showStartGameModal && !showSessionEndModal && (
@@ -1784,6 +1799,11 @@ export default function CubeScene() {
       <ProfileModal
         open={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+      />
+      <MyVehiclesModal
+        open={showMyVehiclesModal}
+        onClose={() => setShowMyVehiclesModal(false)}
+        currentVehicle={playerVehicle}
       />
       <SessionStatsModal
         open={showSessionStatsModal}

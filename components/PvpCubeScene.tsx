@@ -9,6 +9,7 @@ import { GuidelinePreviewPowerSlider } from "@/components/game/cube/hud/Guidelin
 import { FirePowerVerticalHud, ShotHud } from "@/components/game/cube/hud/ShotHud";
 import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { WindHud } from "@/components/game/cube/hud/WindHud";
+import { MyVehiclesModal } from "@/components/game/cube/modals/MyVehiclesModal";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
 import { PlazaShopBuilding } from "@/components/game/cube/meshes/PlazaShopBuilding";
 import { PlazaHubRoads } from "@/components/game/cube/meshes/PlazaHubRoads";
@@ -408,6 +409,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
   const [enemyLossAnimating, setEnemyLossAnimating] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showMyVehiclesModal, setShowMyVehiclesModal] = useState(false);
   const [retroTvEnabled, setRetroTvEnabled] = useState(false);
   const [guidelineEnabled, setGuidelineEnabled] = useState(true);
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
@@ -1036,22 +1038,25 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         top={16}
         accent={hudToastAccent}
       />
-      <StatsHud
-        holePar={holePar}
-        sessionShots={sessionShots}
-        chargeHud={chargeHud}
-        shotInFlight={shotInFlight}
-        cooldownUntil={cooldownUntil}
-        strengthCharges={strengthCharges}
-        noBounceCharges={noBounceCharges}
-        noWindCharges={noWindCharges}
-        powerupStackCount={powerupStackCount}
-        noBounceActive={noBounceActive}
-        noWindActive={noWindActive}
-        vehicle={playerVehicle}
-        onScoreClick={() => {}}
-        rendererStatsRef={rendererStatsRef}
-      />
+      {!showMyVehiclesModal && (
+        <StatsHud
+          holePar={holePar}
+          sessionShots={sessionShots}
+          chargeHud={chargeHud}
+          shotInFlight={shotInFlight}
+          cooldownUntil={cooldownUntil}
+          strengthCharges={strengthCharges}
+          noBounceCharges={noBounceCharges}
+          noWindCharges={noWindCharges}
+          powerupStackCount={powerupStackCount}
+          noBounceActive={noBounceActive}
+          noWindActive={noWindActive}
+          vehicle={playerVehicle}
+          onScoreClick={() => {}}
+          rendererStatsRef={rendererStatsRef}
+          onOpenMyVehicles={() => setShowMyVehiclesModal(true)}
+        />
+      )}
       <div
         style={{
           position: "absolute",
@@ -1120,6 +1125,12 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           </div>
         </div>
       )}
+
+      <MyVehiclesModal
+        open={showMyVehiclesModal}
+        onClose={() => setShowMyVehiclesModal(false)}
+        currentVehicle={playerVehicle}
+      />
 
       <div
         className="hud-bottom-dock"

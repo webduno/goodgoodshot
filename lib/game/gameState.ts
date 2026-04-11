@@ -106,7 +106,7 @@ export function withDefaultBiome(state: GameState): GameState {
   if (!isValidBiomeId(state.biome)) {
     next = { ...next, biome: "plain" };
   }
-  if (!Array.isArray(next.goalEnemies) || next.goalEnemies.length === 0) {
+  if (!Array.isArray(next.goalEnemies)) {
     next = { ...next, goalEnemies: [{ colorHex: "#0099ff" }] };
   }
   if (!Array.isArray(next.mapCages)) {

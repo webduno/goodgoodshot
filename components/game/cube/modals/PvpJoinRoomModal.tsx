@@ -240,6 +240,7 @@ export function PvpJoinRoomModal({
                         color: "rgba(0, 55, 95, 0.62)",
                       }}
                     >
+                      {(r.match_mode ?? "pvp") === "pve" ? "PvE" : "PvP"} ·{" "}
                       {formatRoomTime(r.created_at)} · seed{" "}
                       {String(r.course_seed).slice(0, 8)}…
                     </span>

@@ -140,6 +140,7 @@ import {
   joinPvpRoomById,
 } from "@/lib/pvp/plazaActions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { type PowerupSlotId, type Vec3 } from "@/lib/game/types";
 import { Canvas } from "@react-three/fiber";
@@ -160,34 +161,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
     if (typeof message === "string" && message.trim()) return message;
   }
   return fallback;
-}
-
-async function ensureSupabaseSession(): Promise<void> {
-  const supabase = createSupabaseBrowserClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (session) return;
-
-  const { error } = await supabase.auth.signInAnonymously();
-  if (error) {
-    const message =
-      typeof error.message === "string" ? error.message : "sign-in failed";
-    if (message.includes("anonymous_provider_disabled")) {
-      throw new Error(
-        "Anonymous sign-ins are disabled in Supabase. Enable Auth > Providers > Anonymous."
-      );
-    }
-    throw new Error(message);
-  }
-
-  const {
-    data: { session: nextSession },
-  } = await supabase.auth.getSession();
-  if (!nextSession) {
-    throw new Error("Sign-in did not create a session");
-  }
 }
 
 export default function PlazaScene() {
@@ -343,7 +316,7 @@ export default function PlazaScene() {
     setPvpLobbyBusy(true);
     try {
       await ensureSupabaseSession();
-      const id = await createPvpRoom();
+      const id = await createPvpRoom("pvp");
       const p = new URLSearchParams();
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
@@ -351,6 +324,24 @@ export default function PlazaScene() {
       router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
     } catch (e) {
       pushHudToast(getErrorMessage(e, "PvP setup failed"));
+    } finally {
+      setPvpLobbyBusy(false);
+    }
+  }, [pvpLobbyBusy, playerVehicle, router, pushHudToast]);
+
+  const onPveCreateRoom = useCallback(async () => {
+    if (pvpLobbyBusy) return;
+    setPvpLobbyBusy(true);
+    try {
+      await ensureSupabaseSession();
+      const id = await createPvpRoom("pve");
+      const p = new URLSearchParams();
+      const v = vehicleIdForQueryString(playerVehicle);
+      if (v) p.set("vehicle", v);
+      const qs = p.toString();
+      router.push(qs ? `/pvp/${id}?${qs}` : `/pvp/${id}`);
+    } catch (e) {
+      pushHudToast(getErrorMessage(e, "PvE setup failed"));
     } finally {
       setPvpLobbyBusy(false);
     }
@@ -1325,6 +1316,38 @@ export default function PlazaScene() {
                 +
               </span>
               New PvP
+            </button>
+            <button
+              type="button"
+              disabled={pvpLobbyBusy}
+              aria-label="PvE: create room"
+              onClick={() => void onPveCreateRoom()}
+              style={plazaPvpDockButtonStyle({
+                variant: "create",
+                disabled: pvpLobbyBusy,
+              })}
+            >
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  background:
+                    "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, rgba(0,100,80,0.35) 100%)",
+                  border: "1px solid rgba(255,255,255,0.75)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+                }}
+              >
+                +
+              </span>
+              New PvE
             </button>
             <button
               type="button"

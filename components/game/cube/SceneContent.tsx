@@ -274,6 +274,10 @@ export function SceneContent({
   pvpOpponentWorldPos = null,
   /** PvP: local spawn — opponent hull faces this point. */
   pvpOpponentFacingToward = null,
+  /** PvE race: ghost opponent at their tee (no ball contact — `goalEnemies` empty). */
+  pveOpponentVehicle = null,
+  pveOpponentWorldPos = null,
+  pveOpponentFacingToward = null,
   onEnemyLossAnimatingChange,
   equippedHatId = null,
   equippedFishId = null,
@@ -295,6 +299,10 @@ export function SceneContent({
   pvpOpponentVehicle?: PlayerVehicleConfig | null;
   pvpOpponentWorldPos?: Vec3 | null;
   pvpOpponentFacingToward?: Vec3 | null;
+  /** PvE: show other player’s vehicle without collision (parallel race). */
+  pveOpponentVehicle?: PlayerVehicleConfig | null;
+  pveOpponentWorldPos?: Vec3 | null;
+  pveOpponentFacingToward?: Vec3 | null;
   /** HUD ring yaw (atan2(dx, −dy)); converted to world XZ for shot, prism, and hull snap. */
   aimYawRad: number;
   /** Radians added to `vehicle.launchAngleRad` for this shot (clamped ±15° in UI). */
@@ -926,26 +934,43 @@ export function SceneContent({
               enemyIndex={i}
             />
           ))
-        : !hubMode &&
-          goalEnemies.map((spec, i) => (
-            <GoalMessengerCharacter
-              key={`messenger-${i}-${spec.colorHex}-${goalCenter[0]}-${goalCenter[2]}`}
-              goalCenter={goalCenter}
-              spawnCenter={spawnCenter}
-              alive={enemyAliveMask[i] === true}
-              paused={roundLocked || shotInFlight}
-              onReachedVehicle={onEnemyReachedVehicle}
-              enemySimRef={enemySimRef}
-              enemyIndex={i}
-              colorHex={spec.colorHex}
-              startOffsetXZ={goalEnemySpawnOffsetXZ(
-                islands,
-                goalCenter,
-                i,
-                goalEnemies.length
-              )}
-            />
-          ))}
+        : null}
+      {!hubMode &&
+      !pvpMode &&
+      pveOpponentVehicle &&
+      pveOpponentWorldPos != null &&
+      pveOpponentFacingToward != null ? (
+        <PvpOpponentVehicle
+          key="pve-opp-ghost"
+          worldPosition={pveOpponentWorldPos}
+          lookAt={pveOpponentFacingToward}
+          vehicle={pveOpponentVehicle}
+          alive={true}
+          enemySimRef={enemySimRef}
+          enemyIndex={0}
+        />
+      ) : null}
+      {!hubMode &&
+        !pvpMode &&
+        goalEnemies.map((spec, i) => (
+          <GoalMessengerCharacter
+            key={`messenger-${i}-${spec.colorHex}-${goalCenter[0]}-${goalCenter[2]}`}
+            goalCenter={goalCenter}
+            spawnCenter={spawnCenter}
+            alive={enemyAliveMask[i] === true}
+            paused={roundLocked || shotInFlight}
+            onReachedVehicle={onEnemyReachedVehicle}
+            enemySimRef={enemySimRef}
+            enemyIndex={i}
+            colorHex={spec.colorHex}
+            startOffsetXZ={goalEnemySpawnOffsetXZ(
+              islands,
+              goalCenter,
+              i,
+              goalEnemies.length
+            )}
+          />
+        ))}
       {!hubMode &&
         yellowLaneMarkers.map((center, i) => {
           const ck = coinCellKey(center);

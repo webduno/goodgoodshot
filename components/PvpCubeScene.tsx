@@ -78,6 +78,7 @@ import {
   wrapYawRad,
 } from "@/lib/game/math";
 import { parCoinCountForIslands } from "@/lib/game/path";
+import { pveSideBySideSpawnsFromSeed } from "@/lib/game/pvpTeeSpawns";
 import { pvpGameReducer } from "@/lib/game/pvpGameState";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
@@ -123,6 +124,13 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
   const { room, userId, initialFetchDone, error: roomError, refreshRoom } =
     usePvpRoom(roomId);
+
+  const isPve = (room?.match_mode ?? "pvp") === "pve";
+
+  const pveSpawns = useMemo(() => {
+    if (room?.course_seed == null) return null;
+    return pveSideBySideSpawnsFromSeed(Number(room.course_seed));
+  }, [room?.course_seed]);
 
   const opponentVehicle = useMemo(() => {
     if (!room || !userId) return DEFAULT_PLAYER_VEHICLE;
@@ -171,14 +179,15 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     if (hydratedRoomIdRef.current === room.id) return;
     hydratedRoomIdRef.current = room.id;
     const seed = Number(room.course_seed);
+    const pve = (room.match_mode ?? "pvp") === "pve";
     courseSeedRef.current = seed;
     dispatch({
       type: "REPLACE_GAME_STATE",
       state: createInitialGameStateFromSeed(seed, {
-        goalEnemies: [...PVP_OPPONENT_ENEMY],
+        goalEnemies: pve ? [] : [...PVP_OPPONENT_ENEMY],
       }),
     });
-  }, [room?.id, room?.course_seed]);
+  }, [room?.id, room?.course_seed, room?.match_mode]);
 
   const goalCenter: Vec3 = [
     game.goalWorldX,
@@ -194,11 +203,11 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     if (room?.course_seed == null) return null;
     const seed = Number(room.course_seed);
     return createInitialGameStateFromSeed(seed, {
-      goalEnemies: [...PVP_OPPONENT_ENEMY],
+      goalEnemies: isPve ? [] : [...PVP_OPPONENT_ENEMY],
     }).spawnCenter;
-  }, [room?.course_seed]);
+  }, [room?.course_seed, isPve]);
 
-  /** Opponent world position: host sees guest at goal; guest sees host at tee (DB or seed). */
+  /** Opponent world position: PvP host sees guest at goal; PvE both tee side-by-side; guest sees host at tee (DB or seed). */
   const pvpOpponentWorldPos = useMemo((): Vec3 => {
     if (!room || !userId) return goalCenter;
     const isHost = userId === room.host_user_id;
@@ -207,6 +216,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
       const gy = room.guest_spawn_y;
       const gz = room.guest_spawn_z;
       if (gx == null || gy == null || gz == null) {
+        if (isPve && pveSpawns) return pveSpawns.guestSpawn;
         return goalCenter;
       }
       return [Number(gx), Number(gy), Number(gz)];
@@ -215,10 +225,11 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     const hy = Number(room.host_spawn_y ?? 0);
     const hz = Number(room.host_spawn_z ?? 0);
     if (hx === 0 && hy === 0 && hz === 0 && teeSpawnFromSeed != null) {
+      if (isPve && pveSpawns) return pveSpawns.hostSpawn;
       return teeSpawnFromSeed;
     }
     return [hx, hy, hz];
-  }, [room, userId, goalCenter, teeSpawnFromSeed]);
+  }, [room, userId, goalCenter, teeSpawnFromSeed, isPve, pveSpawns]);
 
   const hostTeeRpcSentRef = useRef(false);
   useEffect(() => {
@@ -236,7 +247,8 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     if (hostTeeRpcSentRef.current) return;
     hostTeeRpcSentRef.current = true;
     const supabase = createSupabaseBrowserClient();
-    const s = game.spawnCenter;
+    const pve = (room.match_mode ?? "pvp") === "pve";
+    const s = pve && pveSpawns ? pveSpawns.hostSpawn : game.spawnCenter;
     void (async () => {
       const { error } = await supabase.rpc("set_pvp_host_spawn_if_default", {
         p_room_id: room.id,
@@ -258,8 +270,10 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     room?.host_spawn_x,
     room?.host_spawn_y,
     room?.host_spawn_z,
+    room?.match_mode,
     userId,
     game.spawnCenter,
+    pveSpawns,
     refreshRoom,
   ]);
 
@@ -267,12 +281,16 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     if (!room?.id || room.status !== "playing" || room.guest_user_id == null) return;
     if (room.guest_spawn_x != null) return;
     const supabase = createSupabaseBrowserClient();
+    const pve = (room.match_mode ?? "pvp") === "pve";
+    const gx = pve && pveSpawns ? pveSpawns.guestSpawn[0] : game.goalWorldX;
+    const gy = pve && pveSpawns ? pveSpawns.guestSpawn[1] : INITIAL_LANE_ORIGIN[1];
+    const gz = pve && pveSpawns ? pveSpawns.guestSpawn[2] : game.goalWorldZ;
     void (async () => {
       const { error } = await supabase.rpc("set_pvp_guest_start_if_null", {
         p_room_id: room.id,
-        p_x: Math.round(game.goalWorldX),
-        p_y: Math.round(INITIAL_LANE_ORIGIN[1]),
-        p_z: Math.round(game.goalWorldZ),
+        p_x: Math.round(gx),
+        p_y: Math.round(gy),
+        p_z: Math.round(gz),
       });
       if (!error) await refreshRoom();
     })();
@@ -281,8 +299,10 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     room?.status,
     room?.guest_user_id,
     room?.guest_spawn_x,
+    room?.match_mode,
     game.goalWorldX,
     game.goalWorldZ,
+    pveSpawns,
     refreshRoom,
   ]);
 
@@ -899,7 +919,9 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
               {room.winner_user_id === userId ? "You won!" : "You lost"}
             </h2>
             <p style={{ margin: "0 0 16px", opacity: 0.85 }}>
-              First to hit the opponent&apos;s vehicle wins.
+              {(room?.match_mode ?? "pvp") === "pve"
+                ? "First to reach the pyramid wins."
+                : "First to hit the opponent's vehicle wins."}
             </p>
             <button type="button" onClick={goToPlaza} style={goldChipButtonStyle()}>
               Back to plaza
@@ -994,7 +1016,6 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             biome={game.biome}
             onTerrainCoordsClick={() => {}}
             ballFollowStateRef={ballFollowStateRef}
-            goalEnemies={[...PVP_OPPONENT_ENEMY]}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
             equippedHatId={shopInventory.equippedHatId}
             equippedFishId={shopInventory.equippedFishId}
@@ -1005,10 +1026,14 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             onBreakGoalCageFromShot={onBreakGoalCageFromShot}
             powerupVehicleBurstSeq={powerupVehicleBurst.seq}
             powerupVehicleBurstSlot={powerupVehicleBurst.slot}
-            pvpMode
+            pvpMode={!isPve}
             pvpOpponentVehicle={opponentVehicle}
             pvpOpponentWorldPos={pvpOpponentWorldPos}
             pvpOpponentFacingToward={game.spawnCenter}
+            pveOpponentVehicle={isPve ? opponentVehicle : null}
+            pveOpponentWorldPos={isPve ? pvpOpponentWorldPos : null}
+            pveOpponentFacingToward={isPve ? game.spawnCenter : null}
+            goalEnemies={isPve ? [] : [...PVP_OPPONENT_ENEMY]}
           />
         </TeleportOrbitRig>
         <InitialFieldGround
@@ -1111,7 +1136,11 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           }}
         >
           <div style={{ ...hudMiniPanel, ...hudFont, padding: 16, maxWidth: 320 }}>
-            <p style={{ marginTop: 0 }}>Turn-based PvP — shoot when it’s your turn.</p>
+            <p style={{ marginTop: 0 }}>
+              {(room?.match_mode ?? "pvp") === "pve"
+                ? "PvE race — same course, no contact between players. Shoot when it’s your turn; first to the pyramid wins."
+                : "Turn-based PvP — shoot when it’s your turn."}
+            </p>
             <button type="button" onClick={goToPlaza} style={goldChipButtonStyle()}>
               Leave to plaza
             </button>

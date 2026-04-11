@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import {
@@ -23,6 +29,13 @@ import { HAT_CATALOG } from "@/lib/shop/hatCatalog";
 import type { FishId, HatId, PlayerShopInventory } from "@/lib/shop/playerInventory";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { VEHICLE_SHOP_CATALOG } from "@/lib/shop/vehicleCatalog";
+import {
+  fetchPlayerUsername,
+  mapUsernameRpcError,
+  savePlayerUsernameOnce,
+  validateUsernameInput,
+} from "@/lib/profile/playerUsername";
+import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
 
 const HAT_SHOP_EMOJI: Record<HatId, string> = {
   glassPyramid: "🔺",
@@ -116,6 +129,63 @@ export function ProfileModal({
     setEquippedHatId,
     setEquippedFishId,
   } = usePlayerShopInventory();
+
+  const [username, setUsername] = useState<string | null>(null);
+  const [usernameDraft, setUsernameDraft] = useState("");
+  const [usernameFetchDone, setUsernameFetchDone] = useState(false);
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setUsernameError(null);
+    setUsernameFetchDone(false);
+    void (async () => {
+      try {
+        await ensureSupabaseSession();
+        if (cancelled) return;
+        const u = await fetchPlayerUsername();
+        if (cancelled) return;
+        setUsername(u);
+        setUsernameDraft(u ?? "");
+      } catch (e) {
+        if (!cancelled) {
+          setUsernameError(
+            e instanceof Error ? e.message : "Could not load username."
+          );
+        }
+      } finally {
+        if (!cancelled) setUsernameFetchDone(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const onSaveUsername = useCallback(async () => {
+    setUsernameError(null);
+    const v = validateUsernameInput(usernameDraft);
+    if (v) {
+      setUsernameError(v);
+      return;
+    }
+    setUsernameSaving(true);
+    try {
+      await ensureSupabaseSession();
+      await savePlayerUsernameOnce(usernameDraft.trim());
+      const u = await fetchPlayerUsername();
+      setUsername(u);
+      setUsernameDraft(u ?? "");
+    } catch (e) {
+      const raw =
+        e instanceof Error && e.message ? e.message : "Could not save username.";
+      setUsernameError(mapUsernameRpcError(raw));
+    } finally {
+      setUsernameSaving(false);
+    }
+  }, [usernameDraft]);
 
   const powerupRows = useMemo<ProfileInvRow[]>(
     () => [
@@ -346,6 +416,105 @@ export function ProfileModal({
             </span>
           </span>
         </div>
+
+        <section style={{ marginBottom: 14 }}>
+          <h3
+            style={{
+              margin: "0 0 6px",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: hudColors.muted,
+            }}
+          >
+            Username
+          </h3>
+          <p
+            style={{
+              margin: "0 0 8px",
+              fontSize: 11,
+              fontWeight: 600,
+              color: hudColors.muted,
+              lineHeight: 1.4,
+            }}
+          >
+            Pick a unique name (letters, numbers, underscores). You can set it
+            once — it can&apos;t be changed later.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <input
+              type="text"
+              autoComplete="username"
+              spellCheck={false}
+              disabled={
+                !usernameFetchDone ||
+                usernameSaving ||
+                (username != null && username !== "")
+              }
+              value={usernameDraft}
+              onChange={(e) => setUsernameDraft(e.target.value)}
+              placeholder={
+                !usernameFetchDone ? "Loading…" : "e.g. cool_shot_42"
+              }
+              style={{
+                ...hudFont,
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "8px 10px",
+                borderRadius: 10,
+                border: "1px solid rgba(0, 114, 188, 0.22)",
+                fontSize: 14,
+                fontWeight: 600,
+                color: hudColors.value,
+                background: "rgba(255,255,255,0.92)",
+              }}
+            />
+            {username != null && username !== "" ? (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "rgba(0, 55, 95, 0.55)",
+                }}
+              >
+                Locked — username cannot be changed.
+              </p>
+            ) : (
+              <button
+                type="button"
+                disabled={
+                  !usernameFetchDone ||
+                  usernameSaving ||
+                  usernameDraft.trim().length < 2
+                }
+                onClick={() => void onSaveUsername()}
+                style={goldChipButtonStyle()}
+              >
+                {usernameSaving ? "Saving…" : "Save username"}
+              </button>
+            )}
+            {usernameError ? (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#b42318",
+                }}
+              >
+                {usernameError}
+              </p>
+            ) : null}
+          </div>
+        </section>
 
         <section style={{ marginBottom: 14 }}>
           <h3

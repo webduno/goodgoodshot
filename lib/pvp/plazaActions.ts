@@ -2,9 +2,13 @@
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export async function createPvpRoom(): Promise<string> {
+export async function createPvpRoom(
+  matchMode: "pvp" | "pve" = "pvp"
+): Promise<string> {
   const supabase = createSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc("create_pvp_room");
+  const { data, error } = await supabase.rpc("create_pvp_room", {
+    p_match_mode: matchMode,
+  });
   if (error) throw error;
   if (data == null || typeof data !== "string") {
     throw new Error("create_pvp_room returned no id");
@@ -25,6 +29,7 @@ export type OpenPvpRoomRow = {
   created_at: string;
   course_seed: number;
   status: string;
+  match_mode?: "pvp" | "pve";
 };
 
 export async function listOpenPvpRoomsToday(): Promise<OpenPvpRoomRow[]> {

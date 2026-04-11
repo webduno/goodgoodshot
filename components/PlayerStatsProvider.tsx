@@ -4,9 +4,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
+import {
+  hydratePlayerProgressFromServer,
+  registerPlayerProgressFlushListeners,
+  schedulePlayerProgressFlush,
+} from "@/lib/profile/playerProgressSync";
 import type { HoleCompletedPayload, PlayerStatsState } from "@/lib/playerStats/types";
 import {
   loadPlayerStats,
@@ -37,6 +43,24 @@ export function PlayerStatsProvider({
     loadPlayerStats()
   );
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const hydrated = await hydratePlayerProgressFromServer();
+        if (cancelled || !hydrated) return;
+        setStats(hydrated.mergedStats);
+      } catch (e) {
+        console.warn("hydratePlayerProgressFromServer", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => registerPlayerProgressFlushListeners(), []);
+
   const recordHoleCompleted = useCallback((payload: HoleCompletedPayload) => {
     setStats((prev) => {
       const next = mergeHoleCompleted(prev, payload);
@@ -49,6 +73,7 @@ export function PlayerStatsProvider({
     setStats((prev) => {
       const next = { ...prev, totalGoldCoins: prev.totalGoldCoins + 1 };
       savePlayerStats(next);
+      schedulePlayerProgressFlush();
       return next;
     });
   }, []);
@@ -59,6 +84,7 @@ export function PlayerStatsProvider({
     setStats((prev) => {
       const next = { ...prev, totalGoldCoins: prev.totalGoldCoins + n };
       savePlayerStats(next);
+      schedulePlayerProgressFlush();
       return next;
     });
   }, []);
@@ -70,6 +96,7 @@ export function PlayerStatsProvider({
       spent = true;
       const next = { ...prev, totalGoldCoins: prev.totalGoldCoins - 1 };
       savePlayerStats(next);
+      schedulePlayerProgressFlush();
       return next;
     });
     return spent;
@@ -84,6 +111,7 @@ export function PlayerStatsProvider({
       spent = true;
       const next = { ...prev, totalGoldCoins: prev.totalGoldCoins - n };
       savePlayerStats(next);
+      schedulePlayerProgressFlush();
       return next;
     });
     return spent;

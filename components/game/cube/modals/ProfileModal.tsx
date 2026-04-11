@@ -30,11 +30,19 @@ import type { FishId, HatId, PlayerShopInventory } from "@/lib/shop/playerInvent
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import { VEHICLE_SHOP_CATALOG } from "@/lib/shop/vehicleCatalog";
 import {
+  linkEmailAndPasswordToCurrentUser,
+  mapAuthPasswordError,
+  sessionUserNeedsEmailLink,
+  signInWithEmailPassword,
+} from "@/lib/profile/accountAuth";
+import { flushPlayerProgressToServer } from "@/lib/profile/playerProgressSync";
+import {
   fetchPlayerUsername,
   mapUsernameRpcError,
   savePlayerUsernameOnce,
   validateUsernameInput,
 } from "@/lib/profile/playerUsername";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
 
 const HAT_SHOP_EMOJI: Record<HatId, string> = {
@@ -136,15 +144,52 @@ export function ProfileModal({
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
 
+  const [authNeedsEmailLink, setAuthNeedsEmailLink] = useState(true);
+
+  const [pwFormOpen, setPwFormOpen] = useState(false);
+  const [pwEmail, setPwEmail] = useState("");
+  const [pwPassword, setPwPassword] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwSuccess, setPwSuccess] = useState<string | null>(null);
+
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginSaving, setLoginSaving] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const inputStyle: CSSProperties = {
+    ...hudFont,
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px solid rgba(0, 114, 188, 0.22)",
+    fontSize: 14,
+    fontWeight: 600,
+    color: hudColors.value,
+    background: "rgba(255,255,255,0.92)",
+  };
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     setUsernameError(null);
     setUsernameFetchDone(false);
+    setPwError(null);
+    setPwSuccess(null);
+    setPwFormOpen(false);
+    setLoginError(null);
     void (async () => {
       try {
         await ensureSupabaseSession();
         if (cancelled) return;
+        const supabase = createSupabaseBrowserClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!cancelled) setAuthNeedsEmailLink(sessionUserNeedsEmailLink(user));
         const u = await fetchPlayerUsername();
         if (cancelled) return;
         setUsername(u);
@@ -164,6 +209,63 @@ export function ProfileModal({
     };
   }, [open]);
 
+  const onCreatePassword = useCallback(async () => {
+    setPwError(null);
+    setPwSuccess(null);
+    const email = pwEmail.trim();
+    if (!email.includes("@") || email.length < 5) {
+      setPwError("Enter a valid email.");
+      return;
+    }
+    if (pwPassword.length < 6) {
+      setPwError("Password must be at least 6 characters.");
+      return;
+    }
+    if (pwPassword !== pwConfirm) {
+      setPwError("Passwords do not match.");
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await ensureSupabaseSession();
+      await linkEmailAndPasswordToCurrentUser(email, pwPassword);
+      setAuthNeedsEmailLink(false);
+      setPwSuccess(
+        "Check your email to confirm the link. After that you can sign in on other devices."
+      );
+    } catch (e) {
+      const raw =
+        e instanceof Error && e.message ? e.message : "Could not save password.";
+      setPwError(mapAuthPasswordError(raw));
+    } finally {
+      setPwSaving(false);
+    }
+  }, [pwEmail, pwPassword, pwConfirm]);
+
+  const onProfileLogin = useCallback(async () => {
+    setLoginError(null);
+    const email = loginEmail.trim();
+    if (!email.includes("@") || email.length < 5) {
+      setLoginError("Enter a valid email.");
+      return;
+    }
+    if (loginPassword.length < 1) {
+      setLoginError("Enter your password.");
+      return;
+    }
+    setLoginSaving(true);
+    try {
+      await signInWithEmailPassword(email, loginPassword);
+      window.location.reload();
+    } catch (e) {
+      const raw =
+        e instanceof Error && e.message ? e.message : "Could not sign in.";
+      setLoginError(mapAuthPasswordError(raw));
+    } finally {
+      setLoginSaving(false);
+    }
+  }, [loginEmail, loginPassword]);
+
   const onSaveUsername = useCallback(async () => {
     setUsernameError(null);
     const v = validateUsernameInput(usernameDraft);
@@ -178,6 +280,7 @@ export function ProfileModal({
       const u = await fetchPlayerUsername();
       setUsername(u);
       setUsernameDraft(u ?? "");
+      await flushPlayerProgressToServer();
     } catch (e) {
       const raw =
         e instanceof Error && e.message ? e.message : "Could not save username.";
@@ -463,30 +566,139 @@ export function ProfileModal({
               placeholder={
                 !usernameFetchDone ? "Loading…" : "e.g. cool_shot_42"
               }
-              style={{
-                ...hudFont,
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "8px 10px",
-                borderRadius: 10,
-                border: "1px solid rgba(0, 114, 188, 0.22)",
-                fontSize: 14,
-                fontWeight: 600,
-                color: hudColors.value,
-                background: "rgba(255,255,255,0.92)",
-              }}
+              style={inputStyle}
             />
             {username != null && username !== "" ? (
-              <p
+              <div
                 style={{
-                  margin: 0,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "rgba(0, 55, 95, 0.55)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
                 }}
               >
-                Locked — username cannot be changed.
-              </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "rgba(0, 55, 95, 0.55)",
+                  }}
+                >
+                  Locked — username cannot be changed.
+                </p>
+                {authNeedsEmailLink ? (
+                  <>
+                    {!pwSuccess && !pwFormOpen ? (
+                      <button
+                        type="button"
+                        disabled={!usernameFetchDone}
+                        onClick={() => {
+                          setPwFormOpen(true);
+                          setPwError(null);
+                        }}
+                        style={goldChipButtonStyle()}
+                      >
+                        Create password
+                      </button>
+                    ) : null}
+                    {pwFormOpen && !pwSuccess ? (
+                      <>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: hudColors.muted,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          Add an email and password so you can sign in on another
+                          device. Your password is stored only for sign-in (not in
+                          our game database).
+                        </p>
+                        <input
+                          type="email"
+                          autoComplete="email"
+                          spellCheck={false}
+                          disabled={pwSaving || !usernameFetchDone}
+                          value={pwEmail}
+                          onChange={(e) => setPwEmail(e.target.value)}
+                          placeholder="Email"
+                          style={inputStyle}
+                        />
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          disabled={pwSaving || !usernameFetchDone}
+                          value={pwPassword}
+                          onChange={(e) => setPwPassword(e.target.value)}
+                          placeholder="New password (min 6 characters)"
+                          style={inputStyle}
+                        />
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          disabled={pwSaving || !usernameFetchDone}
+                          value={pwConfirm}
+                          onChange={(e) => setPwConfirm(e.target.value)}
+                          placeholder="Confirm password"
+                          style={inputStyle}
+                        />
+                        <button
+                          type="button"
+                          disabled={
+                            pwSaving ||
+                            !usernameFetchDone ||
+                            pwEmail.trim().length < 5 ||
+                            pwPassword.length < 6
+                          }
+                          onClick={() => void onCreatePassword()}
+                          style={goldChipButtonStyle()}
+                        >
+                          {pwSaving ? "Saving…" : "Save password"}
+                        </button>
+                      </>
+                    ) : null}
+                    {pwError ? (
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#b42318",
+                        }}
+                      >
+                        {pwError}
+                      </p>
+                    ) : null}
+                    {pwSuccess ? (
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "#166534",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {pwSuccess}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: "rgba(0, 55, 95, 0.45)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    Use your email and password to sign in on other devices.
+                  </p>
+                )}
+              </div>
             ) : (
               <button
                 type="button"
@@ -1076,6 +1288,86 @@ export function ProfileModal({
             </div>
           )}
         </section>
+
+        {usernameFetchDone && (username == null || username === "") ? (
+          <section style={{ marginBottom: 14 }}>
+            <h3
+              style={{
+                margin: "0 0 6px",
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: hudColors.muted,
+              }}
+            >
+              Login
+            </h3>
+            <p
+              style={{
+                margin: "0 0 8px",
+                fontSize: 11,
+                fontWeight: 600,
+                color: hudColors.muted,
+                lineHeight: 1.4,
+              }}
+            >
+              Already have an account with a username? Sign in with the email and
+              password you set.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <input
+                type="email"
+                autoComplete="email"
+                spellCheck={false}
+                disabled={loginSaving}
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="Email"
+                style={inputStyle}
+              />
+              <input
+                type="password"
+                autoComplete="current-password"
+                disabled={loginSaving}
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="Password"
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                disabled={
+                  loginSaving ||
+                  loginEmail.trim().length < 5 ||
+                  loginPassword.length < 1
+                }
+                onClick={() => void onProfileLogin()}
+                style={goldChipButtonStyle()}
+              >
+                {loginSaving ? "Signing in…" : "Log in"}
+              </button>
+              {loginError ? (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#b42318",
+                  }}
+                >
+                  {loginError}
+                </p>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         <button
           type="button"

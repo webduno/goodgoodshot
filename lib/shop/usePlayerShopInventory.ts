@@ -16,6 +16,7 @@ import type {
   PlazaBirdId,
   PlayerShopInventory,
 } from "@/lib/shop/playerInventory";
+import { schedulePlayerProgressFlush } from "@/lib/profile/playerProgressSync";
 import {
   PLAYER_SHOP_INVENTORY_CHANGE_EVENT,
   PLAYER_SHOP_INVENTORY_KEY,
@@ -65,6 +66,7 @@ export function usePlayerShopInventory() {
       setInventoryState((prev) => {
         const next = fn(prev);
         savePlayerShopInventory(next);
+        schedulePlayerProgressFlush();
         return next;
       });
     },

@@ -8,6 +8,40 @@ export const PLAZA_WALKABLE_HALF = 40;
 /** Cardinal torus portals — inside the walkable edge so they sit nearer the hub center. */
 export const PLAZA_PORTAL_ORBIT = 32;
 
+/** Vibe Jam webring exit — east-northeast inside walkable (cardinals use ±32 on axes). */
+export const PLAZA_VIBE_JAM_PORTAL_EXIT_X = 30;
+export const PLAZA_VIBE_JAM_PORTAL_EXIT_Z = 22;
+
+/** Return portal (shown when `?portal=true` & `?ref=`) — southwest, mirrored. */
+export const PLAZA_VIBE_JAM_PORTAL_RETURN_X = -30;
+export const PLAZA_VIBE_JAM_PORTAL_RETURN_Z = -22;
+
+const VIBE_JAM_SPAWN_INWARD = 5;
+const VIBE_JAM_RETURN_LEN = Math.hypot(
+  -PLAZA_VIBE_JAM_PORTAL_RETURN_X,
+  -PLAZA_VIBE_JAM_PORTAL_RETURN_Z
+);
+
+/** Ball spawn just inside the return portal, toward the hub center. */
+export const PLAZA_VIBE_JAM_SPAWN_X =
+  PLAZA_VIBE_JAM_PORTAL_RETURN_X +
+  (-PLAZA_VIBE_JAM_PORTAL_RETURN_X / VIBE_JAM_RETURN_LEN) * VIBE_JAM_SPAWN_INWARD;
+export const PLAZA_VIBE_JAM_SPAWN_Z =
+  PLAZA_VIBE_JAM_PORTAL_RETURN_Z +
+  (-PLAZA_VIBE_JAM_PORTAL_RETURN_Z / VIBE_JAM_RETURN_LEN) * VIBE_JAM_SPAWN_INWARD;
+
+/** Same convention as other plaza torus portals: `rotationY = -atan2(px, pz)`. */
+export function plazaVibeJamExitRotationY(): number {
+  return -Math.atan2(PLAZA_VIBE_JAM_PORTAL_EXIT_X, PLAZA_VIBE_JAM_PORTAL_EXIT_Z);
+}
+
+export function plazaVibeJamReturnRotationY(): number {
+  return -Math.atan2(
+    PLAZA_VIBE_JAM_PORTAL_RETURN_X,
+    PLAZA_VIBE_JAM_PORTAL_RETURN_Z
+  );
+}
+
 /** Inner walkable turf — slightly more saturated than `FIELD_GROUND_MUTED_GREEN` (plain course). */
 export const PLAZA_HUB_TURF_GREEN = "#2cfb26";
 

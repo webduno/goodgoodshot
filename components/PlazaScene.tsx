@@ -90,7 +90,21 @@ import {
   PLAZA_HUB_ISLANDS,
   PLAZA_HUB_TURF_GREEN,
   PLAZA_PORTAL_ORBIT,
+  PLAZA_VIBE_JAM_PORTAL_EXIT_X,
+  PLAZA_VIBE_JAM_PORTAL_EXIT_Z,
+  PLAZA_VIBE_JAM_PORTAL_RETURN_X,
+  PLAZA_VIBE_JAM_PORTAL_RETURN_Z,
+  PLAZA_VIBE_JAM_SPAWN_X,
+  PLAZA_VIBE_JAM_SPAWN_Z,
+  plazaVibeJamExitRotationY,
+  plazaVibeJamReturnRotationY,
 } from "@/lib/game/plazaHub";
+import {
+  buildPlazaCanonicalRefUrl,
+  buildVibeJamExitUrl,
+  buildVibeJamReturnNavigationUrl,
+  rgbTupleToHex,
+} from "@/lib/game/vibeJamPortal";
 import {
   AQUARIUM_SHOP_ITEMS,
   FISH_SHOP_ITEMS,
@@ -202,7 +216,21 @@ export default function PlazaScene() {
 
   const [pvpLobbyBusy, setPvpLobbyBusy] = useState(false);
 
-  const [spawnCenter, setSpawnCenter] = useState<Vec3>(() => [0, 0, 0]);
+  const vibeJamPortalSpawn = useMemo((): Vec3 => {
+    if (
+      searchParams.get("portal") === "true" &&
+      searchParams.get("ref")
+    ) {
+      return snapBlockCenterToGrid([
+        PLAZA_VIBE_JAM_SPAWN_X,
+        0,
+        PLAZA_VIBE_JAM_SPAWN_Z,
+      ]) as Vec3;
+    }
+    return [0, 0, 0];
+  }, [searchParams]);
+
+  const [spawnCenter, setSpawnCenter] = useState<Vec3>(vibeJamPortalSpawn);
   const spawnCenterRef = useRef<Vec3>(spawnCenter);
   spawnCenterRef.current = spawnCenter;
   /** Spawn before the current shot (for penalty revert / hit row), matching main `CubeScene`. */
@@ -228,7 +256,23 @@ export default function PlazaScene() {
   const ballFollowStateRef = useRef({
     pos: new THREE.Vector3(),
     valid: false,
+    vx: 0,
+    vy: 0,
+    vz: 0,
   });
+
+  const vibeJamIncomingParamsRef = useRef<URLSearchParams | null>(null);
+  if (searchParams.get("portal") === "true") {
+    vibeJamIncomingParamsRef.current = new URLSearchParams(
+      searchParams.toString()
+    );
+  } else {
+    vibeJamIncomingParamsRef.current = null;
+  }
+
+  useEffect(() => {
+    setSpawnCenter(vibeJamPortalSpawn);
+  }, [vibeJamPortalSpawn]);
   const rendererStatsRef = useRef<RendererStatsSnapshot | null>(null);
   const [sessionShots, setSessionShots] = useState(0);
 
@@ -659,6 +703,52 @@ export default function PlazaScene() {
     startWarSessionAndRedirectHome(5, "random");
   }, []);
 
+  const cameFromVibePortal = useMemo(
+    () =>
+      searchParams.get("portal") === "true" &&
+      Boolean(searchParams.get("ref")),
+    [searchParams]
+  );
+
+  const onVibeJamExitPortalEnter = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const st = ballFollowStateRef.current;
+    const speed = st.valid ? Math.hypot(st.vx, st.vy, st.vz) : 0;
+    const refUrl = buildPlazaCanonicalRefUrl({
+      origin: window.location.origin,
+      pathname: window.location.pathname,
+      vehicleId: searchParams.get("vehicle"),
+    });
+    const url = buildVibeJamExitUrl({
+      username: playerVehicle.name.slice(0, 64),
+      colorHex: rgbTupleToHex(
+        playerVehicle.mainRgb[0],
+        playerVehicle.mainRgb[1],
+        playerVehicle.mainRgb[2]
+      ),
+      speedMps: speed,
+      refUrl,
+    });
+    window.location.href = url;
+  }, [playerVehicle, searchParams]);
+
+  const onVibeJamReturnPortalEnter = useCallback(() => {
+    const ref = searchParams.get("ref");
+    if (!ref || typeof window === "undefined") return;
+    const currentGameRefUrl = buildPlazaCanonicalRefUrl({
+      origin: window.location.origin,
+      pathname: window.location.pathname,
+      vehicleId: searchParams.get("vehicle"),
+    });
+    const url = buildVibeJamReturnNavigationUrl({
+      previousGameRef: ref,
+      incomingParams: vibeJamIncomingParamsRef.current ?? new URLSearchParams(),
+      currentGameRefUrl,
+      baseOrigin: window.location.origin,
+    });
+    if (url) window.location.href = url;
+  }, [searchParams]);
+
   const onProjectileEnd = useCallback(
     (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
       setShotInFlight(false);
@@ -1085,6 +1175,26 @@ export default function PlazaScene() {
           shotInFlight={shotInFlight}
           onBallEnter={onFiveBattlePortalEnter}
         />
+        <PlazaPortalTorus
+          worldX={PLAZA_VIBE_JAM_PORTAL_EXIT_X}
+          worldZ={PLAZA_VIBE_JAM_PORTAL_EXIT_Z}
+          rotationY={plazaVibeJamExitRotationY()}
+          label="Vibe Jam Portal"
+          ballFollowStateRef={ballFollowStateRef}
+          shotInFlight={shotInFlight}
+          onBallEnter={onVibeJamExitPortalEnter}
+        />
+        {cameFromVibePortal ? (
+          <PlazaPortalTorus
+            worldX={PLAZA_VIBE_JAM_PORTAL_RETURN_X}
+            worldZ={PLAZA_VIBE_JAM_PORTAL_RETURN_Z}
+            rotationY={plazaVibeJamReturnRotationY()}
+            label="Vibe Jam Return"
+            ballFollowStateRef={ballFollowStateRef}
+            shotInFlight={shotInFlight}
+            onBallEnter={onVibeJamReturnPortalEnter}
+          />
+        ) : null}
         <RetroTvPostFx enabled={retroTvEnabled} />
         <RendererStatsCollector statsRef={rendererStatsRef} />
       </Canvas>

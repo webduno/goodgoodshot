@@ -56,6 +56,10 @@ export function SpawnVisualGroup({ children }: { children: ReactNode }) {
 export type BallFollowStateRef = MutableRefObject<{
   pos: THREE.Vector3;
   valid: boolean;
+  /** Projectile velocity (world units/s) while the ball is in flight. */
+  vx: number;
+  vy: number;
+  vz: number;
 }>;
 
 export function TeleportOrbitRig({

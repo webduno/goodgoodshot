@@ -188,6 +188,9 @@ export default function CubeScene() {
   const ballFollowStateRef = useRef({
     pos: new THREE.Vector3(),
     valid: false,
+    vx: 0,
+    vy: 0,
+    vz: 0,
   });
   const rendererStatsRef = useRef<RendererStatsSnapshot | null>(null);
   const [sessionShots, setSessionShots] = useState(0);

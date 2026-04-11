@@ -661,8 +661,14 @@ export function SceneContent({
     if (mesh && p) {
       st.pos.copy(mesh.position);
       st.valid = true;
+      st.vx = p.vx;
+      st.vy = p.vy;
+      st.vz = p.vz;
     } else {
       st.valid = false;
+      st.vx = 0;
+      st.vy = 0;
+      st.vz = 0;
     }
 
     if (enemyLossSinkActiveRef.current) {

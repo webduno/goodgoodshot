@@ -113,6 +113,7 @@ import {
   wrapYawRad,
 } from "@/lib/game/math";
 import { stepWind } from "@/lib/game/wind";
+import { stopBgm } from "@/lib/sfx/bgMusicPlayer";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { parCoinCountForIslands } from "@/lib/game/path";
 import { SESSION_SKIP_START_MODAL_KEY } from "@/lib/game/startWarSession";
@@ -344,6 +345,10 @@ export default function CubeScene() {
       setShowCourseMapModal(false);
     }
   }, [showFinishModal, showStartGameModal, showSessionEndModal]);
+
+  useEffect(() => {
+    if (!showStartGameModal) stopBgm();
+  }, [showStartGameModal]);
 
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);
   const [hudToastToken, setHudToastToken] = useState(0);

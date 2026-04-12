@@ -45,6 +45,7 @@ import {
 } from "@/lib/pvp/plazaActions";
 import { schedulePvpNavigateWithReload } from "@/lib/pvp/pvpNavigate";
 import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
+import { BGM, startBgmLoop, stopBgm } from "@/lib/sfx/bgMusicPlayer";
 
 const BATTLE_OPTIONS: SessionBattleCount[] = [3, 5, 9];
 
@@ -125,6 +126,39 @@ const startModalShell: CSSProperties = {
     "radial-gradient(ellipse 55% 45% at 4% 96%, rgba(0, 230, 255, 0.14) 0%, transparent 52%)",
     "linear-gradient(162deg, rgba(255,255,255,0.97) 0%, rgba(220, 248, 255, 0.93) 40%, rgba(150, 225, 255, 0.88) 100%)",
   ].join(", "),
+};
+
+/** Glassy cyan orb — same look as the top-right “i” help bubble. */
+const startModalBubbleOrbStyle: CSSProperties = {
+  width: 48,
+  height: 48,
+  borderRadius: "50%",
+  cursor: "pointer",
+  padding: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 3,
+  background:
+    "radial-gradient(circle at 38% 30%, rgba(255,255,255,0.98) 0%, rgba(140, 235, 255, 0.78) 40%, rgba(0, 175, 225, 0.55) 100%)",
+  border: "1px solid rgba(255,255,255,0.92)",
+  boxShadow:
+    "inset 0 2px 0 rgba(255,255,255,0.75), 0 6px 18px rgba(0, 82, 130, 0.32)",
+  ...hudFont,
+};
+
+const startModalHelpBubblePosition: CSSProperties = {
+  position: "absolute",
+  top: 8,
+  right: 12,
+  transform: "translate(36%, -40%)",
+};
+
+const startModalMusicBubblePosition: CSSProperties = {
+  position: "absolute",
+  bottom: 8,
+  right: 12,
+  transform: "translate(36%, 40%)",
 };
 
 /** Bottom CTAs: anchor to wrapper bottom, then `translateY(50%)` to straddle the rim. */
@@ -766,6 +800,18 @@ export function StartGameModal({
     useState<WelcomeStartMode>(null);
   const [pvpLobbyBusy, setPvpLobbyBusy] = useState(false);
   const [pvpLobbyError, setPvpLobbyError] = useState<string | null>(null);
+  const [welcomeBgmOn, setWelcomeBgmOn] = useState(false);
+
+  const toggleWelcomeBgm = useCallback(() => {
+    setWelcomeBgmOn((prev) => {
+      if (!prev) {
+        startBgmLoop(BGM.welcome);
+        return true;
+      }
+      stopBgm();
+      return false;
+    });
+  }, []);
 
   const setVehicleInUrl = useCallback(
     (vehicleId: string) => {
@@ -887,6 +933,7 @@ export function StartGameModal({
       setBiomeChoice("random");
       setWelcomeStartMode(null);
       setPvpLobbyError(null);
+      setWelcomeBgmOn(false);
     }
   }, [open]);
 
@@ -937,6 +984,9 @@ export function StartGameModal({
   })();
 
   const showStandardWarPick = !isFirstVisitWelcome || gameConfigOpen;
+
+  const showWelcomeMusicBubble =
+    !inProgress && !gameConfigOpen && welcomeStartMode === null;
 
   const rulesPanelContinue: CSSProperties = {
     ...rulesPanel,
@@ -1031,25 +1081,8 @@ export function StartGameModal({
             aria-label="How to play"
             onClick={onOpenHelp}
             style={{
-              position: "absolute",
-              top: 8,
-              right: 12,
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              zIndex: 3,
-              cursor: "pointer",
-              padding: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transform: "translate(36%, -40%)",
-              background:
-                "radial-gradient(circle at 38% 30%, rgba(255,255,255,0.98) 0%, rgba(140, 235, 255, 0.78) 40%, rgba(0, 175, 225, 0.55) 100%)",
-              border: "1px solid rgba(255,255,255,0.92)",
-              boxShadow:
-                "inset 0 2px 0 rgba(255,255,255,0.75), 0 6px 18px rgba(0, 82, 130, 0.32)",
-              ...hudFont,
+              ...startModalBubbleOrbStyle,
+              ...startModalHelpBubblePosition,
             }}
           >
             <span
@@ -1064,6 +1097,51 @@ export function StartGameModal({
             >
               i
             </span>
+          </button>
+        ) : null}
+        {showWelcomeMusicBubble ? (
+          <button
+            type="button"
+            aria-label={welcomeBgmOn ? "Pause music" : "Play music"}
+            title={welcomeBgmOn ? "Pause music" : "Play music"}
+            onClick={toggleWelcomeBgm}
+            style={{
+              ...startModalBubbleOrbStyle,
+              ...startModalMusicBubblePosition,
+              color: hudColors.value,
+            }}
+          >
+            {welcomeBgmOn ? (
+              <svg
+                width={18}
+                height={18}
+                viewBox="0 0 24 24"
+                aria-hidden
+                style={{
+                  display: "block",
+                  filter: "drop-shadow(0 1px 0 rgba(255,255,255,0.85))",
+                }}
+              >
+                <path
+                  fill="currentColor"
+                  d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"
+                />
+              </svg>
+            ) : (
+              <svg
+                width={20}
+                height={20}
+                viewBox="0 0 24 24"
+                aria-hidden
+                style={{
+                  display: "block",
+                  marginLeft: 3,
+                  filter: "drop-shadow(0 1px 0 rgba(255,255,255,0.85))",
+                }}
+              >
+                <path fill="currentColor" d="M8 5v14l11-7z" />
+              </svg>
+            )}
           </button>
         ) : null}
         <div style={{ position: "relative", zIndex: 1 }}>

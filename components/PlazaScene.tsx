@@ -148,6 +148,7 @@ import {
 } from "@/lib/pvp/pvpNavigate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
+import { BGM, startBgmLoop, stopBgm } from "@/lib/sfx/bgMusicPlayer";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { type PowerupSlotId, type Vec3 } from "@/lib/game/types";
 import { Canvas } from "@react-three/fiber";
@@ -294,6 +295,11 @@ export default function PlazaScene() {
     if (!path) return;
     sessionStorage.removeItem(PVP_PENDING_NAV_SESSION_KEY);
     window.location.replace(path);
+  }, []);
+
+  useEffect(() => {
+    startBgmLoop(BGM.plaza);
+    return () => stopBgm();
   }, []);
 
   const [showPowerupMenu, setShowPowerupMenu] = useState(false);

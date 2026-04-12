@@ -1,12 +1,13 @@
 "use client";
 
 import { Html } from "@react-three/drei";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Mesh } from "three";
 
 import { TURF_TOP_Y } from "@/lib/game/constants";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
-import type { PvpPlayerRatingRow } from "@/lib/pvp/types";
+import type { PvpLeaderboardTopRow } from "@/lib/pvp/types";
 
 /** Pedestal on the hub turf — clear of default spawn (0,0) and cardinal portals (±32). */
 const PLAZA_LEADERBOARD_X = 10;
@@ -23,8 +24,16 @@ function shortId(userId: string): string {
  * Marble-style cube with an HTML panel listing top PvP Elo (from `pvp_player_ratings`).
  */
 export function PlazaPvpLeaderboard() {
-  const [rows, setRows] = useState<PvpPlayerRatingRow[] | null>(null);
+  const cubeMeshRef = useRef<Mesh>(null);
+  const [rows, setRows] = useState<PvpLeaderboardTopRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /** Let `Html` occlusion rays pass through this mesh — otherwise the cube face always “wins” vs the panel anchor. */
+  useLayoutEffect(() => {
+    const m = cubeMeshRef.current;
+    if (!m) return;
+    m.raycast = () => {};
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +50,15 @@ export function PlazaPvpLeaderboard() {
         return;
       }
       const supabase = createSupabaseBrowserClient();
+      const { data: rpcData, error: rpcErr } = await supabase.rpc(
+        "pvp_leaderboard_top",
+        { p_limit: 8 }
+      );
+      if (!cancelled && !rpcErr && rpcData != null) {
+        setRows(rpcData as PvpLeaderboardTopRow[]);
+        setError(null);
+        return;
+      }
       const { data, error: qErr } = await supabase
         .from("pvp_player_ratings")
         .select("user_id, elo, matches_played, wins, losses, updated_at")
@@ -52,7 +70,8 @@ export function PlazaPvpLeaderboard() {
         setRows([]);
         return;
       }
-      setRows((data ?? []) as PvpPlayerRatingRow[]);
+      const base = (data ?? []) as PvpLeaderboardTopRow[];
+      setRows(base.map((r) => ({ ...r, username: null })));
       setError(null);
     })();
     return () => {
@@ -61,8 +80,11 @@ export function PlazaPvpLeaderboard() {
   }, []);
 
   const cubeH = 1.4;
-  const cubeHalfY = cubeH / 2;
+  const cubeHalf = cubeH / 2;
+  const cubeHalfY = cubeHalf;
   const y = TURF_TOP_Y + cubeHalfY;
+  /** Flush HTML on the +Z face (single visible side of the cube). */
+  const faceZ = cubeHalf + 0.004;
 
   const panel = (() => {
     if (rows === null) {
@@ -93,7 +115,9 @@ export function PlazaPvpLeaderboard() {
             <span style={{ fontWeight: 800, marginRight: 4 }}>{i + 1}.</span>
             <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.elo}</span>
             <span style={{ opacity: 0.72, marginLeft: 6 }}>
-              {shortId(r.user_id)}
+              {r.username != null && r.username !== ""
+                ? r.username
+                : shortId(r.user_id)}
             </span>
           </li>
         ))}
@@ -103,7 +127,7 @@ export function PlazaPvpLeaderboard() {
 
   return (
     <group position={[PLAZA_LEADERBOARD_X, y, PLAZA_LEADERBOARD_Z]}>
-      <mesh castShadow receiveShadow>
+      <mesh ref={cubeMeshRef} castShadow receiveShadow>
         <boxGeometry args={[1.4, cubeH, 1.4]} />
         <meshStandardMaterial
           color="#818cf8"
@@ -111,9 +135,12 @@ export function PlazaPvpLeaderboard() {
           metalness={0.18}
         />
       </mesh>
+      {/* transform Html: scale ~ 400/distanceFactor — avoid large values (e.g. 300) or the panel fills the screen */}
       <Html
-        position={[0, cubeHalfY + 0.42, 0]}
-        center
+        transform
+        occlude
+        position={[0, 0, faceZ]}
+        rotation={[0, 0, 0]}
         distanceFactor={9}
         zIndexRange={HTML_Z_INDEX_RANGE}
         style={{ pointerEvents: "none", userSelect: "none" }}

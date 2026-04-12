@@ -38,6 +38,11 @@ export type PvpPlayerRatingRow = {
   updated_at: string;
 };
 
+/** `pvp_leaderboard_top` RPC: ratings plus optional public username. */
+export type PvpLeaderboardTopRow = PvpPlayerRatingRow & {
+  username: string | null;
+};
+
 /** One finished match: per-player stats + Elo before/after (for leaderboards / history). */
 export type PvpMatchResultRow = {
   id: string;

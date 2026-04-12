@@ -17,6 +17,7 @@ import {
   plazaPvpDockButtonStyle,
   POWERUP_SLOT_ACCENT,
 } from "@/components/gameHudStyles";
+import { BiomeChoiceBadgeList } from "@/components/game/cube/modals/BiomeChoiceBadgeList";
 import { PvpOpenRoomsList } from "@/components/game/cube/modals/PvpOpenRoomsList";
 import {
   PREDETERMINED_VEHICLES,
@@ -1585,91 +1586,11 @@ export function StartGameModal({
                     desert, forest, snow, sea, and ice independently for each
                     battle; a fixed choice uses that biome for every battle.
                   </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      flexWrap: "wrap",
-                      gap: 6,
-                      alignItems: "center",
-                    }}
-                  >
-                    {(
-                      [
-                        {
-                          id: "random" as const,
-                          emoji: "🎲",
-                          label: "Random (each battle)",
-                        },
-                        { id: "plain" as const, emoji: "⛳", label: "Plain" },
-                        { id: "desert" as const, emoji: "🏜️", label: "Desert" },
-                        { id: "forest" as const, emoji: "🌲", label: "Forest" },
-                        { id: "snow" as const, emoji: "❄️", label: "Snow" },
-                        { id: "sea" as const, emoji: "🌊", label: "Sea" },
-                        { id: "ice" as const, emoji: "🧊", label: "Ice" },
-                      ] as const
-                    ).map((opt) => {
-                      const selected = biomeChoice === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setBiomeChoice(opt.id)}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "6px 12px",
-                            borderRadius: 9999,
-                            border: selected
-                              ? "2px solid #0072bc"
-                              : "1px solid rgba(0, 114, 188, 0.18)",
-                            background: selected
-                              ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(210, 240, 255, 0.55) 100%)"
-                              : "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(230, 248, 255, 0.35) 100%)",
-                            cursor: "pointer",
-                            textAlign: "center",
-                            maxWidth: "100%",
-                            ...hudFont,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 13,
-                              lineHeight: 1,
-                              flexShrink: 0,
-                            }}
-                            aria-hidden
-                          >
-                            {opt.emoji}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 11.5,
-                              fontWeight: 700,
-                              color: hudColors.value,
-                              lineHeight: 1.25,
-                            }}
-                          >
-                            {opt.label}
-                          </span>
-                          {selected ? (
-                            <span
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 800,
-                                color: hudColors.accent,
-                                flexShrink: 0,
-                              }}
-                              aria-hidden
-                            >
-                              ✓
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <BiomeChoiceBadgeList
+                    value={biomeChoice}
+                    onChange={setBiomeChoice}
+                    labelMode="newSession"
+                  />
                 </div>
               )}
 

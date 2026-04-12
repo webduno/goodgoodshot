@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { BiomeChoiceBadgeList } from "@/components/game/cube/modals/BiomeChoiceBadgeList";
 import {
   goldChipButtonStyle,
   helpModalCard,
@@ -103,19 +104,6 @@ const multiplayerPickModeHoverCss = `
     filter: brightness(1.04);
   }
 `;
-
-const BIOME_OPTIONS: readonly {
-  id: SessionBiomeChoice;
-  label: string;
-}[] = [
-  { id: "random", label: "Random" },
-  { id: "plain", label: "Plain" },
-  { id: "desert", label: "Desert" },
-  { id: "forest", label: "Forest" },
-  { id: "snow", label: "Snow" },
-  { id: "sea", label: "Sea" },
-  { id: "ice", label: "Ice" },
-];
 
 type Step = "main" | "pickMode" | "pickBiome";
 
@@ -708,67 +696,12 @@ export function MultiplayerModal({
             >
               Fairway
             </p>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 5,
-                marginBottom: 14,
-                maxHeight: "min(36vh, 200px)",
-                overflowY: "auto",
-                paddingRight: 2,
-              }}
-            >
-              {BIOME_OPTIONS.map((opt) => {
-                const selected = biomeChoice === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setBiomeChoice(opt.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "6px 8px",
-                      borderRadius: 10,
-                      border: selected
-                        ? "2px solid #0072bc"
-                        : "1px solid rgba(0, 114, 188, 0.18)",
-                      background: selected
-                        ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(210, 240, 255, 0.55) 100%)"
-                        : "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(230, 248, 255, 0.35) 100%)",
-                      cursor: busy ? "not-allowed" : "pointer",
-                      textAlign: "left",
-                      ...hudFont,
-                    }}
-                  >
-                    <span
-                      style={{
-                        flex: 1,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: hudColors.value,
-                      }}
-                    >
-                      {opt.label}
-                    </span>
-                    {selected ? (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 800,
-                          color: hudColors.accent,
-                        }}
-                        aria-hidden
-                      >
-                        ✓
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
+            <div style={{ marginBottom: 14 }}>
+              <BiomeChoiceBadgeList
+                value={biomeChoice}
+                onChange={setBiomeChoice}
+                disabled={busy}
+              />
             </div>
             <button
               type="button"

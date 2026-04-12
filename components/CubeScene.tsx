@@ -347,8 +347,12 @@ export default function CubeScene() {
   }, [showFinishModal, showStartGameModal, showSessionEndModal]);
 
   useEffect(() => {
-    if (showStartGameModal || showSessionEndModal) {
+    if (showSessionEndModal) {
       stopBgm();
+      return;
+    }
+    /** Welcome screen starts its own loop in `StartGameModal`; do not `stopBgm` here or parent effect runs after child and cancels autoplay. */
+    if (showStartGameModal) {
       return;
     }
     if (showFinishModal) {

@@ -3,8 +3,16 @@
  * Separate from `playSfx` / `sfxPlayer.ts` so SFX never replaces or stops BGM.
  */
 
+import {
+  loadBgmUserEnabled,
+  persistBgmUserEnabled,
+} from "@/lib/game/bgmPrefSettings";
+
 let bgmEl: HTMLAudioElement | null = null;
 let currentSrc: string | null = null;
+
+type BgmParams = { src: string; volume: number; loop: boolean };
+let lastBgmParams: BgmParams | null = null;
 
 function getBgmEl(): HTMLAudioElement {
   if (!bgmEl) {
@@ -26,20 +34,52 @@ export const BGM = {
   battleWin: "/sfx/bg/gg5.mp3",
 } as const;
 
-export function startBgmLoop(src: string, volume = 1, loop = true): void {
-  if (typeof window === "undefined") return;
+/** Resolves `true` if playback started (or was already playing this source). */
+export function startBgmLoop(
+  src: string,
+  volume = 1,
+  loop = true
+): Promise<boolean> {
+  lastBgmParams = { src, volume, loop };
+  if (!loadBgmUserEnabled()) return Promise.resolve(false);
+  if (typeof window === "undefined") return Promise.resolve(false);
   try {
     const a = getBgmEl();
     a.loop = loop;
     a.volume = Math.max(0, Math.min(1, volume));
-    if (currentSrc === src && !a.paused) return;
+    if (currentSrc === src && !a.paused) return Promise.resolve(true);
     a.pause();
     a.currentTime = 0;
     a.src = src;
     currentSrc = src;
-    void a.play().catch(() => {});
+    return a.play().then(() => true).catch(() => false);
   } catch {
-    // ignore (e.g. autoplay policy)
+    return Promise.resolve(false);
+  }
+}
+
+export function hasLastBgmTrack(): boolean {
+  return lastBgmParams !== null;
+}
+
+/** Restarts the last track requested via `startBgmLoop` (after user turns music on). */
+export function resumeBgm(): Promise<boolean> {
+  if (!lastBgmParams) return Promise.resolve(false);
+  persistBgmUserEnabled(true);
+  return startBgmLoop(
+    lastBgmParams.src,
+    lastBgmParams.volume,
+    lastBgmParams.loop
+  );
+}
+
+export function isBgmPlaying(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const a = getBgmEl();
+    return !a.paused && Boolean(currentSrc);
+  } catch {
+    return false;
   }
 }
 
@@ -53,4 +93,10 @@ export function stopBgm(): void {
   } catch {
     // ignore
   }
+}
+
+/** Stops playback and remembers the preference so scenes do not auto-start BGM. */
+export function stopBgmForUser(): void {
+  persistBgmUserEnabled(false);
+  stopBgm();
 }

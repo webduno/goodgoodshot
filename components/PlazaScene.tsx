@@ -1721,6 +1721,7 @@ export default function PlazaScene() {
       <MultiplayerModal
         open={showMultiplayerModal}
         onClose={() => setShowMultiplayerModal(false)}
+        onOpenHelp={() => setShowHelpModal(true)}
         busy={pvpLobbyBusy}
         onCreatePvp={(biomeChoice) => {
           setShowMultiplayerModal(false);

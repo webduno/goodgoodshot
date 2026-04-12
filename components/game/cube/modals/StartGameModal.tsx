@@ -46,6 +46,7 @@ import {
 import { schedulePvpNavigateWithReload } from "@/lib/pvp/pvpNavigate";
 import { ensureSupabaseSession } from "@/lib/supabase/ensureSession";
 import { BGM, startBgmLoop, stopBgm } from "@/lib/sfx/bgMusicPlayer";
+import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 
 const BATTLE_OPTIONS: SessionBattleCount[] = [3, 5, 9];
 
@@ -97,6 +98,60 @@ const battleLengthButtonCss = `
     }
   }
 `;
+
+/** Welcome mode tiles: lift + tilt + glow (mirrors war-length pill motion). */
+const welcomeModeTileCss = `
+  .ggsWelcomeModeTile {
+    transition: transform 0.22s cubic-bezier(0.34, 1.45, 0.64, 1),
+      box-shadow 0.22s ease,
+      filter 0.22s ease;
+    will-change: transform;
+  }
+  .ggsWelcomeModeTile:disabled {
+    transition: none;
+  }
+  .ggsWelcomeModeTileSingle:not(:disabled):hover {
+    transform: translate(-4px, -7px) rotate(-2.2deg) scale(1.05);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.72),
+      0 12px 26px rgba(0, 82, 130, 0.42),
+      0 0 0 1px rgba(255, 255, 255, 0.55) !important;
+    filter: brightness(1.08) saturate(1.08);
+  }
+  .ggsWelcomeModeTileMulti:not(:disabled):hover {
+    transform: translate(4px, -7px) rotate(2.2deg) scale(1.05);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.72),
+      0 14px 30px rgba(88, 28, 135, 0.48),
+      0 0 0 1px rgba(255, 255, 255, 0.55) !important;
+    filter: brightness(1.08) saturate(1.1);
+  }
+  .ggsWelcomeModeTileSingle:not(:disabled):active {
+    transition-duration: 0.08s;
+    transform: translate(-1px, -2px) rotate(-0.5deg) scale(1.02);
+    filter: brightness(0.98);
+  }
+  .ggsWelcomeModeTileMulti:not(:disabled):active {
+    transition-duration: 0.08s;
+    transform: translate(1px, -2px) rotate(0.5deg) scale(1.02);
+    filter: brightness(0.98);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ggsWelcomeModeTile {
+      transition: filter 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ggsWelcomeModeTileSingle:not(:disabled):hover,
+    .ggsWelcomeModeTileMulti:not(:disabled):hover {
+      transform: none;
+    }
+    .ggsWelcomeModeTileSingle:not(:disabled):hover,
+    .ggsWelcomeModeTileMulti:not(:disabled):hover {
+      filter: brightness(1.05);
+    }
+  }
+`;
+
+const startModalScopedCss = battleLengthButtonCss + welcomeModeTileCss;
 
 /** Frutiger Aero: soft glass, specular bands, asymmetric “bubble” corners (not a plain square). */
 const startModalShell: CSSProperties = {
@@ -378,8 +433,12 @@ function WelcomeModeFlow({
         >
           <button
             type="button"
+            className="ggsWelcomeModeTile ggsWelcomeModeTileSingle"
             disabled={pvpLobbyBusy}
             onClick={() => onModeChange("single")}
+            onMouseEnter={() => {
+              if (!pvpLobbyBusy) playSfx(SFX.passbip);
+            }}
             style={modeTileBtn()}
           >
             <span
@@ -406,8 +465,12 @@ function WelcomeModeFlow({
           </button>
           <button
             type="button"
+            className="ggsWelcomeModeTile ggsWelcomeModeTileMulti"
             disabled={pvpLobbyBusy}
             onClick={() => onModeChange("multi")}
+            onMouseEnter={() => {
+              if (!pvpLobbyBusy) playSfx(SFX.passbip);
+            }}
             style={modeTileBtnMultiplayer()}
           >
             <span
@@ -439,9 +502,17 @@ function WelcomeModeFlow({
           <button
             type="button"
             onClick={goToPlaza}
-            style={plazaHubButtonStyle({
-              variant: "chip",
-            })}
+            onMouseEnter={() => playSfx(SFX.passbip)}
+            style={{
+              ...plazaHubButtonStyle({
+                variant: "chip",
+              }),
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              gap: 6,
+            }}
           >
             {plazaButtonLabel}
           </button>
@@ -531,10 +602,17 @@ function WelcomeModeFlow({
         <button
           type="button"
           onClick={goToPlaza}
-          style={plazaHubButtonStyle({
-            variant: "full",
-            fullWidth: true,
-          })}
+          onMouseEnter={() => playSfx(SFX.passbip)}
+          style={{
+            ...plazaHubButtonStyle({
+              variant: "full",
+              fullWidth: true,
+            }),
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
         >
           {plazaButtonLabel}
         </button>
@@ -647,10 +725,17 @@ function WelcomeModeFlow({
       <button
         type="button"
         onClick={goToPlaza}
-        style={plazaHubButtonStyle({
-          variant: "full",
-          fullWidth: true,
-        })}
+        onMouseEnter={() => playSfx(SFX.passbip)}
+        style={{
+          ...plazaHubButtonStyle({
+            variant: "full",
+            fullWidth: true,
+          }),
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}
       >
         {plazaButtonLabel}
       </button>
@@ -802,10 +887,23 @@ export function StartGameModal({
   const [pvpLobbyError, setPvpLobbyError] = useState<string | null>(null);
   const [welcomeBgmOn, setWelcomeBgmOn] = useState(false);
 
+  const roundsDone =
+    session !== null ? session.battlesWon + session.battlesLost : 0;
+  const inProgress =
+    session !== null && roundsDone < session.targetBattles;
+  const welcomeLandingAutoplay =
+    open &&
+    sessionReady &&
+    !inProgress &&
+    !gameConfigOpen &&
+    welcomeStartMode === null;
+
   const toggleWelcomeBgm = useCallback(() => {
     setWelcomeBgmOn((prev) => {
       if (!prev) {
-        startBgmLoop(BGM.welcome);
+        void startBgmLoop(BGM.welcome).then((ok) => {
+          if (!ok) setWelcomeBgmOn(false);
+        });
         return true;
       }
       stopBgm();
@@ -941,6 +1039,17 @@ export function StartGameModal({
     setPvpLobbyError(null);
   }, [welcomeStartMode]);
 
+  useEffect(() => {
+    if (!welcomeLandingAutoplay) return;
+    let cancelled = false;
+    void startBgmLoop(BGM.welcome).then((ok) => {
+      if (!cancelled && ok) setWelcomeBgmOn(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [welcomeLandingAutoplay]);
+
   if (!open) return null;
 
   if (!sessionReady) {
@@ -968,10 +1077,6 @@ export function StartGameModal({
     );
   }
 
-  const roundsDone =
-    session !== null ? session.battlesWon + session.battlesLost : 0;
-  const inProgress =
-    session !== null && roundsDone < session.targetBattles;
   const hasStartedBattles = roundsDone > 0;
 
   const isFirstVisitWelcome =
@@ -1080,6 +1185,7 @@ export function StartGameModal({
             type="button"
             aria-label="How to play"
             onClick={onOpenHelp}
+            onMouseEnter={() => playSfx(SFX.bop)}
             style={{
               ...startModalBubbleOrbStyle,
               ...startModalHelpBubblePosition,
@@ -1105,6 +1211,7 @@ export function StartGameModal({
             aria-label={welcomeBgmOn ? "Pause music" : "Play music"}
             title={welcomeBgmOn ? "Pause music" : "Play music"}
             onClick={toggleWelcomeBgm}
+            onMouseEnter={() => playSfx(SFX.bop)}
             style={{
               ...startModalBubbleOrbStyle,
               ...startModalMusicBubblePosition,
@@ -1145,7 +1252,7 @@ export function StartGameModal({
           </button>
         ) : null}
         <div style={{ position: "relative", zIndex: 1 }}>
-        <style dangerouslySetInnerHTML={{ __html: battleLengthButtonCss }} />
+        <style dangerouslySetInnerHTML={{ __html: startModalScopedCss }} />
         <div
           style={{
             marginBottom: 14,
@@ -1407,7 +1514,7 @@ export function StartGameModal({
                     onQuickPlay={onPvpQuickPlay}
                     onJoinRoom={onJoinRoomFromList}
                     goToPlaza={goToPlaza}
-                    plazaButtonLabel="Tutorial plaza"
+                    plazaButtonLabel="📚 Tutorial / Plaza 🌳"
                   />
                 </div>
               ) : (
@@ -1481,19 +1588,25 @@ export function StartGameModal({
                   <div
                     style={{
                       display: "flex",
-                      flexDirection: "column",
+                      flexDirection: "row",
+                      flexWrap: "wrap",
                       gap: 6,
+                      alignItems: "center",
                     }}
                   >
                     {(
                       [
-                        { id: "random" as const, label: "Random (each battle)" },
-                        { id: "plain" as const, label: "Plain" },
-                        { id: "desert" as const, label: "Desert" },
-                        { id: "forest" as const, label: "Forest" },
-                        { id: "snow" as const, label: "Snow" },
-                        { id: "sea" as const, label: "Sea" },
-                        { id: "ice" as const, label: "Ice" },
+                        {
+                          id: "random" as const,
+                          emoji: "🎲",
+                          label: "Random (each battle)",
+                        },
+                        { id: "plain" as const, emoji: "⛳", label: "Plain" },
+                        { id: "desert" as const, emoji: "🏜️", label: "Desert" },
+                        { id: "forest" as const, emoji: "🌲", label: "Forest" },
+                        { id: "snow" as const, emoji: "❄️", label: "Snow" },
+                        { id: "sea" as const, emoji: "🌊", label: "Sea" },
+                        { id: "ice" as const, emoji: "🧊", label: "Ice" },
                       ] as const
                     ).map((opt) => {
                       const selected = biomeChoice === opt.id;
@@ -1503,11 +1616,11 @@ export function StartGameModal({
                           type="button"
                           onClick={() => setBiomeChoice(opt.id)}
                           style={{
-                            display: "flex",
+                            display: "inline-flex",
                             alignItems: "center",
-                            gap: 10,
-                            padding: "8px 10px",
-                            borderRadius: 12,
+                            gap: 6,
+                            padding: "6px 12px",
+                            borderRadius: 9999,
                             border: selected
                               ? "2px solid #0072bc"
                               : "1px solid rgba(0, 114, 188, 0.18)",
@@ -1515,16 +1628,27 @@ export function StartGameModal({
                               ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(210, 240, 255, 0.55) 100%)"
                               : "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(230, 248, 255, 0.35) 100%)",
                             cursor: "pointer",
-                            textAlign: "left",
+                            textAlign: "center",
+                            maxWidth: "100%",
                             ...hudFont,
                           }}
                         >
                           <span
                             style={{
-                              flex: 1,
-                              fontSize: 12.5,
+                              fontSize: 13,
+                              lineHeight: 1,
+                              flexShrink: 0,
+                            }}
+                            aria-hidden
+                          >
+                            {opt.emoji}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11.5,
                               fontWeight: 700,
                               color: hudColors.value,
+                              lineHeight: 1.25,
                             }}
                           >
                             {opt.label}
@@ -1532,9 +1656,10 @@ export function StartGameModal({
                           {selected ? (
                             <span
                               style={{
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: 800,
                                 color: hudColors.accent,
+                                flexShrink: 0,
                               }}
                               aria-hidden
                             >
@@ -1802,7 +1927,7 @@ export function StartGameModal({
                         setNewSessionStep((s) => Math.max(0, s - 1))
                       }
                     >
-                      Back
+                      ← Back
                     </button>
                   ) : (
                     <button
@@ -1810,7 +1935,7 @@ export function StartGameModal({
                       style={linkButtonStyle}
                       onClick={() => setGameConfigOpen(false)}
                     >
-                      Back to overview
+                      ← Back to overview
                     </button>
                   )}
                 </span>
@@ -1825,7 +1950,7 @@ export function StartGameModal({
                         )
                       }
                     >
-                      Continue
+                      Continue →
                     </button>
                   ) : (
                     <button
@@ -1833,7 +1958,7 @@ export function StartGameModal({
                       style={linkButtonStyle}
                       onClick={() => setGameConfigOpen(false)}
                     >
-                      Back to overview
+                      ← Back to overview
                     </button>
                   )}
                 </span>
@@ -1863,7 +1988,7 @@ export function StartGameModal({
                   onQuickPlay={onPvpQuickPlay}
                   onJoinRoom={onJoinRoomFromList}
                   goToPlaza={goToPlaza}
-                  plazaButtonLabel="Go to plaza"
+                  plazaButtonLabel="🏛️ Go to plaza"
                 />
               </div>
             ) : null}

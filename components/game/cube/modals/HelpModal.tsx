@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { usePlayerShopInventory } from "@/lib/shop/usePlayerShopInventory";
 import {
@@ -34,6 +36,16 @@ import {
   PREMIUM_RATATA_VEHICLE_ID,
   shouldShowRatataBetaTag,
 } from "@/lib/game/vehicleUnlock";
+import { persistBgmUserEnabled } from "@/lib/game/bgmPrefSettings";
+import {
+  BGM,
+  hasLastBgmTrack,
+  isBgmPlaying,
+  resumeBgm,
+  startBgmLoop,
+  stopBgmForUser,
+} from "@/lib/sfx/bgMusicPlayer";
+import { getSfxEnabled, setSfxEnabled } from "@/lib/sfx/sfxPlayer";
 
 export function HelpModal({
   open,
@@ -66,6 +78,19 @@ export function HelpModal({
 }) {
   const { stats } = usePlayerStats();
   const { inventory: shopInventory } = usePlayerShopInventory();
+
+  const [sfxOn, setSfxOn] = useState(true);
+  const [bgmPlaying, setBgmPlaying] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setSfxOn(getSfxEnabled());
+    const syncBgm = () => setBgmPlaying(isBgmPlaying());
+    syncBgm();
+    const id = window.setInterval(syncBgm, 400);
+    return () => window.clearInterval(id);
+  }, [open]);
+
   if (!open) return null;
 
   const chargeSec = vehicle.secondsBeforeShotTrigger;
@@ -328,7 +353,7 @@ export function HelpModal({
             </li>
           </ul>
         </details>
-        <details>
+        {/* <details>
           <summary>🚗 My Vehicles</summary>
           <div
             style={{
@@ -413,7 +438,7 @@ export function HelpModal({
             Picks the URL query and reloads the page so you start fresh with
             that vehicle&apos;s shot stats.
           </p>
-        </details>
+        </details> */}
         <details>
           <summary>⚙️ Game Config</summary>
           <div
@@ -637,6 +662,143 @@ export function HelpModal({
             >
               Clear saved data
             </button>
+          </div>
+        </details>
+        <details>
+          <summary>🔊 Sounds</summary>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  color: hudColors.label,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Background music
+              </span>
+              <button
+                type="button"
+                aria-pressed={bgmPlaying}
+                aria-label={
+                  bgmPlaying ? "Stop background music" : "Play background music"
+                }
+                onClick={() => {
+                  if (bgmPlaying) {
+                    stopBgmForUser();
+                    setBgmPlaying(false);
+                    return;
+                  }
+                  void (async () => {
+                    let ok = await resumeBgm();
+                    if (!ok && !hasLastBgmTrack()) {
+                      persistBgmUserEnabled(true);
+                      ok = await startBgmLoop(BGM.welcome, 0.5);
+                    }
+                    setBgmPlaying(isBgmPlaying());
+                  })();
+                }}
+                style={{
+                  ...goldChipButtonStyle(),
+                  minWidth: 72,
+                  fontWeight: 700,
+                  ...(bgmPlaying
+                    ? {
+                        backgroundImage:
+                          "linear-gradient(135deg, #22c55e 0%, #15803d 100%)",
+                        color: "#ffffff",
+                      }
+                    : {
+                        opacity: 0.85,
+                      }),
+                }}
+              >
+                {bgmPlaying ? "Stop" : "Play"}
+              </button>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10,
+                lineHeight: 1.45,
+                color: hudColors.muted,
+              }}
+            >
+              Pause or resume the current background track. Your choice is saved
+              in this browser.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+                marginTop: 8,
+              }}
+            >
+              <span
+                style={{
+                  color: hudColors.label,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Sound effects
+              </span>
+              <button
+                type="button"
+                aria-pressed={sfxOn}
+                aria-label={
+                  sfxOn ? "Disable sound effects" : "Enable sound effects"
+                }
+                onClick={() => {
+                  const next = !sfxOn;
+                  setSfxOn(next);
+                  setSfxEnabled(next);
+                }}
+                style={{
+                  ...goldChipButtonStyle(),
+                  minWidth: 72,
+                  fontWeight: 700,
+                  ...(sfxOn
+                    ? {
+                        backgroundImage:
+                          "linear-gradient(135deg, #22c55e 0%, #15803d 100%)",
+                        color: "#ffffff",
+                      }
+                    : {
+                        opacity: 0.85,
+                      }),
+                }}
+              >
+                {sfxOn ? "Enabled" : "Disabled"}
+              </button>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10,
+                lineHeight: 1.45,
+                color: hudColors.muted,
+              }}
+            >
+              Clicks, shots, coins, and other short sounds. Saved in this browser.
+            </p>
           </div>
         </details>
         <button

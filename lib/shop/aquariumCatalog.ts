@@ -5,6 +5,9 @@ export const FISH_COLOR_HEX: Record<FishId, string> = {
   fishYellow: "#facc15",
   fishBlue: "#38bdf8",
   fishRed: "#ef4444",
+  fishSquid: "#a855f7",
+  fishSwordfish: "#94a3b8",
+  fishSeahorse: "#fb923c",
 };
 
 export const FISH_SHOP_ITEMS: {
@@ -16,6 +19,9 @@ export const FISH_SHOP_ITEMS: {
   { id: "fishYellow", label: "Yellow fish", emoji: "🐠", priceCoins: 1 },
   { id: "fishBlue", label: "Blue fish", emoji: "🐟", priceCoins: 1 },
   { id: "fishRed", label: "Red fish", emoji: "🐡", priceCoins: 1 },
+  { id: "fishSquid", label: "Squid", emoji: "🦑", priceCoins: 1 },
+  { id: "fishSwordfish", label: "Sword fish", emoji: "⚔️", priceCoins: 1 },
+  { id: "fishSeahorse", label: "Seahorse", emoji: "🐠", priceCoins: 1 },
 ];
 
 export const AQUARIUM_SHOP_ITEMS: {

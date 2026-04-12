@@ -18,7 +18,13 @@ export type HatId =
   | "bunnyEars"
   | "crownHat";
 
-export type FishId = "fishYellow" | "fishBlue" | "fishRed";
+export type FishId =
+  | "fishYellow"
+  | "fishBlue"
+  | "fishRed"
+  | "fishSquid"
+  | "fishSwordfish"
+  | "fishSeahorse";
 
 /** Plaza bird shop — placement / gameplay hooks can be added later. */
 export type PlazaBirdId = "birdBee" | "birdColibri" | "birdSparrow";
@@ -73,7 +79,14 @@ function isHatId(x: unknown): x is HatId {
 }
 
 function isFishId(x: unknown): x is FishId {
-  return x === "fishYellow" || x === "fishBlue" || x === "fishRed";
+  return (
+    x === "fishYellow" ||
+    x === "fishBlue" ||
+    x === "fishRed" ||
+    x === "fishSquid" ||
+    x === "fishSwordfish" ||
+    x === "fishSeahorse"
+  );
 }
 
 function isPlazaBirdId(x: unknown): x is PlazaBirdId {

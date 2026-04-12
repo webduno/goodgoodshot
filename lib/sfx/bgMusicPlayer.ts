@@ -30,6 +30,8 @@ export const BGM = {
   welcome: "/sfx/bg/gg3.mp3",
   /** Active battle / course gameplay (`CubeScene`). */
   battle: "/sfx/bg/gg4.mp3",
+  /** PvP match (`PvpCubeScene`); PvE co-op uses `battle`. */
+  pvp: "/sfx/bg/gg99.mp3",
   /** Battle won — finish modal (`CubeScene`). */
   battleWin: "/sfx/bg/gg5.mp3",
 } as const;

@@ -85,6 +85,7 @@ import {
 import { parCoinCountForIslands } from "@/lib/game/path";
 import { pveSideBySideSpawnsFromSeed } from "@/lib/game/pvpTeeSpawns";
 import { pvpGameReducer } from "@/lib/game/pvpGameState";
+import { BGM, startBgmLoop, stopBgm } from "@/lib/sfx/bgMusicPlayer";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
 import type { PvpShotBroadcastPayload } from "@/lib/pvp/shotBroadcast";
@@ -1051,6 +1052,24 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   const matchOver = room?.status === "finished" || room?.winner_user_id != null;
   const waitingForOpponent =
     room?.status === "waiting" || room?.guest_user_id == null;
+
+  useEffect(() => {
+    if (!room?.id) return;
+    if (matchOver) {
+      if (room.winner_user_id === userId) startBgmLoop(BGM.battleWin, 0.5);
+      else stopBgm();
+      return;
+    }
+    const track = isPve ? BGM.battle : BGM.pvp;
+    startBgmLoop(track, 0.5);
+  }, [
+    room?.id,
+    matchOver,
+    room?.winner_user_id,
+    room?.status,
+    userId,
+    isPve,
+  ]);
 
   const roundLocked =
     !bothPlayersReady ||

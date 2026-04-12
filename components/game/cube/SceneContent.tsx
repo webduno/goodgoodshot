@@ -16,7 +16,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type MutableRefObject,
 } from "react";
 import * as THREE from "three";
@@ -80,8 +79,8 @@ import {
 } from "@/lib/game/types";
 import { TerrainTextured } from "../TerrainTextured";
 import type { FishId, HatId } from "@/lib/shop/playerInventory";
-import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
-import { POWERUP_SLOT_ACCENT, POWERUP_WORLD_RGB } from "@/components/gameHudStyles";
+import { NextShotPowerupsStrip } from "@/components/game/cube/hud/NextShotPowerupsStrip";
+import { POWERUP_WORLD_RGB } from "@/components/gameHudStyles";
 import { EarthTextured } from "../EarthTextured";
 import { ShotGuidelineArc } from "@/components/game/cube/ShotGuidelineArc";
 import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
@@ -100,34 +99,6 @@ const ENEMY_LOSS_SINK_BLOCKS = 2;
  */
 const VEHICLE_HTML_Z_INDEX_RANGE: [number, number] = [35, 0];
 
-function pillStyle(
-  slot: "strength" | "noBounce" | "nowind"
-): CSSProperties {
-  const a = POWERUP_SLOT_ACCENT[slot];
-  const text =
-    slot === "strength"
-      ? "#7c2d12"
-      : slot === "noBounce"
-        ? "#4c1d95"
-        : "#0c4a5e";
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 3,
-    padding: "0 6px",
-    height: 18,
-    borderRadius: 999,
-    fontSize: 9,
-    fontWeight: 700,
-    color: text,
-    textShadow: "0 1px 0 rgba(255,255,255,0.45)",
-    background: a.ready,
-    border: "1px solid rgba(255,255,255,0.88)",
-    boxShadow: a.shadow,
-    whiteSpace: "nowrap",
-  };
-}
-
 function VehicleNextShotPowerupLabel({
   powerupStackCount,
   noBounceActive,
@@ -141,8 +112,6 @@ function VehicleNextShotPowerupLabel({
     powerupStackCount > 0 || noBounceActive || noWindActive;
   if (!hasAny) return null;
 
-  const strengthMult = Math.pow(2, powerupStackCount);
-
   return (
     <Html
       position={[0, VEHICLE_POWERUP_LABEL_Y, 0]}
@@ -151,53 +120,12 @@ function VehicleNextShotPowerupLabel({
       zIndexRange={VEHICLE_HTML_Z_INDEX_RANGE}
       style={{ pointerEvents: "none", userSelect: "none" }}
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 3,
-          maxWidth: 190,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 9,
-            fontWeight: 600,
-            color: "rgba(15, 23, 42, 0.72)",
-            letterSpacing: "0.02em",
-          }}
-        >
-          Next shot
-        </span>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 4,
-            justifyContent: "center",
-          }}
-        >
-          {powerupStackCount > 0 && (
-            <span style={pillStyle("strength")}>
-              <PowerupHudIcon slotId="strength" color="currentColor" size={11} />
-              ×{strengthMult}
-            </span>
-          )}
-          {noBounceActive && (
-            <span style={pillStyle("noBounce")}>
-              <PowerupHudIcon slotId="noBounce" color="currentColor" size={11} />
-              No bounce
-            </span>
-          )}
-          {noWindActive && (
-            <span style={pillStyle("nowind")}>
-              <PowerupHudIcon slotId="nowind" color="currentColor" size={11} />
-              No wind
-            </span>
-          )}
-        </div>
-      </div>
+      <NextShotPowerupsStrip
+        powerupStackCount={powerupStackCount}
+        noBounceActive={noBounceActive}
+        noWindActive={noWindActive}
+        variant="world"
+      />
     </Html>
   );
 }

@@ -9,6 +9,7 @@ import { useEffect, useState, type CSSProperties, type MutableRefObject } from "
 
 import type { RendererStatsSnapshot } from "@/components/game/cube/RendererStatsCollector";
 
+import { NextShotPowerupsStrip } from "@/components/game/cube/hud/NextShotPowerupsStrip";
 import {
   goldChipButtonStyle,
   hudColors,
@@ -554,6 +555,34 @@ export function StatsHud({
           )}
         </div>
       ) : null}
+
+      {(powerupStackCount > 0 || noBounceActive || noWindActive) && (
+        <div
+          style={{
+            position: "fixed",
+            left: 12,
+            bottom: "calc(300px + env(safe-area-inset-bottom, 0px))",
+            zIndex: 41,
+            pointerEvents: "none",
+            maxWidth: "min(92vw, 110px)",
+          }}
+        >
+          <div
+            style={{
+              ...hudMiniPanel,
+              padding: "6px 8px",
+              boxSizing: "border-box",
+            }}
+          >
+            <NextShotPowerupsStrip
+              powerupStackCount={powerupStackCount}
+              noBounceActive={noBounceActive}
+              noWindActive={noWindActive}
+              variant="hud"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

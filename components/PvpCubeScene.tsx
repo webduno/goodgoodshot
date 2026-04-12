@@ -983,7 +983,8 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     !isMyTurn ||
     matchOver ||
     enemyLossAnimating ||
-    waitingForOpponent;
+    waitingForOpponent ||
+    shotInFlight;
 
   const guidelineArmed = guidelineEnabled;
   const guidelineAdjusting =
@@ -1392,7 +1393,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           {chargeHud === null &&
             (aimControlMode === "pad" ? (
               <AimPadHud
-                disabled={shotInFlight || roundLocked}
+                disabled={roundLocked}
                 aimYawRad={aimYawRad}
                 aimPitchOffsetRad={aimPitchOffsetRad}
                 onAimChange={({ yawRad, pitchOffsetRad }) => {
@@ -1410,7 +1411,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
               />
             ) : (
               <AimHud
-                disabled={shotInFlight || enemyLossAnimating}
+                disabled={roundLocked}
                 onPitchMaxUp={() => setAimPitchOffsetRad(AIM_PITCH_MAX_RAD)}
                 onPitchUp={() =>
                   setAimPitchOffsetRad((p) =>

@@ -1082,7 +1082,8 @@ export default function PlazaScene() {
     showBirdShopModal ||
     showPvpJoinModal ||
     showVibeJamPortalModal ||
-    showMyVehiclesModal;
+    showMyVehiclesModal ||
+    shotInFlight;
 
   const modalBlocksHud =
     showHelpModal ||

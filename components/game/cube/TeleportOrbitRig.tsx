@@ -182,10 +182,10 @@ export function TeleportOrbitRig({
       followBallActive &&
       ballState &&
       ballValid &&
-      introDoneRef.current &&
       !transitioningRef.current
     ) {
       followBallWasTrackingRef.current = true;
+      introDoneRef.current = true;
       const b = ballState.pos;
       const ox = FOLLOW_BALL_CAMERA_OFFSET[0];
       const oy = FOLLOW_BALL_CAMERA_OFFSET[1];
@@ -204,7 +204,6 @@ export function TeleportOrbitRig({
       followBallActive &&
       followBallWasTrackingRef.current &&
       !ballValid &&
-      introDoneRef.current &&
       !transitioningRef.current
     ) {
       followBallWasTrackingRef.current = false;

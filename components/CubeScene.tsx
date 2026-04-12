@@ -1162,7 +1162,8 @@ export default function CubeScene() {
               showFinishModal ||
               showStartGameModal ||
               showSessionEndModal ||
-              enemyLossAnimating
+              enemyLossAnimating ||
+              shotInFlight
             }
             shotInFlight={shotInFlight}
             vehicle={playerVehicle}

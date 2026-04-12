@@ -1234,6 +1234,14 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         >
           Leave room
         </button>
+        {room?.id && initialFetchDone ? (
+          <MatchChatPanel
+            chatText={room.chat_text ?? ""}
+            onSend={sendMatchChat}
+            onPoll={pollRoomForChat}
+            disabled={!userId}
+          />
+        ) : null}
       </div>
       <div
         style={{
@@ -1249,28 +1257,6 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           <WindHud windHud={windHud} />
         </div>
       </div>
-
-      {room?.id && initialFetchDone ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 8,
-            bottom: 100,
-            zIndex: 41,
-            pointerEvents: "none",
-            transform: "translateZ(0)",
-          }}
-        >
-          <div style={{ pointerEvents: "auto" }}>
-            <MatchChatPanel
-              chatText={room.chat_text ?? ""}
-              onSend={sendMatchChat}
-              onPoll={pollRoomForChat}
-              disabled={!userId}
-            />
-          </div>
-        </div>
-      ) : null}
 
       {showHelpModal && (
         <div

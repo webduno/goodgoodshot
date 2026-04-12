@@ -157,6 +157,8 @@ export function SphereToGoal({
     const mesh = meshRef.current;
     const p = projectileRef.current;
     if (!mesh || !p) return;
+    /** Ghost / remote shots never call `fireProjectile` (which flips visibility); keep mesh shown while simulating. */
+    mesh.visible = true;
 
     const dt = Math.min(delta, 0.05);
 

@@ -869,7 +869,9 @@ export function SceneContent({
       {!hubMode && (
         <>
           <SpawnTeePad biome={biome} />
+          <group position={[1.5, 0, -3]}>
           <TeeSnowman biome={biome} />
+          </group>
           <TeeCornerTree biome={biome} />
           <TeeHoleSign
             biome={biome}

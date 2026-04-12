@@ -26,6 +26,9 @@ import { SceneContent } from "@/components/game/cube/SceneContent";
 import { TeleportOrbitRig } from "@/components/game/cube/TeleportOrbitRig";
 import { StaticSceneLights } from "@/components/game/cube/StaticSceneLights";
 import {
+  dangerChipButtonStyle,
+  goldChipButtonGroupLeftDangerStyle,
+  goldChipButtonGroupRightStyle,
   goldChipButtonStyle,
   hudBottomPanel,
   hudColors,
@@ -525,6 +528,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   const [enemyLossAnimating, setEnemyLossAnimating] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showLeaveRoomConfirm, setShowLeaveRoomConfirm] = useState(false);
   const [retroTvEnabled, setRetroTvEnabled] = useState(false);
   const [guidelineEnabled, setGuidelineEnabled] = useState(true);
   const [aimControlMode, setAimControlMode] = useState<AimControlMode>("pad");
@@ -596,6 +600,15 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [showProfileModal]);
+
+  useEffect(() => {
+    if (!showLeaveRoomConfirm) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowLeaveRoomConfirm(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showLeaveRoomConfirm]);
 
   const onCageTrapped = useCallback(() => {
     setCageEscapeNextShot(true);
@@ -1416,6 +1429,37 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
           transform: "translateZ(0)",
         }}
       >
+        {room?.id && initialFetchDone ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "stretch",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowLeaveRoomConfirm(true)}
+              style={goldChipButtonGroupLeftDangerStyle()}
+            >
+              Leave room
+            </button>
+            <MatchChatPanel
+              chatText={room.chat_text ?? ""}
+              onSend={sendMatchChat}
+              onPoll={pollRoomForChat}
+              disabled={!userId}
+              chatButtonStyle={goldChipButtonGroupRightStyle()}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowLeaveRoomConfirm(true)}
+            style={dangerChipButtonStyle()}
+          >
+            Leave room
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowHelpModal(true)}
@@ -1423,21 +1467,6 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         >
           Menu
         </button>
-        <button
-          type="button"
-          onClick={leavePvpRoom}
-          style={goldChipButtonStyle()}
-        >
-          Leave room
-        </button>
-        {room?.id && initialFetchDone ? (
-          <MatchChatPanel
-            chatText={room.chat_text ?? ""}
-            onSend={sendMatchChat}
-            onPoll={pollRoomForChat}
-            disabled={!userId}
-          />
-        ) : null}
       </div>
       <div
         style={{
@@ -1481,6 +1510,52 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
               style={{ ...goldChipButtonStyle(), marginLeft: 8 }}
             >
               Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showLeaveRoomConfirm && (
+        <div
+          role="presentation"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 60,
+            background: "rgba(15,23,42,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            boxSizing: "border-box",
+          }}
+          onClick={() => setShowLeaveRoomConfirm(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leave-room-confirm-title"
+            style={{ ...hudMiniPanel, ...hudFont, padding: 16, maxWidth: 340 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p id="leave-room-confirm-title" style={{ marginTop: 0, fontWeight: 800 }}>
+              Leave room?
+            </p>
+            <p style={{ marginTop: 8, marginBottom: 14, color: hudColors.value }}>
+              You will return to the plaza. You can join again from multiplayer if the room is still open.
+            </p>
+            <button type="button" onClick={() => setShowLeaveRoomConfirm(false)} style={goldChipButtonStyle()}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowLeaveRoomConfirm(false);
+                leavePvpRoom();
+              }}
+              style={{ ...dangerChipButtonStyle(), marginLeft: 8 }}
+            >
+              Leave room
             </button>
           </div>
         </div>

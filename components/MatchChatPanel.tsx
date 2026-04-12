@@ -20,6 +20,8 @@ type Props = {
   /** Poll parent state (e.g. room row) on this interval. */
   onPoll: () => void;
   pollMs?: number;
+  /** Overrides the Chat trigger (e.g. segmented button group right segment). */
+  chatButtonStyle?: CSSProperties;
 };
 
 const logStyle: CSSProperties = {
@@ -51,6 +53,7 @@ export function MatchChatPanel({
   onSend,
   onPoll,
   pollMs = 1000,
+  chatButtonStyle,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -97,7 +100,7 @@ export function MatchChatPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        style={goldChipButtonStyle()}
+        style={chatButtonStyle ?? goldChipButtonStyle()}
         aria-haspopup="dialog"
         aria-expanded={open}
       >

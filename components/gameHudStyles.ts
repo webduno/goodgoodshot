@@ -201,6 +201,59 @@ export function goldChipButtonStyle(): CSSProperties {
   };
 }
 
+/** Same footprint as `goldChipButtonStyle` — glossy red (standalone destructive chip). */
+export function dangerChipButtonStyle(): CSSProperties {
+  return {
+    ...hudFont,
+    ...textOnGlossButton,
+    padding: "5px 12px",
+    fontSize: 11,
+    fontWeight: 700,
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.85)",
+    backgroundImage: glassFaceRed,
+    cursor: "pointer",
+    boxShadow: `${edgeLight}, ${dropSmRed}`,
+  };
+}
+
+/** Joined pair: left segment — red (e.g. Leave room). */
+export function goldChipButtonGroupLeftDangerStyle(): CSSProperties {
+  return {
+    ...hudFont,
+    ...textOnGlossButton,
+    padding: "5px 12px",
+    fontSize: 11,
+    fontWeight: 700,
+    borderRadius: "999px 0 0 999px",
+    border: "1px solid rgba(255,255,255,0.85)",
+    backgroundImage: glassFaceRed,
+    cursor: "pointer",
+    boxShadow: `${edgeLight}, ${dropSmRed}`,
+    position: "relative",
+    zIndex: 1,
+  };
+}
+
+/** Joined pair: right segment — blue (e.g. Chat). Overlaps left border for a single seam. */
+export function goldChipButtonGroupRightStyle(): CSSProperties {
+  return {
+    ...hudFont,
+    ...textOnGlossButton,
+    padding: "5px 12px",
+    fontSize: 11,
+    fontWeight: 700,
+    borderRadius: "0 999px 999px 0",
+    border: "1px solid rgba(255,255,255,0.9)",
+    backgroundImage: glassFace,
+    cursor: "pointer",
+    boxShadow: `${edgeLight}, ${dropSm}`,
+    marginLeft: -1,
+    position: "relative",
+    zIndex: 0,
+  };
+}
+
 /**
  * Plaza top bar — glossy cyan → cerulean capsule (Menu).
  */

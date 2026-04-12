@@ -1307,6 +1307,14 @@ export default function PlazaScene() {
         >
           <button
             type="button"
+            aria-haspopup="dialog"
+            onClick={() => setShowMultiplayerModal(true)}
+            style={plazaMultiplayerCapsuleButtonStyle()}
+          >
+            Multiplayer
+          </button>
+          <button
+            type="button"
             aria-label="Open menu"
             onClick={() => {
               setShowProfileModal(false);
@@ -1316,14 +1324,6 @@ export default function PlazaScene() {
             style={plazaGlassCapsuleButtonStyle()}
           >
             Menu
-          </button>
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            onClick={() => setShowMultiplayerModal(true)}
-            style={plazaMultiplayerCapsuleButtonStyle()}
-          >
-            Multiplayer
           </button>
         </div>
       )}

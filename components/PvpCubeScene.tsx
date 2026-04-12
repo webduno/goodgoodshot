@@ -14,6 +14,7 @@ import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGr
 import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
 import { IslandMiniVillage } from "@/components/game/cube/meshes/IslandMiniVillage";
 import { IslandTrees } from "@/components/game/cube/meshes/IslandTrees";
+import { SnowBiomeDecor } from "@/components/game/cube/meshes/SnowBiomeDecor";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
 import { SkySun } from "@/components/game/cube/meshes/SkySun";
 import { RetroTvPostFx } from "@/components/game/cube/effects/RetroTvPostFx";
@@ -1407,6 +1408,12 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         <IslandMiniVillage miniVillage={game.miniVillage} />
         <IslandBushes islands={islands} biome={game.biome} />
         <IslandTrees islands={islands} biome={game.biome} />
+        <SnowBiomeDecor
+          islands={islands}
+          biome={game.biome}
+          spawnCenter={game.spawnCenter}
+          goalCenter={goalCenter}
+        />
         <RetroTvPostFx enabled={retroTvEnabled} />
         <RendererStatsCollector statsRef={rendererStatsRef} />
       </Canvas>

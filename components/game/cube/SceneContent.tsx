@@ -26,6 +26,7 @@ import { GoalMessengerCharacter } from "@/components/game/cube/meshes/GoalMessen
 import { AimYawPrism } from "@/components/game/cube/meshes/AimYawPrism";
 import { SpawnTeePad } from "@/components/game/cube/meshes/SpawnTeePad";
 import { TeeCornerTree } from "@/components/game/cube/meshes/TeeCornerTree";
+import { TeeSnowman } from "@/components/game/cube/meshes/TeeSnowman";
 import { TeeHoleSign } from "@/components/game/cube/meshes/TeeHoleSign";
 import { ShootTriggerCube } from "@/components/game/cube/meshes/ShootTriggerCube";
 import { VehicleBodyParts } from "@/components/game/cube/meshes/VehicleBodyParts";
@@ -867,7 +868,8 @@ export function SceneContent({
       </group> */}
       {!hubMode && (
         <>
-          <SpawnTeePad />
+          <SpawnTeePad biome={biome} />
+          <TeeSnowman biome={biome} />
           <TeeCornerTree biome={biome} />
           <TeeHoleSign
             biome={biome}

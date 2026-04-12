@@ -12,6 +12,8 @@ import { SnowPineTree } from "./SnowPineTree";
 
 /** Fairway trees: thinner on X/Z only (tee tree scales separately in `TeeCornerTree`). */
 const ISLAND_TREE_XZ_SCALE = 0.68;
+/** Snow/ice fairway pines: much taller than default mesh height. */
+const ISLAND_SNOW_PINE_Y_SCALE = 2.05;
 
 export function IslandTrees({
   islands,
@@ -31,29 +33,52 @@ export function IslandTrees({
       : biomeUsesCactus(biome)
         ? BlockyCactus
         : BlockyTree;
+  const isSnowPine = biome === "snow" || biome === "ice";
   return (
     <>
       {islands.flatMap((is, ii) =>
-        is.trees.map((t, ti) => (
-          <group
-            key={`island-${ii}-tree-${ti}-${t.ox}-${t.oz}`}
-            position={[is.worldX + t.ox, 0, is.worldZ + t.oz]}
-          >
+        is.trees.map((t, ti) => {
+          const seed =
+            ii * 7919 + ti * 4999 + Math.round(t.ox * 1e3);
+          return (
             <group
-              scale={[
-                ISLAND_TREE_XZ_SCALE,
-                1,
-                ISLAND_TREE_XZ_SCALE,
-              ]}
+              key={`island-${ii}-tree-${ti}-${t.ox}-${t.oz}`}
+              position={[is.worldX + t.ox, 0, is.worldZ + t.oz]}
             >
-              <TreeMesh
-                groundY={TURF_TOP_Y}
-                seed={ii * 7919 + ti * 4999 + Math.round(t.ox * 1e3)}
-                raycastDisabled
-              />
+              {isSnowPine ? (
+                <group position={[0, TURF_TOP_Y, 0]}>
+                  <group
+                    scale={[
+                      ISLAND_TREE_XZ_SCALE,
+                      ISLAND_SNOW_PINE_Y_SCALE,
+                      ISLAND_TREE_XZ_SCALE,
+                    ]}
+                  >
+                    <TreeMesh
+                      groundY={0}
+                      seed={seed}
+                      raycastDisabled
+                    />
+                  </group>
+                </group>
+              ) : (
+                <group
+                  scale={[
+                    ISLAND_TREE_XZ_SCALE,
+                    1,
+                    ISLAND_TREE_XZ_SCALE,
+                  ]}
+                >
+                  <TreeMesh
+                    groundY={TURF_TOP_Y}
+                    seed={seed}
+                    raycastDisabled
+                  />
+                </group>
+              )}
             </group>
-          </group>
-        ))
+          );
+        })
       )}
     </>
   );

@@ -137,6 +137,9 @@ export const TEE_PAD_HALF_Z = VEHICLE_FOOTPRINT_HALF_XZ * 4;
  */
 export const TEE_PAD_EXTEND_BACK_Z = 0.55;
 export const TEE_PAD_CENTER_Y = TEE_PAD_HALF_Y;
+/** World Y of the top face of `SpawnTeePad` (decor that must sit on the tee). */
+export const TEE_PAD_TOP_Y =
+  TEE_PAD_CENTER_Y - 0.55 + TEE_PAD_HALF_Y * 3;
 
 /** Prism length for the weakest predetermined vehicle; stronger builds scale up linearly. */
 export const AIM_PRISM_LENGTH = 0.85;

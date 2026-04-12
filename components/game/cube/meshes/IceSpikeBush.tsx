@@ -13,7 +13,7 @@ const ICE_COLORS = [
 ] as const;
 
 /**
- * Snow undergrowth: one thin, tall blue ice spike (tapered cone), visual-only (raycast off).
+ * Snow undergrowth: one blue ice spike (tapered cone), wider base; visual-only (raycast off).
  */
 export function IceSpikeBush({
   worldX,
@@ -36,8 +36,8 @@ export function IceSpikeBush({
 
   const y0 = TURF_TOP_Y;
   const groupYaw = (seed % 997) * 0.001 * Math.PI * 2;
-  const radius = 0.042 + (seed % 11) * 0.0025;
-  const height = 0.88 + (seed >>> 3) % 15 * 0.03;
+  const radius = 0.092 + (seed % 11) * 0.01;
+  const height = 0.76 + (seed >>> 3) % 15 * 0.026;
   const color = ICE_COLORS[seed % ICE_COLORS.length];
 
   return (

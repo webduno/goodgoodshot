@@ -95,8 +95,8 @@ export function islandColorsForBiome(biome: BiomeId): {
 }
 
 /**
- * Minimap tee-box top color (spawn island). Matches biome tone; 3D `SpawnTeePad` still uses
- * `GOAL_GREEN` — this is HUD-only for a readable schematic.
+ * Minimap tee-box top color (spawn island). Matches biome tone; 3D `SpawnTeePad` uses
+ * `GOAL_GREEN` except snow/ice (`FIELD_GROUND_SNOW`).
  */
 export function minimapTeeSurfaceColor(biome: BiomeId): string {
   switch (biome) {

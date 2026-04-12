@@ -20,6 +20,7 @@ import { StatsHud } from "@/components/game/cube/hud/StatsHud";
 import { WindHud } from "@/components/game/cube/hud/WindHud";
 import { InitialFieldGround } from "@/components/game/cube/meshes/InitialFieldGround";
 import { IslandBushes } from "@/components/game/cube/meshes/IslandBushes";
+import { SnowBiomeDecor } from "@/components/game/cube/meshes/SnowBiomeDecor";
 import { IslandMiniVillage } from "@/components/game/cube/meshes/IslandMiniVillage";
 import { IslandTrees } from "@/components/game/cube/meshes/IslandTrees";
 import { SkyClouds } from "@/components/game/cube/meshes/SkyClouds";
@@ -1252,6 +1253,12 @@ export default function CubeScene() {
         <IslandMiniVillage miniVillage={game.miniVillage} />
         <IslandBushes islands={islands} biome={game.biome} />
         <IslandTrees islands={islands} biome={game.biome} />
+        <SnowBiomeDecor
+          islands={islands}
+          biome={game.biome}
+          spawnCenter={game.spawnCenter}
+          goalCenter={goalCenter}
+        />
         <RetroTvPostFx enabled={retroTvEnabled} />
         <RendererStatsCollector statsRef={rendererStatsRef} />
       </Canvas>

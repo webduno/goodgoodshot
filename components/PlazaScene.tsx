@@ -1278,6 +1278,7 @@ export default function PlazaScene() {
           rendererStatsRef={rendererStatsRef}
           onOpenMyVehicles={() => setShowMyVehiclesModal(true)}
           onOpenProfile={() => setShowProfileModal(true)}
+          showShotHud={false}
         />
       )}
       {!modalBlocksHud && (

@@ -74,6 +74,12 @@ const HAT_SHOP_EMOJI: Record<HatId, string> = {
   glassPyramid: "🔺",
   glassCube: "📦",
   glassSphere: "🔮",
+  pandaFace: "🐼",
+  messengerMini: "🦠",
+  topHat: "🎩",
+  simsPlumbob: "💎",
+  bunnyEars: "🐰",
+  crownHat: "👑",
 };
 
 function vehicleShopEmoji(vehicleId: string): string {

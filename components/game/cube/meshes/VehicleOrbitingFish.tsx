@@ -8,7 +8,7 @@ import { FISH_COLOR_HEX } from "@/lib/shop/aquariumCatalog";
 import type { FishId } from "@/lib/shop/playerInventory";
 
 /** Horizontal orbit radius in vehicle-local space (inside body yaw group). */
-const ORBIT_R = 0.58;
+const ORBIT_R = 0.99;
 /** Height above vehicle origin (hull sits near y ≈ 0). */
 const ORBIT_Y = 0.36;
 /** Same cone proportions as plaza aquarium fish, scaled down. */
@@ -48,13 +48,11 @@ export function VehicleOrbitingFish({ fishId }: { fishId: FishId }) {
 
   return (
     <group ref={orbitRef}>
-      <mesh
-        position={[ORBIT_R, ORBIT_Y, 0]}
-        rotation={[0, 0, -Math.PI / 2]}
-        material={mat}
-      >
-        <coneGeometry args={[CONE_R, CONE_H, 5, 1, false]} />
-      </mesh>
+      <group position={[ORBIT_R, ORBIT_Y, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh rotation={[0, 0, -Math.PI / 2]} material={mat}>
+          <coneGeometry args={[CONE_R, CONE_H, 5, 1, false]} />
+        </mesh>
+      </group>
     </group>
   );
 }

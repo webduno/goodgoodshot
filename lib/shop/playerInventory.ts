@@ -7,7 +7,16 @@ export const PLAYER_SHOP_INVENTORY_KEY = "goodgoodshot.playerShopInventory.v1";
 export const PLAYER_SHOP_INVENTORY_CHANGE_EVENT =
   "goodgoodshot:playerShopInventory";
 
-export type HatId = "glassPyramid" | "glassCube" | "glassSphere";
+export type HatId =
+  | "glassPyramid"
+  | "glassCube"
+  | "glassSphere"
+  | "pandaFace"
+  | "messengerMini"
+  | "topHat"
+  | "simsPlumbob"
+  | "bunnyEars"
+  | "crownHat";
 
 export type FishId = "fishYellow" | "fishBlue" | "fishRed";
 
@@ -51,7 +60,15 @@ export function defaultPlayerShopInventory(): PlayerShopInventory {
 
 function isHatId(x: unknown): x is HatId {
   return (
-    x === "glassPyramid" || x === "glassCube" || x === "glassSphere"
+    x === "glassPyramid" ||
+    x === "glassCube" ||
+    x === "glassSphere" ||
+    x === "pandaFace" ||
+    x === "messengerMini" ||
+    x === "topHat" ||
+    x === "simsPlumbob" ||
+    x === "bunnyEars" ||
+    x === "crownHat"
   );
 }
 

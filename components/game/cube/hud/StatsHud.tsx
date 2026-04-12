@@ -38,6 +38,7 @@ export function StatsHud({
   onOpenMyVehicles,
   onOpenProfile,
   profileButtonDisabled,
+  showShotHud = true,
 }: {
   /** Max strokes (inclusive) to count as a battle win when you hole out — same as lane bonus coin count. */
   holePar: number;
@@ -60,6 +61,8 @@ export function StatsHud({
   /** When set, a Profile chip is shown above the Vehicle panel. */
   onOpenProfile?: () => void;
   profileButtonDisabled?: boolean;
+  /** When false, hides the Shot / strokes panel (e.g. plaza hub has no hole strokes). */
+  showShotHud?: boolean;
 }) {
   const { stats } = usePlayerStats();
   const [vehicleOpen, setVehicleOpen] = useState(false);
@@ -316,67 +319,69 @@ export function StatsHud({
         ) : null}
       </div>
 
-      <button
-        type="button"
-        onClick={onScoreClick}
-        title="View war details"
-        aria-haspopup="dialog"
-        aria-label={
-          holePar > 0 && bulletsLeft !== null
-            ? `${bulletsLeft} ${
-                bulletsLeft === 1 ? "bullet" : "bullets"
-              } left (strokes at or below par win the battle). Open war details.`
-            : `Shot ${sessionShots}. Open war details.`
-        }
-        style={{
-          pointerEvents: "auto",
-          margin: 0,
-          padding: "6px 8px",
-          ...hudMiniPanel,
-          fontSize: 10,
-          lineHeight: 1.4,
-          cursor: "pointer",
-          textAlign: "left",
-          width: "fit-content",
-          maxWidth: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
+      {showShotHud ? (
+        <button
+          type="button"
+          onClick={onScoreClick}
+          title="View war details"
+          aria-haspopup="dialog"
+          aria-label={
+            holePar > 0 && bulletsLeft !== null
+              ? `${bulletsLeft} ${
+                  bulletsLeft === 1 ? "bullet" : "bullets"
+                } left (strokes at or below par win the battle). Open war details.`
+              : `Shot ${sessionShots}. Open war details.`
+          }
           style={{
-            color: hudColors.muted,
-            marginBottom: 2,
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-          }}
-        >
-          Shot
-        </div>
-        <div
-          style={{
-            color: hudColors.value,
-            fontWeight: 700,
+            pointerEvents: "auto",
+            margin: 0,
+            padding: "6px 8px",
+            ...hudMiniPanel,
             fontSize: 10,
-            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1.4,
+            cursor: "pointer",
+            textAlign: "left",
+            width: "fit-content",
+            maxWidth: "100%",
+            boxSizing: "border-box",
           }}
         >
-          {bulletsLeft !== null
-            ? bulletsLeft === 1
-              ? "1 bullet"
-              : `${bulletsLeft} bullets`
-            : sessionShots}
-            <br />
-            remaining
-        </div>
-
-        {shotInFlight && (
-          <div style={{ ...metricsDivider, color: hudColors.value, fontSize: 10 }}>
-            Shot in flight…
+          <div
+            style={{
+              color: hudColors.muted,
+              marginBottom: 2,
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Shot
           </div>
-        )}
-      </button>
+          <div
+            style={{
+              color: hudColors.value,
+              fontWeight: 700,
+              fontSize: 10,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {bulletsLeft !== null
+              ? bulletsLeft === 1
+                ? "1 bullet"
+                : `${bulletsLeft} bullets`
+              : sessionShots}
+              <br />
+              remaining
+          </div>
+
+          {shotInFlight && (
+            <div style={{ ...metricsDivider, color: hudColors.value, fontSize: 10 }}>
+              Shot in flight…
+            </div>
+          )}
+        </button>
+      ) : null}
 
       {isLocalhost && (
         <div

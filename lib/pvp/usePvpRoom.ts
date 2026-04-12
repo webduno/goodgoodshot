@@ -1,10 +1,14 @@
 "use client";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { PvpShotBroadcastPayload } from "@/lib/pvp/shotBroadcast";
 import type { PvpRoomRow } from "@/lib/pvp/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function usePvpRoom(roomId: string | null) {
+export function usePvpRoom(
+  roomId: string | null,
+  onRemoteShot?: (payload: PvpShotBroadcastPayload) => void
+) {
   const [room, setRoom] = useState<PvpRoomRow | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -13,6 +17,18 @@ export function usePvpRoom(roomId: string | null) {
   const channelRef = useRef<ReturnType<
     ReturnType<typeof createSupabaseBrowserClient>["channel"]
   > | null>(null);
+  const onRemoteShotRef = useRef(onRemoteShot);
+  onRemoteShotRef.current = onRemoteShot;
+
+  const broadcastShot = useCallback((payload: PvpShotBroadcastPayload) => {
+    const ch = channelRef.current;
+    if (!ch) return;
+    void ch.send({
+      type: "broadcast",
+      event: "pvp_shot",
+      payload,
+    });
+  }, []);
 
   const refreshRoom = useCallback(async () => {
     if (!roomId) return;
@@ -85,6 +101,10 @@ export function usePvpRoom(roomId: string | null) {
             void refreshRoom();
           }
         )
+        .on("broadcast", { event: "pvp_shot" }, (evt: { payload?: unknown }) => {
+          const p = evt.payload as PvpShotBroadcastPayload | undefined;
+          if (p?.senderId) onRemoteShotRef.current?.(p);
+        })
         .subscribe();
       channelRef.current = channel;
     })();
@@ -97,5 +117,14 @@ export function usePvpRoom(roomId: string | null) {
     };
   }, [roomId, refreshRoom]);
 
-  return { room, userId, authReady, initialFetchDone, error, refreshRoom, setRoom };
+  return {
+    room,
+    userId,
+    authReady,
+    initialFetchDone,
+    error,
+    refreshRoom,
+    setRoom,
+    broadcastShot,
+  };
 }

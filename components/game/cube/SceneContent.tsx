@@ -86,6 +86,7 @@ import { EarthTextured } from "../EarthTextured";
 import { ShotGuidelineArc } from "@/components/game/cube/ShotGuidelineArc";
 import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
+import type { PvpShotBroadcastPayload } from "@/lib/pvp/shotBroadcast";
 
 /** Local Y above spawn block center: clears default hull top (~0.5) and typical barrel. */
 const VEHICLE_POWERUP_LABEL_Y = 0.92;
@@ -288,6 +289,10 @@ export function SceneContent({
   onBreakGoalCageFromShot,
   powerupVehicleBurstSeq = 0,
   powerupVehicleBurstSlot = "strength",
+  broadcastUserId = null,
+  onBroadcastLocalShot,
+  remoteGhostShotPayload = null,
+  onRemoteGhostShotConsumed,
 }: {
   spawnCenter: Vec3;
   goalCenter: Vec3;
@@ -372,6 +377,11 @@ export function SceneContent({
   /** Bump when the local player uses a consumable power-up (strength / no bounce / no wind). */
   powerupVehicleBurstSeq?: number;
   powerupVehicleBurstSlot?: VehiclePowerupBurstSlot;
+  /** PvP/PvE online: local user id — used to ignore own broadcast echo and to tag outgoing shots. */
+  broadcastUserId?: string | null;
+  onBroadcastLocalShot?: (payload: PvpShotBroadcastPayload) => void;
+  remoteGhostShotPayload?: PvpShotBroadcastPayload | null;
+  onRemoteGhostShotConsumed?: () => void;
 }) {
   const mapCagesRef = useRef(mapCages);
   mapCagesRef.current = mapCages;
@@ -380,7 +390,13 @@ export function SceneContent({
 
   const meshRef = useRef<THREE.Mesh>(null);
   const projectileRef = useRef<Projectile | null>(null);
+  const ghostMeshRef = useRef<THREE.Mesh>(null);
+  const ghostProjectileRef = useRef<Projectile | null>(null);
+  const ghostShotWindAccelRef = useRef({ x: 0, z: 0 });
+  const ghostCollectedCoinKeysRef = useRef(new Set<string>());
   const shotWindAccelRef = useRef({ x: 0, z: 0 });
+  const [ghostSpawnCenter, setGhostSpawnCenter] = useState<Vec3 | null>(null);
+  const [ghostSpawnKey, setGhostSpawnKey] = useState(0);
   const chargingRef = useRef(false);
   const clickCountRef = useRef(1);
   const chargeEndsAtRef = useRef(0);
@@ -429,6 +445,9 @@ export function SceneContent({
     });
     playSfx(SFX.enemyKill);
   }, []);
+
+  /** Ghost ball: do not mutate local enemy-alive state (server is source of truth). */
+  const ghostEnemyHitNoop = useCallback(() => {}, []);
 
   useEffect(() => {
     return () => {
@@ -482,15 +501,16 @@ export function SceneContent({
       onGuidelineConsumedForShot();
       const w = prepareShotWind();
       shotWindAccelRef.current = { x: w.ax, z: w.az };
+      const noBounceShot = getNoBounceActive();
+      const powerMulBeforeReset = getPowerupMultiplier();
       let force =
-        launchStrengthFromClicks(clicks, vehicle) * getPowerupMultiplier();
+        launchStrengthFromClicks(clicks, vehicle) * powerMulBeforeReset;
       if (cageEscapeNextShot) {
         force *= 0.15;
         onBreakGoalCageFromShot?.(
           mapCageKey(spawnCenter[0], spawnCenter[2])
         );
       }
-      const noBounceShot = getNoBounceActive();
       resetPowerupStack();
       const launchAngleRad = vehicle.launchAngleRad + aimPitchOffsetRad;
       const horizontalMag = force * Math.cos(launchAngleRad);
@@ -516,12 +536,27 @@ export function SceneContent({
       mesh.position.set(topX, topY, topZ);
       playSfx(SFX.shoot);
       onShootStart();
+      if (onBroadcastLocalShot && broadcastUserId) {
+        onBroadcastLocalShot({
+          senderId: broadcastUserId,
+          spawn: [topX, spawnCenter[1], topZ],
+          clicks,
+          worldAimYawRad,
+          aimPitchOffsetRad,
+          powerMultiplier: powerMulBeforeReset,
+          noBounce: noBounceShot,
+          windAx: shotWindAccelRef.current.x,
+          windAz: shotWindAccelRef.current.z,
+        });
+      }
     },
     [
       aimPitchOffsetRad,
       worldAimYawRad,
+      broadcastUserId,
       getNoBounceActive,
       getPowerupMultiplier,
+      onBroadcastLocalShot,
       onGuidelineConsumedForShot,
       onShootStart,
       prepareShotWind,
@@ -532,6 +567,73 @@ export function SceneContent({
       onBreakGoalCageFromShot,
     ]
   );
+
+  const fireGhostProjectile = useCallback(
+    (payload: PvpShotBroadcastPayload, ghostVehicle: PlayerVehicleConfig) => {
+      ghostShotWindAccelRef.current = { x: payload.windAx, z: payload.windAz };
+      const spawn = payload.spawn;
+      const launchAngleRad =
+        ghostVehicle.launchAngleRad + payload.aimPitchOffsetRad;
+      const force =
+        launchStrengthFromClicks(payload.clicks, ghostVehicle) *
+        payload.powerMultiplier;
+      const horizontalMag = force * Math.cos(launchAngleRad);
+      const vy = force * Math.sin(launchAngleRad);
+      const topY = spawnTopYFromBlockCenterY(spawn[1]);
+      const topX = spawn[0];
+      const topZ = spawn[2];
+      ghostProjectileRef.current = {
+        x: topX,
+        y: topY,
+        z: topZ,
+        vx: horizontalMag * Math.sin(payload.worldAimYawRad),
+        vy,
+        vz: horizontalMag * Math.cos(payload.worldAimYawRad),
+        bouncesRemaining: payload.noBounce ? 0 : ghostVehicle.landingBounces,
+        rolling: false,
+        allowRoll: !payload.noBounce,
+      };
+      setGhostSpawnCenter(spawn);
+      setGhostSpawnKey((k) => k + 1);
+    },
+    []
+  );
+
+  const onGhostProjectileEnd = useCallback(
+    (
+      _outcome: "hit" | "miss" | "penalty" | "enemy_loss",
+      _landing?: Vec3
+    ) => {
+      ghostProjectileRef.current = null;
+      setGhostSpawnCenter(null);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!remoteGhostShotPayload) return;
+    if (
+      broadcastUserId &&
+      remoteGhostShotPayload.senderId === broadcastUserId
+    ) {
+      onRemoteGhostShotConsumed?.();
+      return;
+    }
+    const ghostVehicle = pvpOpponentVehicle ?? pveOpponentVehicle;
+    if (!ghostVehicle) {
+      onRemoteGhostShotConsumed?.();
+      return;
+    }
+    fireGhostProjectile(remoteGhostShotPayload, ghostVehicle);
+    onRemoteGhostShotConsumed?.();
+  }, [
+    remoteGhostShotPayload,
+    broadcastUserId,
+    pvpOpponentVehicle,
+    pveOpponentVehicle,
+    fireGhostProjectile,
+    onRemoteGhostShotConsumed,
+  ]);
 
   const tryFireGuidelineDirect = useCallback(() => {
     if (roundLocked) return;
@@ -667,10 +769,18 @@ export function SceneContent({
   void coinRenderTick;
 
   useFrame((_, delta) => {
+    const ghostMesh = ghostMeshRef.current;
+    const gp = ghostProjectileRef.current;
     const mesh = meshRef.current;
     const p = projectileRef.current;
     const st = ballFollowStateRef.current;
-    if (mesh && p) {
+    if (ghostMesh && gp) {
+      st.pos.copy(ghostMesh.position);
+      st.valid = true;
+      st.vx = gp.vx;
+      st.vy = gp.vy;
+      st.vz = gp.vz;
+    } else if (mesh && p) {
       st.pos.copy(mesh.position);
       st.valid = true;
       st.vx = p.vx;
@@ -697,7 +807,7 @@ export function SceneContent({
         onEnemyLossAnimatingChangeRef.current?.(false);
       }
     }
-  });
+  }, -1);
 
   const onFireInput = useCallback(() => {
     if (roundLocked) return;
@@ -999,6 +1109,38 @@ export function SceneContent({
         onCageTrapped={onCageTrapped}
         pvpMode={pvpMode}
       />
+      {ghostSpawnCenter && (
+        <SphereToGoal
+          key={`ghost-${ghostSpawnKey}`}
+          meshRef={ghostMeshRef}
+          projectileRef={ghostProjectileRef}
+          shotWindAccelRef={ghostShotWindAccelRef}
+          spawnCenter={ghostSpawnCenter}
+          islands={islands}
+          goalCenter={goalCenter}
+          gravityY={
+            (pvpOpponentVehicle ?? pveOpponentVehicle ?? vehicle).gravityY
+          }
+          bounceRestitution={
+            (pvpOpponentVehicle ?? pveOpponentVehicle ?? vehicle)
+              .bounceRestitution
+          }
+          rollDeceleration={
+            (pvpOpponentVehicle ?? pveOpponentVehicle ?? vehicle)
+              .rollDeceleration
+          }
+          onProjectileEnd={onGhostProjectileEnd}
+          coinCells={[]}
+          collectedCoinKeysRef={ghostCollectedCoinKeysRef}
+          onCoinCollected={() => {}}
+          enemySimRef={enemySimRef}
+          onEnemyHitByBall={ghostEnemyHitNoop}
+          hubMode={hubMode}
+          mapCagesRef={mapCagesRef}
+          goalCagesBrokenRef={goalCagesBrokenRef}
+          pvpMode={pvpMode}
+        />
+      )}
       {guidelinePoints.length >= 2 && (
         <ShotGuidelineArc points={guidelinePoints} />
       )}

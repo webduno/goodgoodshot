@@ -57,6 +57,7 @@ import {
   AIM_YAW_QUARTER_TURN_RAD,
   AIM_YAW_STEP_RAD,
   CHARGE_HOLD_REPEAT_MS,
+  PVP_PVE_TURN_TIME_LIMIT_MS,
   SKY_GRADIENT_CSS,
 } from "@/lib/game/constants";
 import {
@@ -81,6 +82,7 @@ import { pveSideBySideSpawnsFromSeed } from "@/lib/game/pvpTeeSpawns";
 import { pvpGameReducer } from "@/lib/game/pvpGameState";
 import { playSfx, SFX } from "@/lib/sfx/sfxPlayer";
 import { INITIAL_LANE_ORIGIN, type PowerupSlotId, type Vec3 } from "@/lib/game/types";
+import type { PvpShotBroadcastPayload } from "@/lib/pvp/shotBroadcast";
 import type { PvpRoomRow } from "@/lib/pvp/types";
 import { usePvpRoom } from "@/lib/pvp/usePvpRoom";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -98,6 +100,13 @@ import {
 import * as THREE from "three";
 
 const PVP_OPPONENT_ENEMY = [{ colorHex: "#e11d48" }] as const;
+
+function formatPvpTurnClock(remainingMs: number): string {
+  const totalSec = Math.max(0, Math.ceil(remainingMs / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 /** Avoid spawn sync reading stale `gameRef` in the same effect flush as course hydration (would spread seed-1 layout over the real room course). */
 function pvpGameStateMatchesRoomCourse(
@@ -136,8 +145,23 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     shopInventory.ownedVehicleIds
   );
 
-  const { room, userId, initialFetchDone, error: roomError, refreshRoom } =
-    usePvpRoom(roomId);
+  const [incomingGhostShot, setIncomingGhostShot] =
+    useState<PvpShotBroadcastPayload | null>(null);
+  const onRemoteShot = useCallback((payload: PvpShotBroadcastPayload) => {
+    setIncomingGhostShot(payload);
+  }, []);
+  const clearIncomingGhostShot = useCallback(() => {
+    setIncomingGhostShot(null);
+  }, []);
+
+  const {
+    room,
+    userId,
+    initialFetchDone,
+    error: roomError,
+    refreshRoom,
+    broadcastShot,
+  } = usePvpRoom(roomId, onRemoteShot);
 
   /** Host: full reload when a guest joins so canvas/state match the two-player room. */
   const hostOpponentJoinReloadRef = useRef<{
@@ -662,6 +686,12 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     halfClicksForStrengthBarRef(DEFAULT_PLAYER_VEHICLE)
   );
   const [, setHudTick] = useState(0);
+  const [turnTimerTick, setTurnTimerTick] = useState(0);
+  const turnSubmitPendingRef = useRef(false);
+  const forfeitOnceRef = useRef(false);
+  const prevIsMyTurnRef = useRef(false);
+  const turnDeadlineMsRef = useRef<number | null>(null);
+  const pauseRemainingMsRef = useRef<number | null>(null);
 
   const powerupStackRef = useRef(0);
   const noBounceRef = useRef(false);
@@ -776,6 +806,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   }, []);
 
   const onShootStart = useCallback(() => {
+    turnSubmitPendingRef.current = true;
     setShotInFlight(true);
     spawnBeforeShotRef.current = gameSpawnRef.current;
     setSessionShots((n) => n + 1);
@@ -789,7 +820,10 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
       maybeWindToast(windRef.current.x, windRef.current.z, false);
 
       const rid = room?.id;
-      if (!rid) return;
+      if (!rid) {
+        turnSubmitPendingRef.current = false;
+        return;
+      }
 
       const rpcOutcome =
         outcome === "hit" || outcome === "enemy_loss"
@@ -799,6 +833,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             : "miss";
 
       void (async () => {
+        try {
         const supabase = createSupabaseBrowserClient();
         // Always pass all five args (null spawns) so PostgREST matches submit_pvp_shot(uuid, text, bigint, bigint, bigint).
         let p_spawn_x: number | null = null;
@@ -857,9 +892,13 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         }
 
         setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
+        } finally {
+          turnSubmitPendingRef.current = false;
+        }
       })();
     },
     [
+      dispatch,
       isPve,
       maybeWindToast,
       onEnemyKillReward,
@@ -998,6 +1037,126 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     (chargeHud !== null && !shotInFlight) ||
     (inCooldown && !shotInFlight && chargeHud === null);
 
+  const handleTurnTimeout = useCallback(async () => {
+    if (forfeitOnceRef.current) return;
+    if (turnSubmitPendingRef.current) return;
+    if (shotInFlight || enemyLossAnimating) return;
+    forfeitOnceRef.current = true;
+    const rid = room?.id;
+    if (!rid || !userId) {
+      forfeitOnceRef.current = false;
+      return;
+    }
+    const spawn = snapBlockCenterToGrid([...gameSpawnRef.current] as Vec3);
+    turnSubmitPendingRef.current = true;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.rpc("submit_pvp_shot", {
+        p_room_id: rid,
+        p_outcome: "penalty",
+        p_spawn_x: Math.round(spawn[0]),
+        p_spawn_y: Math.round(spawn[1]),
+        p_spawn_z: Math.round(spawn[2]),
+      });
+      if (error) {
+        pushHudToast(error.message);
+        return;
+      }
+      playSfx(SFX.errorBip);
+      setCageEscapeNextShot(false);
+      dispatch({
+        type: "PROJECTILE_END",
+        outcome: "penalty",
+        revertSpawn: [...gameSpawnRef.current] as Vec3,
+      });
+      pushHudToast("Time's up — turn forfeited");
+      setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
+      await refreshRoom();
+    } finally {
+      turnSubmitPendingRef.current = false;
+      forfeitOnceRef.current = false;
+    }
+  }, [
+    dispatch,
+    enemyLossAnimating,
+    playerVehicle,
+    pushHudToast,
+    refreshRoom,
+    room?.id,
+    shotInFlight,
+    userId,
+  ]);
+
+  useEffect(() => {
+    if (!isMyTurn) {
+      turnDeadlineMsRef.current = null;
+      pauseRemainingMsRef.current = null;
+    } else if (!prevIsMyTurnRef.current) {
+      turnDeadlineMsRef.current = Date.now() + PVP_PVE_TURN_TIME_LIMIT_MS;
+      pauseRemainingMsRef.current = null;
+    }
+    prevIsMyTurnRef.current = isMyTurn;
+  }, [isMyTurn]);
+
+  useEffect(() => {
+    if (!isMyTurn) return;
+    if (shotInFlight || enemyLossAnimating) {
+      if (turnDeadlineMsRef.current !== null) {
+        pauseRemainingMsRef.current = Math.max(
+          0,
+          turnDeadlineMsRef.current - Date.now()
+        );
+        turnDeadlineMsRef.current = null;
+      }
+    } else if (pauseRemainingMsRef.current !== null) {
+      turnDeadlineMsRef.current =
+        Date.now() + pauseRemainingMsRef.current;
+      pauseRemainingMsRef.current = null;
+    }
+  }, [isMyTurn, shotInFlight, enemyLossAnimating]);
+
+  useEffect(() => {
+    if (!bothPlayersReady || matchOver) return;
+    const id = window.setInterval(() => {
+      setTurnTimerTick((t) => t + 1);
+      if (
+        !isMyTurn ||
+        shotInFlight ||
+        enemyLossAnimating ||
+        turnSubmitPendingRef.current
+      ) {
+        return;
+      }
+      const d = turnDeadlineMsRef.current;
+      if (d !== null && Date.now() >= d) {
+        void handleTurnTimeout();
+      }
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [
+    bothPlayersReady,
+    matchOver,
+    isMyTurn,
+    shotInFlight,
+    enemyLossAnimating,
+    handleTurnTimeout,
+  ]);
+
+  const turnRemainingMs =
+    isMyTurn &&
+    bothPlayersReady &&
+    !matchOver &&
+    !waitingForOpponent
+      ? (() => {
+          void turnTimerTick;
+          return turnDeadlineMsRef.current !== null
+            ? Math.max(0, turnDeadlineMsRef.current - Date.now())
+            : pauseRemainingMsRef.current !== null
+              ? pauseRemainingMsRef.current
+              : null;
+        })()
+      : null;
+
   if (!initialFetchDone) {
     return (
       <div
@@ -1100,7 +1259,18 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             textAlign: "center",
           }}
         >
-          {isMyTurn ? "Your turn" : "Opponent's turn"}
+          {isMyTurn ? (
+            <>
+              Your turn
+              {turnRemainingMs !== null ? (
+                <span style={{ marginLeft: 8, opacity: 0.95 }}>
+                  · {formatPvpTurnClock(turnRemainingMs)}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            "Opponent's turn"
+          )}
         </div>
       )}
 
@@ -1154,6 +1324,10 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
             biome={game.biome}
             onTerrainCoordsClick={() => {}}
             ballFollowStateRef={ballFollowStateRef}
+            broadcastUserId={userId ?? null}
+            onBroadcastLocalShot={broadcastShot}
+            remoteGhostShotPayload={incomingGhostShot}
+            onRemoteGhostShotConsumed={clearIncomingGhostShot}
             onEnemyLossAnimatingChange={setEnemyLossAnimating}
             equippedHatId={shopInventory.equippedHatId}
             equippedFishId={shopInventory.equippedFishId}

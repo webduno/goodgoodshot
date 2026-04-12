@@ -190,8 +190,24 @@ export function TeleportOrbitRig({
       const ox = FOLLOW_BALL_CAMERA_OFFSET[0];
       const oy = FOLLOW_BALL_CAMERA_OFFSET[1];
       const oz = FOLLOW_BALL_CAMERA_OFFSET[2];
+      const vx = ballState.vx;
+      const vy = ballState.vy;
+      const vz = ballState.vz;
+      const horiz = Math.hypot(vx, vz);
+      /** Stay behind the ball along horizontal travel (any tee / curved shot); fall back when nearly still. */
+      const useVelocity =
+        horiz > 0.14 || Math.abs(vy) > 1.0;
       controls.enabled = false;
-      camera.position.set(b.x + ox, b.y + oy, b.z + oz);
+      if (useVelocity && horiz > 0.08) {
+        const invH = 1 / horiz;
+        const backX = -vx * invH * Math.abs(oz);
+        const backZ = -vz * invH * Math.abs(oz);
+        const latX = -vz * invH * ox;
+        const latZ = vx * invH * ox;
+        camera.position.set(b.x + backX + latX, b.y + oy, b.z + backZ + latZ);
+      } else {
+        camera.position.set(b.x + ox, b.y + oy, b.z + oz);
+      }
       controls.target.set(b.x, b.y, b.z);
       camera.lookAt(controls.target);
       clampCameraAboveGround(camera, controls.target);

@@ -244,6 +244,9 @@ export const CAMERA_FAR = 6000;
 /** Seconds for linear camera + spawn move when `gameSpawn` jumps (orbit disabled until done). */
 export const TELEPORT_DURATION_SEC = 1.5;
 
+/** PvP / PvE: per-turn shot clock (client UI + forfeit via penalty RPC). */
+export const PVP_PVE_TURN_TIME_LIMIT_MS = 60_000;
+
 /** Mid Z for goal corridor; used by static goal-area light (does not follow rolling goal X/Z). */
 export const MID_GOAL_Z = (GOAL_Z_MIN + GOAL_Z_MAX) / 2;
 

@@ -119,5 +119,10 @@ From `components/gameHudStyles.ts`:
 - `hudColors.label` — secondary/muted blue for labels
 - `modalBackdrop` — full‑screen dimmed overlay for dialogs
 - `goldPillButtonStyle({ disabled, fullWidth })` — primary pill CTA
+- **`plazaGlassCapsuleButtonStyle()`** — cyan glossy capsule (e.g. **Menu** on the plaza HUD)
+- **`plazaMultiplayerCapsuleButtonStyle()`** — violet / orchid glossy capsule, same family as the landing screen **Multiplayer / Online** tile (`glassFaceMultiplayer`); use for the plaza **Multiplayer** control so online entry matches the start screen
+- **`plazaPvpDockButtonStyle({ variant })`** — stacked actions inside **Multiplayer** modal (`create` | `join` | `quick`)
+
+Modal titles on light glass cards should use **`hudColors.value`** (navy) plus a light `textShadow` for contrast—not washed‑out white on pale blue.
 
 When adding new modals, mirror **StartGameModal** / **FinishGameModal** / **SessionEndModal** patterns: shell + blobs + optional help bubble + anchored actions.

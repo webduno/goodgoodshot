@@ -67,13 +67,17 @@ Selection can be exposed in UI (“Vehicle”); URL query `?vehicle=<v_id>` can 
 
 ## Biomes
 
-Biomes are **visual themes** for fairways and props (`BiomeId`: `plain` | `desert` | `forest` | `snow`). They drive:
+Biomes are **visual themes** for fairways and props (`BiomeId`: `plain` | `desert` | `forest` | `snow` | `sea` | `ice`). They drive:
 
-- **Island turf and foundation colors** (sand, muted green, forest turf, snow, etc.)
+- **Island turf and foundation colors** (sand, muted green, forest turf, snow, water-adjacent tones, ice, etc.)
 - **Vegetation:** e.g. blocky trees vs **cactus** in arid themes, **snow pines** in winter
 - **Decor rules:** e.g. **dead brush** in desert-style biomes
 
 The **spawn tee** can stay a readable green patch while the surrounding fairway follows the biome. Biomes do not need to change core rules—they reshape **readability and mood** (desert sun vs forest vs snowfield).
+
+**Solo / war session:** the start flow can pick **random** (per battle) or a **fixed** biome for the whole session.
+
+**Online (PvP / PvE rooms):** the **host** chooses **random** or a fixed biome when **creating a room**; it is stored server-side so both players see the same fairway. Random online still resolves deterministically from the room seed so clients agree.
 
 ---
 

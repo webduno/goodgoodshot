@@ -76,6 +76,43 @@ Implemented in **`SphereToGoal`** with a small **`Projectile`** state (`x,y,z`, 
 
 ---
 
+## Supabase (backend)
+
+The game uses **Supabase** for optional online features: **anonymous auth**, **player profiles** (username + synced gold / shop JSON), and **PvP / PvE rooms** (turn-based matches, Elo for PvP duels).
+
+### Tables (public)
+
+| Table | Role |
+|-------|------|
+| `player_profiles` | `user_id` → `auth.users`; optional `username`; `total_gold_coins`, `shop_inventory` when username is set |
+| `pvp_rooms` | Match room: `status`, `course_seed`, `match_mode` (`pvp` \| `pve`), **`biome_choice`** (`random` or a fixed `BiomeId`), spawns, vehicles, chat, etc. |
+| `pvp_shots` | Per-shot outcomes for a room |
+| `pvp_player_ratings` | Elo + W/L (PvP only; PvE skips Elo updates) |
+| `pvp_match_results` | One row per finished ranked PvP match (stats + Elo before/after) |
+
+RLS generally restricts reads to participants; writes go through **RPCs** (`security definer`).
+
+### RPCs (representative)
+
+- `create_pvp_room(p_match_mode, p_biome_choice)` — host creates a waiting room; stores fairway preference for the match.
+- `join_pvp_room_by_id`, `join_first_open_pvp_room` — guest joins.
+- `submit_pvp_shot`, `leave_pvp_room`, `set_pvp_room_vehicle`, spawn sync helpers, etc.
+- `set_player_username`, `set_player_progress` — profile / cloud sync when a username exists.
+
+### Online fairway (biome)
+
+For **online** rooms, the host picks **random** or a **fixed biome**; it is stored on `pvp_rooms.biome_choice`. Both clients resolve the same visual biome from the room seed where needed (`resolvePvpRoomBiome` in `lib/game/sessionBattleMaps.ts`) so layouts stay in sync.
+
+### Reset / “clean DB” (start fresh)
+
+To **delete all application rows** but keep the schema (and **not** delete `auth.users`), run the script in the Supabase SQL Editor:
+
+`supabase/scripts/reset_all_app_data.sql`
+
+That truncates match history, rooms, shots, ratings, and profiles. Users can still sign in; they will need to set username / sync again. To remove identities, use the Dashboard → Authentication.
+
+---
+
 ## Related files
 
 - Render entry: `components/CubeScene.tsx`, `components/HomeCanvas.tsx`
@@ -84,3 +121,5 @@ Implemented in **`SphereToGoal`** with a small **`Projectile`** state (`x,y,z`, 
 - Islands / counts: `lib/game/islands.ts` (`NUM_ISLANDS`, `computeIslandsForLane`)
 - Wind: `lib/game/wind.ts`
 - Power-up slots / charges: `lib/game/constants.ts` (`POWERUP_SLOTS`, `INITIAL_POWERUP_CHARGES`); HUD: `components/game/cube/hud/PowerupSlotRow.tsx`
+- PvP client: `components/PvpCubeScene.tsx`, `lib/pvp/plazaActions.ts`, `lib/pvp/usePvpRoom.ts`
+- Plaza multiplayer UI: `components/game/cube/modals/MultiplayerModal.tsx`, `components/PlazaScene.tsx`

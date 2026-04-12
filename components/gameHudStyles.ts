@@ -202,7 +202,7 @@ export function goldChipButtonStyle(): CSSProperties {
 }
 
 /**
- * Plaza top bar — glossy cyan → cerulean capsule, bright upper-left highlight (Menu + Multiplayer).
+ * Plaza top bar — glossy cyan → cerulean capsule (Menu).
  */
 export function plazaGlassCapsuleButtonStyle(): CSSProperties {
   const face = [
@@ -227,6 +227,33 @@ export function plazaGlassCapsuleButtonStyle(): CSSProperties {
       "inset 0 1px 0 rgba(255,255,255,0.68)",
       "inset 0 -1px 0 rgba(0, 55, 100, 0.14)",
       "0 4px 14px rgba(0, 75, 130, 0.3)",
+    ].join(", "),
+  };
+}
+
+/**
+ * Plaza top bar — Multiplayer: same violet glass as landing “Multiplayer / Online” tile.
+ */
+export function plazaMultiplayerCapsuleButtonStyle(): CSSProperties {
+  return {
+    ...hudFont,
+    ...textOnGlossButton,
+    padding: "7px 14px",
+    minHeight: 30,
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: "0.02em",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.92)",
+    boxSizing: "border-box",
+    backgroundImage: glassFaceMultiplayer,
+    backgroundColor: "#6b21a8",
+    cursor: "pointer",
+    boxShadow: [
+      "inset 0 2px 0 rgba(255,255,255,0.58)",
+      "inset 0 -1px 0 rgba(60, 20, 100, 0.12)",
+      "0 4px 14px rgba(88, 28, 135, 0.38)",
+      "0 0 0 1px rgba(147, 51, 234, 0.12)",
     ].join(", "),
   };
 }

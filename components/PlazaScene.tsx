@@ -39,6 +39,7 @@ import { PlazaHubFillLights } from "@/components/game/cube/meshes/PlazaHubFillLi
 import {
   goldIconButtonStyle,
   plazaGlassCapsuleButtonStyle,
+  plazaMultiplayerCapsuleButtonStyle,
   hudBottomPanel,
   hudFont,
   hudMiniPanel,
@@ -1314,7 +1315,7 @@ export default function PlazaScene() {
             type="button"
             aria-haspopup="dialog"
             onClick={() => setShowMultiplayerModal(true)}
-            style={plazaGlassCapsuleButtonStyle()}
+            style={plazaMultiplayerCapsuleButtonStyle()}
           >
             Multiplayer
           </button>

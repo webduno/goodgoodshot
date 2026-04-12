@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   goldChipButtonStyle,
   helpModalCard,
@@ -24,7 +25,25 @@ const BIOME_OPTIONS: readonly {
   { id: "ice", label: "Ice" },
 ];
 
-type CreateFlow = null | "pvp" | "pve";
+type Step = "main" | "pickMode" | "pickBiome";
+
+const modalTitleStyle: CSSProperties = {
+  margin: "0 0 14px",
+  fontSize: 18,
+  fontWeight: 800,
+  letterSpacing: "-0.02em",
+  color: hudColors.value,
+  textShadow: "0 1px 0 rgba(255,255,255,0.95)",
+};
+
+const modalSectionTitleStyle: CSSProperties = {
+  margin: "0 0 8px",
+  fontSize: 17,
+  fontWeight: 800,
+  letterSpacing: "-0.02em",
+  color: hudColors.value,
+  textShadow: "0 1px 0 rgba(255,255,255,0.92)",
+};
 
 export function MultiplayerModal({
   open,
@@ -43,54 +62,86 @@ export function MultiplayerModal({
   onJoinPvp: () => void;
   onQuickMatch: () => void | Promise<void>;
 }) {
-  const [createFlow, setCreateFlow] = useState<CreateFlow>(null);
+  const [step, setStep] = useState<Step>("main");
+  const [roomMode, setRoomMode] = useState<"pvp" | "pve" | null>(null);
   const [biomeChoice, setBiomeChoice] = useState<SessionBiomeChoice>("random");
 
   useEffect(() => {
     if (!open) return;
-    setCreateFlow(null);
+    setStep("main");
+    setRoomMode(null);
     setBiomeChoice("random");
   }, [open]);
+
+  const goBack = useCallback(() => {
+    if (step === "pickBiome") {
+      setStep("pickMode");
+      setRoomMode(null);
+      return;
+    }
+    if (step === "pickMode") {
+      setStep("main");
+      setRoomMode(null);
+      return;
+    }
+    onClose();
+  }, [step, onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (createFlow !== null) {
-        e.preventDefault();
-        setCreateFlow(null);
-        return;
-      }
-      onClose();
+      e.preventDefault();
+      goBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, createFlow]);
-
-  const goBackOrClose = () => {
-    if (createFlow !== null) {
-      setCreateFlow(null);
-      return;
-    }
-    onClose();
-  };
+  }, [open, goBack]);
 
   if (!open) return null;
 
-  const titleId =
-    createFlow === null
-      ? "plaza-multiplayer-modal-title"
-      : "plaza-multiplayer-create-title";
+  const titleText =
+    step === "main"
+      ? "Multiplayer"
+      : step === "pickMode"
+        ? "Create room"
+        : roomMode === "pvp"
+          ? "New PvP room"
+          : "New PvE room";
+
+  const backRow = (
+    <div style={{ marginBottom: 10 }}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={goBack}
+        style={{
+          padding: "4px 0",
+          border: "none",
+          background: "none",
+          cursor: busy ? "not-allowed" : "pointer",
+          fontSize: 12,
+          fontWeight: 700,
+          color: hudColors.accent,
+          textDecoration: "underline",
+          textUnderlineOffset: 2,
+          ...hudFont,
+        }}
+      >
+        ← Back
+      </button>
+    </div>
+  );
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby={titleId}
+      aria-labelledby="plaza-multiplayer-modal-title"
       style={modalBackdrop}
       onMouseDown={(e) => {
         if (e.target !== e.currentTarget) return;
-        goBackOrClose();
+        goBack();
       }}
     >
       <div
@@ -102,20 +153,10 @@ export function MultiplayerModal({
         }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {createFlow === null ? (
+        {step === "main" ? (
           <>
-            <h2
-              id="plaza-multiplayer-modal-title"
-              style={{
-                margin: "0 0 14px",
-                fontSize: 18,
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-                color: "#fff",
-                textShadow: "0 1px 2px rgba(40, 0, 80, 0.55)",
-              }}
-            >
-              Multiplayer
+            <h2 id="plaza-multiplayer-modal-title" style={modalTitleStyle}>
+              {titleText}
             </h2>
             <div
               style={{
@@ -128,8 +169,8 @@ export function MultiplayerModal({
               <button
                 type="button"
                 disabled={busy}
-                aria-label="Start creating a PvP room"
-                onClick={() => setCreateFlow("pvp")}
+                aria-label="Create a new online room"
+                onClick={() => setStep("pickMode")}
                 style={plazaPvpDockButtonStyle({
                   variant: "create",
                   disabled: busy,
@@ -155,44 +196,12 @@ export function MultiplayerModal({
                 >
                   +
                 </span>
-                New PvP
+                Create room
               </button>
               <button
                 type="button"
                 disabled={busy}
-                aria-label="Start creating a PvE room"
-                onClick={() => setCreateFlow("pve")}
-                style={plazaPvpDockButtonStyle({
-                  variant: "create",
-                  disabled: busy,
-                })}
-              >
-                <span
-                  aria-hidden
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    fontSize: 13,
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    background:
-                      "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, rgba(0,100,80,0.35) 100%)",
-                    border: "1px solid rgba(255,255,255,0.75)",
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
-                  }}
-                >
-                  +
-                </span>
-                New PvE
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                aria-label="PvP: join PvP"
+                aria-label="Join a PvP room by code"
                 onClick={onJoinPvp}
                 style={plazaPvpDockButtonStyle({
                   variant: "join",
@@ -224,7 +233,7 @@ export function MultiplayerModal({
               <button
                 type="button"
                 disabled={busy}
-                aria-label="PvP: quick match"
+                aria-label="Quick match"
                 onClick={() => {
                   void onQuickMatch();
                 }}
@@ -257,41 +266,13 @@ export function MultiplayerModal({
               </button>
             </div>
           </>
-        ) : (
+        ) : null}
+
+        {step === "pickMode" ? (
           <>
-            <div style={{ marginBottom: 10 }}>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setCreateFlow(null)}
-                style={{
-                  padding: "4px 0",
-                  border: "none",
-                  background: "none",
-                  cursor: busy ? "not-allowed" : "pointer",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: hudColors.accent,
-                  textDecoration: "underline",
-                  textUnderlineOffset: 2,
-                  ...hudFont,
-                }}
-              >
-                ← Back
-              </button>
-            </div>
-            <h2
-              id="plaza-multiplayer-create-title"
-              style={{
-                margin: "0 0 6px",
-                fontSize: 17,
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-                color: "#fff",
-                textShadow: "0 1px 2px rgba(40, 0, 80, 0.55)",
-              }}
-            >
-              {createFlow === "pvp" ? "New PvP room" : "New PvE room"}
+            {backRow}
+            <h2 id="plaza-multiplayer-modal-title" style={modalSectionTitleStyle}>
+              {titleText}
             </h2>
             <p
               style={{
@@ -302,8 +283,146 @@ export function MultiplayerModal({
                 ...hudFont,
               }}
             >
-              Pick a fairway for this room. Random is still fair — both players
-              get the same course from the match seed.
+              Head-to-head duel, or co-op race — then you&apos;ll pick the
+              fairway.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                alignItems: "stretch",
+              }}
+            >
+              <button
+                type="button"
+                disabled={busy}
+                aria-label="Create a PvP room"
+                onClick={() => {
+                  setRoomMode("pvp");
+                  setStep("pickBiome");
+                }}
+                style={{
+                  ...plazaPvpDockButtonStyle({
+                    variant: "create",
+                    disabled: busy,
+                  }),
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  minHeight: 48,
+                  padding: "10px 14px",
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    fontSize: 13,
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    background:
+                      "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, rgba(0,80,100,0.35) 100%)",
+                    border: "1px solid rgba(255,255,255,0.75)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+                  }}
+                >
+                  +
+                </span>
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 2,
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>PvP</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.92 }}>
+                    Duel vs another player
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                aria-label="Create a PvE room"
+                onClick={() => {
+                  setRoomMode("pve");
+                  setStep("pickBiome");
+                }}
+                style={{
+                  ...plazaPvpDockButtonStyle({
+                    variant: "create",
+                    disabled: busy,
+                  }),
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  minHeight: 48,
+                  padding: "10px 14px",
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    fontSize: 13,
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    background:
+                      "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, rgba(0,100,80,0.35) 100%)",
+                    border: "1px solid rgba(255,255,255,0.75)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+                  }}
+                >
+                  +
+                </span>
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 2,
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>PvE</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.92 }}>
+                    Co-op race to the goal
+                  </span>
+                </span>
+              </button>
+            </div>
+          </>
+        ) : null}
+
+        {step === "pickBiome" && roomMode !== null ? (
+          <>
+            {backRow}
+            <h2 id="plaza-multiplayer-modal-title" style={modalSectionTitleStyle}>
+              {titleText}
+            </h2>
+            <p
+              style={{
+                margin: "0 0 12px",
+                fontSize: 12,
+                lineHeight: 1.45,
+                color: hudColors.label,
+                ...hudFont,
+              }}
+            >
+              Pick a fairway for this room. Random still gives both players the
+              same course — it&apos;s chosen from the match seed.
             </p>
             <p
               style={{
@@ -383,7 +502,7 @@ export function MultiplayerModal({
               type="button"
               disabled={busy}
               onClick={() => {
-                if (createFlow === "pvp") void onCreatePvp(biomeChoice);
+                if (roomMode === "pvp") void onCreatePvp(biomeChoice);
                 else void onCreatePve(biomeChoice);
               }}
               style={{
@@ -399,7 +518,8 @@ export function MultiplayerModal({
               Create room
             </button>
           </>
-        )}
+        ) : null}
+
         <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
           <button
             type="button"

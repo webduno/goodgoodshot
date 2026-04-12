@@ -20,12 +20,18 @@ export const BGM = {
   plaza: "/sfx/bg/ggshot1.mp3",
   /** Home / start-game welcome screen (`app/page.tsx`). */
   welcome: "/sfx/bg/gg3.mp3",
+  /** Active battle / course gameplay (`CubeScene`). */
+  battle: "/sfx/bg/gg4.mp3",
+  /** Battle won — finish modal (`CubeScene`). */
+  battleWin: "/sfx/bg/gg5.mp3",
 } as const;
 
-export function startBgmLoop(src: string): void {
+export function startBgmLoop(src: string, volume = 1, loop = true): void {
   if (typeof window === "undefined") return;
   try {
     const a = getBgmEl();
+    a.loop = loop;
+    a.volume = Math.max(0, Math.min(1, volume));
     if (currentSrc === src && !a.paused) return;
     a.pause();
     a.currentTime = 0;

@@ -208,7 +208,7 @@ export function HelpModal({
                 onClick={onGoToPlaza}
                 style={plazaHubButtonStyle({ variant: "chip" })}
               >
-                Plaza
+                Go to Plaza 🌳
               </button>
             ) : null}
             {showProfileButton ? (

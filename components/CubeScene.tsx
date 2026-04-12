@@ -677,6 +677,7 @@ export default function CubeScene() {
         pushHudToast("Need 1 coin");
         return;
       }
+      playSfx(SFX.kash);
       if (slotId === "strength") {
         const next = strengthChargesRef.current + 1;
         setStrengthCharges((c) => c + 1);
@@ -731,12 +732,22 @@ export default function CubeScene() {
   }, []);
 
   const onProjectileEnd = useCallback(
-    (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
+    (
+      outcome: "hit" | "miss" | "penalty" | "enemy_loss" | "enemy_kill",
+      landing?: Vec3
+    ) => {
       setShotInFlight(false);
       setWindHud({ x: windRef.current.x, y: 0, z: windRef.current.z });
       maybeWindToast(windRef.current.x, windRef.current.z, false);
-      if (outcome === "enemy_loss") {
+      if (outcome === "enemy_kill") {
         onEnemyKillReward();
+        dispatch({
+          type: "PROJECTILE_END",
+          outcome: "enemy_kill",
+          landing,
+        });
+        setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
+        return;
       }
       if (outcome === "penalty") {
         setCageEscapeNextShot(false);
@@ -763,8 +774,9 @@ export default function CubeScene() {
           );
           const shots = sessionShotsRef.current;
           const battleWon =
-            outcome === "enemy_loss" ||
-            (outcome === "hit" && shots <= par);
+            outcome === "enemy_loss"
+              ? false
+              : outcome === "hit" && shots <= par;
           if (battleWon) {
             playSfx(SFX.conff);
           }
@@ -824,7 +836,7 @@ export default function CubeScene() {
           }
           setFinishBattleWon(battleWon);
           setFinishPar(par);
-          setFinishWinKind(outcome === "enemy_loss" ? "virus" : "goal");
+          setFinishWinKind("goal");
           setFinishLossReason(outcome === "enemy_loss" ? "enemy" : "par");
           setFinishBattleCoinsEarned(
             battleWon && session && warBattleIndex > 0 ? warBattleIndex : 0
@@ -845,6 +857,7 @@ export default function CubeScene() {
       setCooldownUntil(performance.now() + vehicleShotCooldownMs(playerVehicle));
     },
     [
+      dispatch,
       maybeWindToast,
       onEnemyKillReward,
       playerVehicle,

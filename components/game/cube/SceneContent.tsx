@@ -323,7 +323,7 @@ export function SceneContent({
   ) => void;
   onShootStart: () => void;
   onProjectileEnd: (
-    outcome: "hit" | "miss" | "penalty" | "enemy_loss",
+    outcome: "hit" | "miss" | "penalty" | "enemy_loss" | "enemy_kill",
     landing?: Vec3
   ) => void;
   getPowerupMultiplier: () => number;
@@ -601,7 +601,7 @@ export function SceneContent({
 
   const onGhostProjectileEnd = useCallback(
     (
-      _outcome: "hit" | "miss" | "penalty" | "enemy_loss",
+      _outcome: "hit" | "miss" | "penalty" | "enemy_loss" | "enemy_kill",
       _landing?: Vec3
     ) => {
       ghostProjectileRef.current = null;

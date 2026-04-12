@@ -18,7 +18,11 @@ export function pvpGameReducer(state: GameState, action: GameAction): GameState 
   }
   if (action.type !== "PROJECTILE_END") return state;
 
-  if (action.outcome === "hit" || action.outcome === "enemy_loss") {
+  if (
+    action.outcome === "hit" ||
+    action.outcome === "enemy_loss" ||
+    action.outcome === "enemy_kill"
+  ) {
     return state;
   }
 

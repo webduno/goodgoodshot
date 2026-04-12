@@ -24,6 +24,7 @@ export const SFX = {
   rollLand: "/sfx/land.mp3",
   errorBip: "/sfx/short/errorbip.mp3",
   conff: "/sfx/short/conff.mp3",
+  kash: "/sfx/short/kash.mp3",
 } as const;
 
 export function playSfx(src: string): void {

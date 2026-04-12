@@ -814,7 +814,10 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
   }, []);
 
   const onProjectileEnd = useCallback(
-    (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
+    (
+      outcome: "hit" | "miss" | "penalty" | "enemy_loss" | "enemy_kill",
+      landing?: Vec3
+    ) => {
       setShotInFlight(false);
       setWindHud({ x: windRef.current.x, y: 0, z: windRef.current.z });
       maybeWindToast(windRef.current.x, windRef.current.z, false);
@@ -976,6 +979,7 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
         pushHudToast("Need 1 coin");
         return;
       }
+      playSfx(SFX.kash);
       if (slotId === "strength") {
         const next = strengthChargesRef.current + 1;
         setStrengthCharges((c) => c + 1);

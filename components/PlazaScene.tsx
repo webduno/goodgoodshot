@@ -555,6 +555,7 @@ export default function PlazaScene() {
         pushHudToast("Need 1 coin");
         return;
       }
+      playSfx(SFX.kash);
       if (slotId === "strength") {
         const next = strengthChargesRef.current + 1;
         setStrengthCharges((c) => c + 1);
@@ -780,14 +781,20 @@ export default function PlazaScene() {
   }, [searchParams, playerVehicle]);
 
   const onProjectileEnd = useCallback(
-    (outcome: "hit" | "miss" | "penalty" | "enemy_loss", landing?: Vec3) => {
+    (
+      outcome: "hit" | "miss" | "penalty" | "enemy_loss" | "enemy_kill",
+      landing?: Vec3
+    ) => {
       setShotInFlight(false);
       const prev = spawnBeforeShotRef.current;
       if (outcome === "penalty") {
         playSfx(SFX.errorBip);
         pushHudToast("Out of bounds");
         setSpawnCenter(snapBlockCenterToGrid(prev));
-      } else if (outcome === "miss" && landing) {
+      } else if (
+        (outcome === "miss" || outcome === "enemy_kill") &&
+        landing
+      ) {
         setSpawnCenter(snapBlockCenterToGrid(landing));
         const hub = PLAZA_HUB_ISLANDS[0]!;
         if (isNearPlazaShop(landing[0], landing[2])) {

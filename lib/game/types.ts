@@ -105,7 +105,7 @@ export type GameState = {
 export type GameAction =
   | {
       type: "PROJECTILE_END";
-      outcome: "hit" | "miss" | "penalty" | "enemy_loss";
+      outcome: "hit" | "miss" | "penalty" | "enemy_loss" | "enemy_kill";
       landing?: Vec3;
       /** Spawn position before the shot that hit the penalty (snapped). */
       revertSpawn?: Vec3;

@@ -55,7 +55,7 @@ export function SphereToGoal({
   bounceRestitution: number;
   rollDeceleration: number;
   onProjectileEnd: (
-    outcome: "hit" | "miss" | "penalty" | "enemy_loss",
+    outcome: "hit" | "miss" | "penalty" | "enemy_loss" | "enemy_kill",
     landing?: Vec3
   ) => void;
   /** Lane bonus pickups (same cells as yellow markers); 1×1×1 hitbox, no physics. */
@@ -66,7 +66,7 @@ export function SphereToGoal({
     positions: { x: number; y: number; z: number }[];
     alive: boolean[];
   }>;
-  /** Ball touched an enemy: update sim only (reward comes from `onProjectileEnd("enemy_loss")`). */
+  /** Ball touched an enemy: update sim; solo rewards via `enemy_kill`, PvP win via `enemy_loss`. */
   onEnemyHitByBall: (enemyIndex: number) => void;
   hubMode?: boolean;
   /** PvP: no goal-block win; win by hitting the opponent vehicle. */
@@ -142,7 +142,11 @@ export function SphereToGoal({
         onEnemyHitByBall(i);
         projectileRef.current = null;
         mesh.visible = false;
-        onProjectileEnd("enemy_loss");
+        if (pvpMode) {
+          onProjectileEnd("enemy_loss");
+        } else {
+          onProjectileEnd("enemy_kill", [px, spawnCenter[1], pz]);
+        }
         return true;
       }
     }

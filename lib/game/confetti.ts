@@ -80,7 +80,7 @@ export function burstPowerupBuyConfetti(
   const j = getConfetti();
   if (!j) return;
   void j.addConfetti({
-    confettiNumber: 160,
+    confettiNumber: 110,
     confettiColors: POWERUP_BUY_COLORS[slot],
     confettiRadius: 5,
   });

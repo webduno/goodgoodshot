@@ -81,7 +81,7 @@ import {
 import { TerrainTextured } from "../TerrainTextured";
 import type { FishId, HatId } from "@/lib/shop/playerInventory";
 import { PowerupHudIcon } from "@/components/game/cube/hud/PowerupHudIcon";
-import { POWERUP_SLOT_ACCENT } from "@/components/gameHudStyles";
+import { POWERUP_SLOT_ACCENT, POWERUP_WORLD_RGB } from "@/components/gameHudStyles";
 import { EarthTextured } from "../EarthTextured";
 import { ShotGuidelineArc } from "@/components/game/cube/ShotGuidelineArc";
 import { sampleFirstSegmentGuideline } from "@/lib/game/firstSegmentGuideline";
@@ -951,6 +951,72 @@ export function SceneContent({
       <SpawnVisualGroup>
         <group ref={enemyLossSinkGroupRef}>
         <group rotation={[0, bodyYawRad, 0]}>
+          {powerupStackCount > 0 ? (
+            <mesh
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[0, TURF_TOP_Y + 0.018, 0]}
+              receiveShadow
+            >
+              <torusGeometry args={[1.3, 0.036, 32, 64]} />
+              <meshStandardMaterial
+                color={POWERUP_WORLD_RGB.strength}
+                emissive={POWERUP_WORLD_RGB.strength}
+                emissiveIntensity={0.22}
+                roughness={0.42}
+                metalness={0.12}
+              />
+            </mesh>
+          ) : null}
+          {noBounceActive ? (
+            <mesh receiveShadow>
+              {/*
+                Default torus lies in XY (vertical ring); hole along local Z. Same XZ center as
+                vehicle; smaller than strength ground ring.
+              */}
+              <torusGeometry args={[1.3, 0.026, 32, 64]} />
+              <meshStandardMaterial
+                color={POWERUP_WORLD_RGB.noBounce}
+                emissive={POWERUP_WORLD_RGB.noBounce}
+                emissiveIntensity={0.2}
+                roughness={0.42}
+                metalness={0.12}
+              />
+            </mesh>
+          ) : null}
+          {noBounceActive && noWindActive ? (
+            <group>
+              {/*
+                Top of vertical torus: major radius 1.3 + tube 0.026 (matches geometry above).
+                Cylinder + sphere sit above the front-facing top arc (local +Y), same XZ as ring center.
+              */}
+              <mesh
+                position={[0, 1.3 + 0.026 + 0.008 + 0.28, 0]}
+                castShadow
+              >
+                <cylinderGeometry args={[0.02, 0.02, 0.65, 16]} />
+                <meshStandardMaterial
+                  color={POWERUP_WORLD_RGB.nowind}
+                  emissive={POWERUP_WORLD_RGB.nowind}
+                  emissiveIntensity={0.18}
+                  roughness={0.4}
+                  metalness={0.1}
+                />
+              </mesh>
+              <mesh position={[0, 1.3 + 0.026 + 0.008 + 0.56 + 0.11, 0]}>
+                <sphereGeometry args={[0.2, 24, 24]} />
+                <meshStandardMaterial
+                  color={POWERUP_WORLD_RGB.nowind}
+                  emissive={POWERUP_WORLD_RGB.nowind}
+                  emissiveIntensity={0.12}
+                  roughness={0.35}
+                  metalness={0.06}
+                  transparent
+                  opacity={0.45}
+                  depthWrite={false}
+                />
+              </mesh>
+            </group>
+          ) : null}
           {vehicle.meshObjPath != null && vehicle.meshObjPath.length > 0 ? (
             <Suspense
               fallback={

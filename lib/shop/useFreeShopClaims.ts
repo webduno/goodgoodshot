@@ -11,6 +11,7 @@ import {
 import {
   FREE_SHOP_CLAIMS_CHANGE_EVENT,
   FREE_SHOP_CLAIMS_KEY,
+  getNineNineNineCoinBagRemainingMs,
   getThreeCoinBagRemainingMs,
   loadFreeShopClaims,
   saveFreeShopClaims,
@@ -55,6 +56,12 @@ export function useFreeShopClaims(recordGoldCoins: (count: number) => void) {
   );
   const canClaimThreeCoinBag = threeCoinBagRemainingMs === 0;
 
+  const nineNineNineCoinBagRemainingMs = useMemo(
+    () => getNineNineNineCoinBagRemainingMs(state, Date.now()),
+    [state, tick]
+  );
+  const canClaimNineNineNineCoinBag = nineNineNineCoinBagRemainingMs === 0;
+
   const tryClaimThreeCoinBag = useCallback((): boolean => {
     const current = loadFreeShopClaims();
     if (getThreeCoinBagRemainingMs(current, Date.now()) > 0) return false;
@@ -68,9 +75,26 @@ export function useFreeShopClaims(recordGoldCoins: (count: number) => void) {
     return true;
   }, [recordGoldCoins]);
 
+  const tryClaimNineNineNineCoinBag = useCallback((): boolean => {
+    const current = loadFreeShopClaims();
+    if (getNineNineNineCoinBagRemainingMs(current, Date.now()) > 0)
+      return false;
+    recordGoldCoins(999);
+    const next: FreeShopClaimsState = {
+      ...current,
+      lastNineNineNineCoinBagClaimAtMs: Date.now(),
+    };
+    saveFreeShopClaims(next);
+    setState(next);
+    return true;
+  }, [recordGoldCoins]);
+
   return {
     canClaimThreeCoinBag,
     threeCoinBagRemainingMs,
     tryClaimThreeCoinBag,
+    canClaimNineNineNineCoinBag,
+    nineNineNineCoinBagRemainingMs,
+    tryClaimNineNineNineCoinBag,
   };
 }

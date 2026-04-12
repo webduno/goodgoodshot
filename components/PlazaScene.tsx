@@ -191,6 +191,9 @@ export default function PlazaScene() {
     canClaimThreeCoinBag,
     threeCoinBagRemainingMs,
     tryClaimThreeCoinBag,
+    canClaimNineNineNineCoinBag,
+    nineNineNineCoinBagRemainingMs,
+    tryClaimNineNineNineCoinBag,
   } = useFreeShopClaims(recordGoldCoins);
   const strengthCharges = shopInventory.strengthCharges;
   const noBounceCharges = shopInventory.noBounceCharges;
@@ -604,6 +607,12 @@ export default function PlazaScene() {
     playSfx(SFX.coinCollect);
     pushHudToast("+3 coins");
   }, [tryClaimThreeCoinBag, pushHudToast]);
+
+  const onClaimFree999CoinBag = useCallback(() => {
+    if (!tryClaimNineNineNineCoinBag()) return;
+    playSfx(SFX.coinCollect);
+    pushHudToast("+999 coins");
+  }, [tryClaimNineNineNineCoinBag, pushHudToast]);
 
   const buyVehicleFromShop = useCallback(
     (vehicleId: string) => {
@@ -1807,6 +1816,9 @@ export default function PlazaScene() {
         canClaimFreeCoinBag={canClaimThreeCoinBag}
         freeCoinBagRemainingMs={threeCoinBagRemainingMs}
         onClaimFreeCoinBag={onClaimFreeCoinBag}
+        canClaimFree999CoinBag={canClaimNineNineNineCoinBag}
+        free999CoinBagRemainingMs={nineNineNineCoinBagRemainingMs}
+        onClaimFree999CoinBag={onClaimFree999CoinBag}
       />
       <AquariumShopModal
         open={showAquariumShopModal}

@@ -118,6 +118,20 @@ function lockedShopCellStyle(): CSSProperties {
   };
 }
 
+const freeShopGiftCellStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "stretch",
+  justifyContent: "space-between",
+  gap: 8,
+  minHeight: 96,
+  padding: "8px 8px",
+  borderRadius: 12,
+  border: "1px solid rgba(0, 55, 95, 0.18)",
+  background: "rgba(255,255,255,0.55)",
+  boxSizing: "border-box",
+};
+
 export function ShopModal({
   open,
   onClose,
@@ -136,6 +150,9 @@ export function ShopModal({
   canClaimFreeCoinBag,
   freeCoinBagRemainingMs,
   onClaimFreeCoinBag,
+  canClaimFree999CoinBag,
+  free999CoinBagRemainingMs,
+  onClaimFree999CoinBag,
   onOpenProfile,
 }: {
   open: boolean;
@@ -158,6 +175,9 @@ export function ShopModal({
   canClaimFreeCoinBag: boolean;
   freeCoinBagRemainingMs: number;
   onClaimFreeCoinBag: () => void;
+  canClaimFree999CoinBag: boolean;
+  free999CoinBagRemainingMs: number;
+  onClaimFree999CoinBag: () => void;
 }) {
   const [tab, setTab] = useState<ShopTab>("powerups");
 
@@ -629,21 +649,7 @@ export function ShopModal({
 
         {tab === "free" && (
           <ul style={shopGridStyle}>
-            <li
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "stretch",
-                justifyContent: "space-between",
-                gap: 8,
-                minHeight: 96,
-                padding: "8px 8px",
-                borderRadius: 12,
-                border: "1px solid rgba(0, 55, 95, 0.18)",
-                background: "rgba(255,255,255,0.55)",
-                boxSizing: "border-box",
-              }}
-            >
+            <li style={freeShopGiftCellStyle}>
               <span style={shopItemEmojiStyle} aria-hidden>
                 🎁
               </span>
@@ -680,8 +686,45 @@ export function ShopModal({
                 </span>
               )}
             </li>
+            <li style={freeShopGiftCellStyle}>
+              <span style={shopItemEmojiStyle} aria-hidden>
+                🎁
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#7c2d12",
+                  lineHeight: 1.25,
+                  textAlign: "center",
+                }}
+              >
+                999 coin bag
+              </span>
+              {canClaimFree999CoinBag ? (
+                <button
+                  type="button"
+                  onClick={onClaimFree999CoinBag}
+                  style={{ ...goldChipButtonStyle(), width: "100%", marginTop: "auto" }}
+                >
+                  Claim
+                </button>
+              ) : (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: hudColors.muted,
+                    textAlign: "center",
+                    marginTop: "auto",
+                  }}
+                >
+                  Next in {formatMsAsMmSs(free999CoinBagRemainingMs)}
+                </span>
+              )}
+            </li>
             {Array.from(
-              { length: SHOP_GRID_SLOTS - 1 },
+              { length: SHOP_GRID_SLOTS - 2 },
               (_, i) => (
                 <li
                   key={`free-locked-${i}`}

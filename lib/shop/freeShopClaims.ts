@@ -5,13 +5,21 @@ export const FREE_SHOP_CLAIMS_CHANGE_EVENT = "goodgoodshot:freeShopClaims";
 /** Cooldown after claiming the 3-coin bag (ms). */
 export const THREE_COIN_BAG_COOLDOWN_MS = 30 * 60 * 1000;
 
+/** Cooldown after claiming the 999-coin bag (ms). */
+export const NINE_NINE_NINE_COIN_BAG_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 export type FreeShopClaimsState = {
   /** Wall-clock ms when the player last claimed the 3-coin bag; `null` = never. */
   lastThreeCoinBagClaimAtMs: number | null;
+  /** Wall-clock ms when the player last claimed the 999-coin bag; `null` = never. */
+  lastNineNineNineCoinBagClaimAtMs: number | null;
 };
 
 export function defaultFreeShopClaims(): FreeShopClaimsState {
-  return { lastThreeCoinBagClaimAtMs: null };
+  return {
+    lastThreeCoinBagClaimAtMs: null,
+    lastNineNineNineCoinBagClaimAtMs: null,
+  };
 }
 
 export function loadFreeShopClaims(): FreeShopClaimsState {
@@ -30,7 +38,18 @@ export function loadFreeShopClaims(): FreeShopClaimsState {
       const t = Math.floor(p.lastThreeCoinBagClaimAtMs);
       lastThreeCoinBagClaimAtMs = Number.isFinite(t) ? t : null;
     }
-    return { ...base, lastThreeCoinBagClaimAtMs };
+    let lastNineNineNineCoinBagClaimAtMs: number | null = null;
+    if (p.lastNineNineNineCoinBagClaimAtMs === null) {
+      lastNineNineNineCoinBagClaimAtMs = null;
+    } else if (typeof p.lastNineNineNineCoinBagClaimAtMs === "number") {
+      const t = Math.floor(p.lastNineNineNineCoinBagClaimAtMs);
+      lastNineNineNineCoinBagClaimAtMs = Number.isFinite(t) ? t : null;
+    }
+    return {
+      ...base,
+      lastThreeCoinBagClaimAtMs,
+      lastNineNineNineCoinBagClaimAtMs,
+    };
   } catch {
     return defaultFreeShopClaims();
   }
@@ -64,6 +83,16 @@ export function getThreeCoinBagRemainingMs(
   if (state.lastThreeCoinBagClaimAtMs == null) return 0;
   const elapsed = nowMs - state.lastThreeCoinBagClaimAtMs;
   return Math.max(0, THREE_COIN_BAG_COOLDOWN_MS - elapsed);
+}
+
+/** Ms until the 999-coin bag can be claimed again; `0` means ready. */
+export function getNineNineNineCoinBagRemainingMs(
+  state: FreeShopClaimsState,
+  nowMs: number
+): number {
+  if (state.lastNineNineNineCoinBagClaimAtMs == null) return 0;
+  const elapsed = nowMs - state.lastNineNineNineCoinBagClaimAtMs;
+  return Math.max(0, NINE_NINE_NINE_COIN_BAG_COOLDOWN_MS - elapsed);
 }
 
 export function formatMsAsMmSs(totalMs: number): string {

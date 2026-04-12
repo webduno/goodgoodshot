@@ -1,13 +1,14 @@
 "use client";
 
 import { biomeUsesCactus } from "@/lib/game/biomes";
-import { TURF_TOP_Y } from "@/lib/game/constants";
+import { PALM_DECOR_Y_LIFT, TURF_TOP_Y } from "@/lib/game/constants";
 import type { IslandRect } from "@/lib/game/islands";
 import type { BiomeId } from "@/lib/game/types";
 
 import { BlockyCactus } from "./BlockyCactus";
 import { BlockyTree } from "./BlockyTree";
 import { InstancedBlockyTrees } from "./InstancedBlockyTrees";
+import { PalmTree } from "./PalmTree";
 import { SnowPineTree } from "./SnowPineTree";
 
 /** Fairway trees: thinner on X/Z only (tee tree scales separately in `TeeCornerTree`). */
@@ -30,10 +31,13 @@ export function IslandTrees({
   const TreeMesh =
     biome === "snow" || biome === "ice"
       ? SnowPineTree
-      : biomeUsesCactus(biome)
-        ? BlockyCactus
-        : BlockyTree;
+      : biome === "sea"
+        ? PalmTree
+        : biomeUsesCactus(biome)
+          ? BlockyCactus
+          : BlockyTree;
   const isSnowPine = biome === "snow" || biome === "ice";
+  const islandTreeY = biome === "sea" ? PALM_DECOR_Y_LIFT : 0;
   return (
     <>
       {islands.flatMap((is, ii) =>
@@ -43,7 +47,7 @@ export function IslandTrees({
           return (
             <group
               key={`island-${ii}-tree-${ti}-${t.ox}-${t.oz}`}
-              position={[is.worldX + t.ox, 0, is.worldZ + t.oz]}
+              position={[is.worldX + t.ox, islandTreeY, is.worldZ + t.oz]}
             >
               {isSnowPine ? (
                 <group position={[0, TURF_TOP_Y, 0]}>

@@ -4,6 +4,7 @@ import { biomeUsesDeadBush } from "@/lib/game/biomes";
 import type { IslandRect } from "@/lib/game/islands";
 import type { BiomeId } from "@/lib/game/types";
 
+import { Buoy } from "./Buoy";
 import { Bush } from "./Bush";
 import { DeadBush } from "./DeadBush";
 import { IceSpikeBush } from "./IceSpikeBush";
@@ -48,6 +49,16 @@ export function IslandBushes({
           if (biomeUsesDeadBush(biome)) {
             return (
               <DeadBush
+                key={`island-${ii}-bush-${bi}-${b.ox}-${b.oz}`}
+                worldX={wx}
+                worldZ={wz}
+                seed={seed}
+              />
+            );
+          }
+          if (biome === "sea") {
+            return (
+              <Buoy
                 key={`island-${ii}-bush-${bi}-${b.ox}-${b.oz}`}
                 worldX={wx}
                 worldZ={wz}

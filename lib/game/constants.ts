@@ -46,6 +46,8 @@ export const SPHERE_RADIUS = 0.2;
 
 /** Top of the green field mesh (`InitialFieldGround`); aligns with block bottom at y = 0. */
 export const TURF_TOP_Y = -BLOCK_SIZE / 2;
+/** Sea palm + sand: lift above turf/tee so the beach mound reads clearly (`IslandTrees`, `TeeCornerTree`). */
+export const PALM_DECOR_Y_LIFT = 0.05;
 /** Sphere center Y when the ball rests on the turf (bottom of sphere at `TURF_TOP_Y`). */
 export const FLOOR_CONTACT_CENTER_Y = TURF_TOP_Y + SPHERE_RADIUS;
 /** End ground roll when horizontal speed drops below this (world units/s). */

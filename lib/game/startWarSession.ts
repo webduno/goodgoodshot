@@ -22,10 +22,12 @@ export const SESSION_SKIP_START_MODAL_KEY = "goodgoodshot.skipStartModal";
 /**
  * Persists a new war session (maps + play session) and navigates to home so `CubeScene` loads it.
  * Preserves `?vehicle=` from the current URL when present.
+ * When `options.vehicleParam` is set (including `null` for default), it overrides URL + stored preference for the redirect.
  */
 export function startWarSessionAndRedirectHome(
   battleCount: SessionBattleCount,
-  biomeChoice: SessionBiomeChoice
+  biomeChoice: SessionBiomeChoice,
+  options?: { vehicleParam?: string | null }
 ): void {
   if (typeof window === "undefined") return;
 
@@ -48,7 +50,10 @@ export function startWarSessionAndRedirectHome(
   const url = new URL("/", window.location.origin);
   const fromUrl = new URLSearchParams(window.location.search).get("vehicle");
   const stored = readPreferredVehicleId();
-  const effective = effectiveVehicleParam(fromUrl, stored);
+  const effective =
+    options?.vehicleParam !== undefined
+      ? options.vehicleParam
+      : effectiveVehicleParam(fromUrl, stored);
   const cfg = resolveVehicleFromUrlParam(effective);
   if (cfg.id !== DEFAULT_V_ID) {
     url.searchParams.set("vehicle", cfg.id);

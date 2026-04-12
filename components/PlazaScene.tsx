@@ -8,6 +8,7 @@ import { PvpJoinRoomModal } from "@/components/game/cube/modals/PvpJoinRoomModal
 import { MultiplayerModal } from "@/components/game/cube/modals/MultiplayerModal";
 import type { SessionBiomeChoice } from "@/lib/game/sessionBattleMaps";
 import { VibeJamPortalModal } from "@/components/game/cube/modals/VibeJamPortalModal";
+import { PlazaWarPortalModal } from "@/components/game/cube/modals/PlazaWarPortalModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { AquariumShopModal } from "@/components/game/cube/modals/AquariumShopModal";
 import { BirdShopModal } from "@/components/game/cube/modals/BirdShopModal";
@@ -136,7 +137,7 @@ import type {
   HatId,
   PlazaBirdId,
 } from "@/lib/shop/playerInventory";
-import { startWarSessionAndRedirectHome } from "@/lib/game/startWarSession";
+import type { SessionBattleCount } from "@/lib/game/playSession";
 import {
   createPvpRoom,
   joinFirstOpenPvpRoom,
@@ -280,6 +281,9 @@ export default function PlazaScene() {
   const [showPvpJoinModal, setShowPvpJoinModal] = useState(false);
   const [showMultiplayerModal, setShowMultiplayerModal] = useState(false);
   const [showVibeJamPortalModal, setShowVibeJamPortalModal] = useState(false);
+  const [showPlazaWarPortalModal, setShowPlazaWarPortalModal] = useState(false);
+  const [plazaWarBattleCount, setPlazaWarBattleCount] =
+    useState<SessionBattleCount>(PLAZA_WAR_PORTAL_BATTLE_COUNT);
   const [showMyVehiclesModal, setShowMyVehiclesModal] = useState(false);
 
   useEffect(() => {
@@ -723,7 +727,8 @@ export default function PlazaScene() {
   }, []);
 
   const onWarPortalEnter = useCallback(() => {
-    startWarSessionAndRedirectHome(PLAZA_WAR_PORTAL_BATTLE_COUNT, "random");
+    setPlazaWarBattleCount(PLAZA_WAR_PORTAL_BATTLE_COUNT);
+    setShowPlazaWarPortalModal(true);
   }, []);
 
   const onHomePortalEnter = useCallback(() => {
@@ -737,11 +742,13 @@ export default function PlazaScene() {
   }, [router, playerVehicle]);
 
   const onNineBattlePortalEnter = useCallback(() => {
-    startWarSessionAndRedirectHome(9, "random");
+    setPlazaWarBattleCount(9);
+    setShowPlazaWarPortalModal(true);
   }, []);
 
   const onFiveBattlePortalEnter = useCallback(() => {
-    startWarSessionAndRedirectHome(5, "random");
+    setPlazaWarBattleCount(5);
+    setShowPlazaWarPortalModal(true);
   }, []);
 
   const cameFromVibePortal = useMemo(
@@ -924,7 +931,8 @@ export default function PlazaScene() {
       showBirdShopModal ||
       showPvpJoinModal ||
       showMultiplayerModal ||
-      showVibeJamPortalModal
+      showVibeJamPortalModal ||
+      showPlazaWarPortalModal
     ) {
       return;
     }
@@ -1048,6 +1056,7 @@ export default function PlazaScene() {
     showPvpJoinModal,
     showMultiplayerModal,
     showVibeJamPortalModal,
+    showPlazaWarPortalModal,
     inCooldown,
     chargeHud,
     activatePowerup,
@@ -1110,6 +1119,7 @@ export default function PlazaScene() {
     showPvpJoinModal ||
     showMultiplayerModal ||
     showVibeJamPortalModal ||
+    showPlazaWarPortalModal ||
     showMyVehiclesModal ||
     shotInFlight;
 
@@ -1122,6 +1132,7 @@ export default function PlazaScene() {
     showPvpJoinModal ||
     showMultiplayerModal ||
     showVibeJamPortalModal ||
+    showPlazaWarPortalModal ||
     showMyVehiclesModal;
 
   return (
@@ -1765,6 +1776,11 @@ export default function PlazaScene() {
           setShowVibeJamPortalModal(false);
           navigateToVibeJamPortal(u);
         }}
+      />
+      <PlazaWarPortalModal
+        open={showPlazaWarPortalModal}
+        battleCount={plazaWarBattleCount}
+        onClose={() => setShowPlazaWarPortalModal(false)}
       />
       <MyVehiclesModal
         open={showMyVehiclesModal}

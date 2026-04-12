@@ -79,10 +79,6 @@ export function resolvePlayerVehicle(
   return base;
 }
 
-export function shouldShowRatataBetaTag(): boolean {
-  return RATATA_PREMIUM_BETA_FREE_UNLOCK;
-}
-
 /** Short hint when a vehicle row is locked in the vehicle picker. */
 export function lockedVehicleSelectionHint(
   vehicleId: string,

@@ -15,11 +15,7 @@ import {
   modalBackdrop,
 } from "@/components/gameHudStyles";
 import { writePreferredVehicleId } from "@/lib/game/preferredVehicleStorage";
-import {
-  isVehicleUnlocked,
-  PREMIUM_RATATA_VEHICLE_ID,
-  shouldShowRatataBetaTag,
-} from "@/lib/game/vehicleUnlock";
+import { isVehicleUnlocked } from "@/lib/game/vehicleUnlock";
 
 function equipVehicleAndReload(vId: string) {
   writePreferredVehicleId(vId);
@@ -126,8 +122,6 @@ export function MyVehiclesModal({
         >
           {myVehicles.map((v) => {
             const isCurrent = v.id === currentVehicle.id;
-            const betaTag =
-              shouldShowRatataBetaTag() && v.id === PREMIUM_RATATA_VEHICLE_ID;
             const mainCss = rgbTupleToCss(v.mainRgb);
             const accentCss = rgbTupleToCss(v.accentRgb);
             return (
@@ -167,23 +161,6 @@ export function MyVehiclesModal({
                   }}
                 >
                   {v.name}
-                  {betaTag ? (
-                    <span
-                      style={{
-                        fontSize: 7,
-                        fontWeight: 800,
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        padding: "1px 5px",
-                        borderRadius: 4,
-                        background:
-                          "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)",
-                        border: "1px solid rgba(255,255,255,0.55)",
-                      }}
-                    >
-                      Beta
-                    </span>
-                  ) : null}
                 </span>
               </button>
             );

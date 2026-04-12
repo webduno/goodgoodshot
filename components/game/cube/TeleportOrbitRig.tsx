@@ -138,8 +138,26 @@ export function TeleportOrbitRig({
     toRef.current.set(gameSpawn[0], gameSpawn[1], gameSpawn[2]);
     progressRef.current = 0;
     transitioningRef.current = true;
-    camStartRef.current.copy(camera.position);
-    tgtStartRef.current.copy(controls.target);
+    /**
+     * `useLayoutEffect` runs before `useFrame`. After follow-ball, the camera still sits on the
+     * ball path; the per-frame snap to spawn+offset is skipped once `transitioningRef` is true.
+     * Start the teleport from the standard orbit pose at the *previous* spawn so camera + vehicle
+     * stay aligned with `fromRef` → `toRef`.
+     */
+    if (followBallWasTrackingRef.current) {
+      const fx = fromRef.current.x;
+      const fy = fromRef.current.y;
+      const fz = fromRef.current.z;
+      camStartRef.current.set(
+        fx + CAMERA_OFFSET_FROM_SPAWN[0],
+        fy + CAMERA_OFFSET_FROM_SPAWN[1],
+        fz + CAMERA_OFFSET_FROM_SPAWN[2]
+      );
+      tgtStartRef.current.set(fx, fy + ORBIT_TARGET_Y_OFFSET, fz);
+    } else {
+      camStartRef.current.copy(camera.position);
+      tgtStartRef.current.copy(controls.target);
+    }
     deltaVRef.current.subVectors(toRef.current, fromRef.current);
     controls.enabled = false;
     prevGameRef.current = [...gameSpawn];

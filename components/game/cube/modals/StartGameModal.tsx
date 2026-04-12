@@ -28,8 +28,6 @@ import {
 import {
   isVehicleUnlocked,
   lockedVehicleSelectionHint,
-  PREMIUM_RATATA_VEHICLE_ID,
-  shouldShowRatataBetaTag,
 } from "@/lib/game/vehicleUnlock";
 import { useResolvedPlayerVehicle } from "@/lib/game/useResolvedPlayerVehicle";
 import { burstVehicleStartConfetti } from "@/lib/game/confetti";
@@ -1621,9 +1619,6 @@ export function StartGameModal({
                         v.id,
                         shopInventory.ownedVehicleIds
                       );
-                      const betaTag =
-                        shouldShowRatataBetaTag() &&
-                        v.id === PREMIUM_RATATA_VEHICLE_ID;
                       return (
                         <button
                           key={v.id}
@@ -1690,25 +1685,6 @@ export function StartGameModal({
                             }}
                           >
                             {v.name}
-                            {betaTag ? (
-                              <span
-                                style={{
-                                  fontSize: 9,
-                                  fontWeight: 800,
-                                  letterSpacing: "0.06em",
-                                  textTransform: "uppercase",
-                                  padding: "2px 6px",
-                                  borderRadius: 6,
-                                  color: "#ffffff",
-                                  background:
-                                    "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)",
-                                  border: "1px solid rgba(255,255,255,0.55)",
-                                  textShadow: "0 1px 2px rgba(0,0,0,0.35)",
-                                }}
-                              >
-                                Beta
-                              </span>
-                            ) : null}
                             {!unlocked ? (
                               <span
                                 style={{

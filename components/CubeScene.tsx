@@ -218,7 +218,7 @@ export default function CubeScene() {
   /** Mid-war battle finished: session is saved but map advance waits for Continue. */
   const deferMapAdvanceRef = useRef(false);
   const pendingBattleFinishRef = useRef<{
-    outcome: "hit" | "enemy_loss";
+    outcome: "hit" | "enemy_loss" | "miss" | "penalty";
     landing?: Vec3;
   } | null>(null);
 
@@ -874,6 +874,68 @@ export default function CubeScene() {
           });
         }
       }
+      /** Last shot (0 bullets HUD): miss or penalty ends the battle — loss (singleplayer only). */
+      if (
+        holePar > 0 &&
+        sessionShotsRef.current >= holePar &&
+        (outcome === "miss" || outcome === "penalty")
+      ) {
+        const g = gameRef.current;
+        const par = parCoinCountForIslands(
+          g.islands,
+          INITIAL_LANE_ORIGIN[1],
+          [
+            g.goalWorldX,
+            INITIAL_LANE_ORIGIN[1],
+            g.goalWorldZ,
+          ] as Vec3
+        );
+        const shots = sessionShotsRef.current;
+        const session = loadPlaySession();
+        recordHoleCompleted({
+          vehicleId: playerVehicle.id,
+          shots,
+          ponds: g.ponds,
+          goalWorldX: g.goalWorldX,
+          goalWorldZ: g.goalWorldZ,
+          strengthUses: strengthUsesRoundRef.current,
+          noBounceUses: noBounceUsesRoundRef.current,
+          waterPenaltiesThisRound: waterPenaltiesRoundRef.current,
+          battleOutcome: "loss",
+        });
+        if (session) {
+          const nextWon = session.battlesWon;
+          const nextLost = session.battlesLost + 1;
+          const nextTotal = session.totalStrokes + shots;
+          const updated: PlaySession = {
+            ...session,
+            battlesWon: nextWon,
+            battlesLost: nextLost,
+            totalStrokes: nextTotal,
+          };
+          savePlaySession(updated);
+          setPlaySession(updated);
+          const roundsDone = nextWon + nextLost;
+          if (roundsDone >= session.targetBattles) {
+            setSessionEndTotalStrokes(nextTotal);
+            setSessionEndTargetBattles(session.targetBattles);
+            setSessionEndWon(nextWon >= nextLost);
+            setSessionEndBattlesWon(nextWon);
+            setSessionEndBattlesLost(nextLost);
+            setShowSessionEndModal(true);
+            return;
+          }
+          deferMapAdvanceRef.current = true;
+          pendingBattleFinishRef.current = { outcome, landing };
+        }
+        setFinishBattleWon(false);
+        setFinishPar(par);
+        setFinishWinKind("goal");
+        setFinishLossReason("par");
+        setFinishBattleCoinsEarned(0);
+        setShowFinishModal(true);
+        return;
+      }
       if (outcome === "hit" || outcome === "enemy_loss") {
         setShowFinishModal(true);
         return;
@@ -882,6 +944,7 @@ export default function CubeScene() {
     },
     [
       dispatch,
+      holePar,
       maybeWindToast,
       onEnemyKillReward,
       playerVehicle,

@@ -91,6 +91,8 @@ export function StatsHud({
   const inCooldown = cooldownUntil !== null && remainingMs > 0;
   const charging = chargeHud !== null;
   const powerupMult = Math.pow(2, powerupStackCount);
+  const bulletsLeft =
+    holePar > 0 ? Math.max(0, holePar - sessionShots) : null;
 
   const mainCss = rgbTupleToCss(vehicle.mainRgb);
   const accentCss = rgbTupleToCss(vehicle.accentRgb);
@@ -320,8 +322,10 @@ export function StatsHud({
         title="View war details"
         aria-haspopup="dialog"
         aria-label={
-          holePar > 0
-            ? `Shot ${sessionShots} of ${holePar} (strokes at or below par win the battle). Open war details.`
+          holePar > 0 && bulletsLeft !== null
+            ? `${bulletsLeft} ${
+                bulletsLeft === 1 ? "bullet" : "bullets"
+              } left (strokes at or below par win the battle). Open war details.`
             : `Shot ${sessionShots}. Open war details.`
         }
         style={{
@@ -354,11 +358,17 @@ export function StatsHud({
           style={{
             color: hudColors.value,
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 10,
             fontVariantNumeric: "tabular-nums",
           }}
         >
-          {holePar > 0 ? `${sessionShots}/${holePar}` : sessionShots}
+          {bulletsLeft !== null
+            ? bulletsLeft === 1
+              ? "1 bullet"
+              : `${bulletsLeft} bullets`
+            : sessionShots}
+            <br />
+            remaining
         </div>
 
         {shotInFlight && (

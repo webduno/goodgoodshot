@@ -1006,6 +1006,25 @@ export function StartGameModal({
             }}
           />
         </div>
+        {inProgress && session ? (
+          <button
+            type="button"
+            onClick={goToPlaza}
+            style={{
+              position: "absolute",
+              top: -20,
+              right: 70,
+              zIndex: 3,
+              ...plazaHubButtonStyle({ variant: "compact" }),
+              padding: "8px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Go to Plaza 🌳
+          </button>
+        ) : null}
         {onOpenHelp ? (
           <button
             type="button"
@@ -1053,6 +1072,7 @@ export function StartGameModal({
           style={{
             marginBottom: 14,
             paddingBottom: 12,
+            paddingRight: inProgress && session ? 168 : 0,
             borderBottom: "1px solid rgba(0, 150, 200, 0.14)",
           }}
         >
@@ -1229,26 +1249,6 @@ export function StartGameModal({
               </div>
             </div>
             <div style={startModalActionsAnchor}>
-              <div style={{ 
-                display: "flex", justifyContent: "center"
-                 }}>
-              <button
-                type="button"
-                onClick={goToPlaza}
-                style={{
-                  ...plazaHubButtonStyle({
-                    // variant: "full",
-                    // fullWidth: false,
-                  }),
-                  width: "60%",
-                  padding: "12px 18px",
-                  fontSize: 14,
-                  fontWeight: 700,
-                }}
-              >
-                Go to Plaza 🌳
-              </button>
-              </div>
               <button
                 type="button"
                 onClick={() => {

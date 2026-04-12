@@ -201,6 +201,36 @@ export function goldChipButtonStyle(): CSSProperties {
   };
 }
 
+/**
+ * Plaza top bar — glossy cyan → cerulean capsule, bright upper-left highlight (Menu + Multiplayer).
+ */
+export function plazaGlassCapsuleButtonStyle(): CSSProperties {
+  const face = [
+    "radial-gradient(ellipse 130% 115% at 16% 10%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.4) 32%, transparent 56%)",
+    "linear-gradient(158deg, #f0fdff 0%, #7ee8ff 14%, #38bdf8 40%, #0b7dd4 70%, #0369a1 100%)",
+  ].join(", ");
+  return {
+    ...hudFont,
+    ...textOnGlossButton,
+    padding: "7px 14px",
+    minHeight: 30,
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: "0.02em",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.95)",
+    boxSizing: "border-box",
+    backgroundImage: face,
+    backgroundColor: "#0284c7",
+    cursor: "pointer",
+    boxShadow: [
+      "inset 0 1px 0 rgba(255,255,255,0.68)",
+      "inset 0 -1px 0 rgba(0, 55, 100, 0.14)",
+      "0 4px 14px rgba(0, 75, 130, 0.3)",
+    ].join(", "),
+  };
+}
+
 /** Glossy Frutiger Aero gradients — plaza PvP dock only; each action reads distinct in-game. */
 const pvpGlassCreate =
   "linear-gradient(165deg, #ffffff 0%, #cffafe 14%, #22d3ee 42%, #0891b2 72%, #155e75 100%)";

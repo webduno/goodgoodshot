@@ -4,6 +4,7 @@ import {
   createInitialGameState,
   withDefaultBiome,
 } from "@/lib/game/gameState";
+import { mulberry32 } from "@/lib/game/math";
 import type { BiomeId, GameState } from "@/lib/game/types";
 import type { PlaySession, SessionBattleCount } from "@/lib/game/playSession";
 
@@ -66,6 +67,20 @@ function pickRandomBiomeAvoidingPrevious(previous: BiomeId | undefined): BiomeId
 export function resolveBiomeForBattle(choice: SessionBiomeChoice): BiomeId {
   if (choice === "random") return pickRandomBiome();
   return choice;
+}
+
+/**
+ * Online rooms: host picks a biome or `random`. Random is derived only from
+ * `course_seed` so host and guest render the same fairway.
+ */
+export function resolvePvpRoomBiome(
+  courseSeed: number,
+  choice: SessionBiomeChoice
+): BiomeId {
+  if (choice !== "random") return choice;
+  const rng = mulberry32(courseSeed ^ 0x2f6b9b8d);
+  const u = rng();
+  return BIOME_IDS[Math.floor(u * BIOME_IDS.length)]!;
 }
 
 export function generateSessionBattleMaps(

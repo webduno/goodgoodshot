@@ -64,6 +64,8 @@ import {
   createInitialGameStateFromSeed,
   withDefaultBiome,
 } from "@/lib/game/gameState";
+import { parsePvpRoomBiomeChoice } from "@/lib/game/pvpRoomBiome";
+import { resolvePvpRoomBiome } from "@/lib/game/sessionBattleMaps";
 import { ensureSpawnAndGoalOnIslandsImmutable } from "@/lib/game/islands";
 import { loadAimControlMode, persistAimControlMode, type AimControlMode } from "@/lib/game/aimControlSettings";
 import { loadRetroTvEnabled, persistRetroTvEnabled } from "@/lib/game/retroTvSettings";
@@ -111,12 +113,15 @@ function formatPvpTurnClock(remainingMs: number): string {
 /** Avoid spawn sync reading stale `gameRef` in the same effect flush as course hydration (would spread seed-1 layout over the real room course). */
 function pvpGameStateMatchesRoomCourse(
   g: { goalWorldX: number; goalWorldZ: number },
-  room: Pick<PvpRoomRow, "course_seed" | "match_mode"> | null
+  room: Pick<PvpRoomRow, "course_seed" | "match_mode" | "biome_choice"> | null
 ): boolean {
   if (!room || room.course_seed == null) return true;
   const seed = Number(room.course_seed);
   const pve = (room.match_mode ?? "pvp") === "pve";
+  const choice = parsePvpRoomBiomeChoice(room.biome_choice);
+  const biome = resolvePvpRoomBiome(seed, choice);
   const expected = createInitialGameStateFromSeed(seed, {
+    biome,
     goalEnemies: pve ? [] : [...PVP_OPPONENT_ENEMY],
   });
   return g.goalWorldX === expected.goalWorldX && g.goalWorldZ === expected.goalWorldZ;
@@ -198,10 +203,19 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
   const isPve = (room?.match_mode ?? "pvp") === "pve";
 
-  const pveSpawns = useMemo(() => {
+  const resolvedCourseBiome = useMemo(() => {
     if (room?.course_seed == null) return null;
-    return pveSideBySideSpawnsFromSeed(Number(room.course_seed));
-  }, [room?.course_seed]);
+    const choice = parsePvpRoomBiomeChoice(room.biome_choice);
+    return resolvePvpRoomBiome(Number(room.course_seed), choice);
+  }, [room?.course_seed, room?.biome_choice]);
+
+  const pveSpawns = useMemo(() => {
+    if (room?.course_seed == null || resolvedCourseBiome == null) return null;
+    return pveSideBySideSpawnsFromSeed(
+      Number(room.course_seed),
+      resolvedCourseBiome
+    );
+  }, [room?.course_seed, resolvedCourseBiome]);
 
   const opponentVehicle = useMemo(() => {
     if (!room || !userId) return DEFAULT_PLAYER_VEHICLE;
@@ -251,14 +265,17 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
     hydratedRoomIdRef.current = room.id;
     const seed = Number(room.course_seed);
     const pve = (room.match_mode ?? "pvp") === "pve";
+    const choice = parsePvpRoomBiomeChoice(room.biome_choice);
+    const biome = resolvePvpRoomBiome(seed, choice);
     courseSeedRef.current = seed;
     dispatch({
       type: "REPLACE_GAME_STATE",
       state: createInitialGameStateFromSeed(seed, {
+        biome,
         goalEnemies: pve ? [] : [...PVP_OPPONENT_ENEMY],
       }),
     });
-  }, [room?.id, room?.course_seed, room?.match_mode]);
+  }, [room?.id, room?.course_seed, room?.match_mode, room?.biome_choice]);
 
   const goalCenter: Vec3 = [
     game.goalWorldX,
@@ -271,12 +288,13 @@ export default function PvpCubeScene({ roomId }: { roomId: string }) {
 
   /** Tee spawn for this course seed (host side) — used until `host_spawn_*` is persisted. */
   const teeSpawnFromSeed = useMemo((): Vec3 | null => {
-    if (room?.course_seed == null) return null;
+    if (room?.course_seed == null || resolvedCourseBiome == null) return null;
     const seed = Number(room.course_seed);
     return createInitialGameStateFromSeed(seed, {
+      biome: resolvedCourseBiome,
       goalEnemies: isPve ? [] : [...PVP_OPPONENT_ENEMY],
     }).spawnCenter;
-  }, [room?.course_seed, isPve]);
+  }, [room?.course_seed, isPve, resolvedCourseBiome]);
 
   /** Opponent world position: PvP host sees guest at goal; PvE both tee side-by-side; guest sees host at tee (DB or seed). */
   const pvpOpponentWorldPos = useMemo((): Vec3 => {

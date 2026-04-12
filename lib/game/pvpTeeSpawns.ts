@@ -1,5 +1,5 @@
 import { createInitialGameStateFromSeed } from "./gameState";
-import type { Vec3 } from "./types";
+import type { BiomeId, Vec3 } from "./types";
 
 /** World units: perpendicular offset from shared tee so two players stand side by side. */
 const PVE_TEE_SIDE_OFFSET = 2;
@@ -8,11 +8,17 @@ const PVE_TEE_SIDE_OFFSET = 2;
  * Deterministic host/guest spawn positions for PvE (race to pyramid): both near the tee,
  * offset perpendicular to the tee→goal direction.
  */
-export function pveSideBySideSpawnsFromSeed(courseSeed: number): {
+export function pveSideBySideSpawnsFromSeed(
+  courseSeed: number,
+  biome: BiomeId
+): {
   hostSpawn: Vec3;
   guestSpawn: Vec3;
 } {
-  const g = createInitialGameStateFromSeed(courseSeed, { goalEnemies: [] });
+  const g = createInitialGameStateFromSeed(courseSeed, {
+    goalEnemies: [],
+    biome,
+  });
   const tee = g.spawnCenter;
   const gx = g.goalWorldX;
   const gz = g.goalWorldZ;

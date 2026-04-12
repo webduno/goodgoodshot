@@ -10,6 +10,8 @@ export type PvpRoomRow = {
   current_turn_user_id: string | null;
   winner_user_id: string | null;
   course_seed: number;
+  /** `random` or fixed biome id; omitted before migration → treat as `random`. */
+  biome_choice?: string;
   /** Omitted on DBs before migration; treat as `pvp`. */
   match_mode?: PvpMatchMode;
   host_vehicle_id?: string;

@@ -1,13 +1,16 @@
 "use client";
 
+import type { SessionBiomeChoice } from "@/lib/game/sessionBattleMaps";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export async function createPvpRoom(
-  matchMode: "pvp" | "pve" = "pvp"
+  matchMode: "pvp" | "pve" = "pvp",
+  biomeChoice: SessionBiomeChoice = "random"
 ): Promise<string> {
   const supabase = createSupabaseBrowserClient();
   const { data, error } = await supabase.rpc("create_pvp_room", {
     p_match_mode: matchMode,
+    p_biome_choice: biomeChoice,
   });
   if (error) throw error;
   if (data == null || typeof data !== "string") {
@@ -30,6 +33,7 @@ export type OpenPvpRoomRow = {
   course_seed: number;
   status: string;
   match_mode?: "pvp" | "pve";
+  biome_choice?: string;
 };
 
 export async function listOpenPvpRoomsToday(): Promise<OpenPvpRoomRow[]> {

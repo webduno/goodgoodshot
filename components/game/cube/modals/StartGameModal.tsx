@@ -801,7 +801,7 @@ export function StartGameModal({
     setPvpLobbyError(null);
     try {
       await ensureSupabaseSession();
-      const id = await createPvpRoom("pvp");
+      const id = await createPvpRoom("pvp", biomeChoice);
       const p = new URLSearchParams();
       const v = vehicleIdForQueryString(selectedVehicle);
       if (v) p.set("vehicle", v);
@@ -812,7 +812,7 @@ export function StartGameModal({
     } finally {
       setPvpLobbyBusy(false);
     }
-  }, [pvpLobbyBusy, selectedVehicle]);
+  }, [pvpLobbyBusy, selectedVehicle, biomeChoice]);
 
   const onPveCreateRoom = useCallback(async () => {
     if (pvpLobbyBusy) return;
@@ -820,7 +820,7 @@ export function StartGameModal({
     setPvpLobbyError(null);
     try {
       await ensureSupabaseSession();
-      const id = await createPvpRoom("pve");
+      const id = await createPvpRoom("pve", biomeChoice);
       const p = new URLSearchParams();
       const v = vehicleIdForQueryString(selectedVehicle);
       if (v) p.set("vehicle", v);
@@ -831,7 +831,7 @@ export function StartGameModal({
     } finally {
       setPvpLobbyBusy(false);
     }
-  }, [pvpLobbyBusy, selectedVehicle]);
+  }, [pvpLobbyBusy, selectedVehicle, biomeChoice]);
 
   const onPvpQuickPlay = useCallback(async () => {
     if (pvpLobbyBusy) return;

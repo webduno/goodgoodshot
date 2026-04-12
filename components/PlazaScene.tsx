@@ -5,6 +5,8 @@ import { usePlayerStats } from "@/components/PlayerStatsProvider";
 import { HelpModal } from "@/components/game/cube/modals/HelpModal";
 import { MyVehiclesModal } from "@/components/game/cube/modals/MyVehiclesModal";
 import { PvpJoinRoomModal } from "@/components/game/cube/modals/PvpJoinRoomModal";
+import { MultiplayerModal } from "@/components/game/cube/modals/MultiplayerModal";
+import type { SessionBiomeChoice } from "@/lib/game/sessionBattleMaps";
 import { VibeJamPortalModal } from "@/components/game/cube/modals/VibeJamPortalModal";
 import { ProfileModal } from "@/components/game/cube/modals/ProfileModal";
 import { AquariumShopModal } from "@/components/game/cube/modals/AquariumShopModal";
@@ -37,7 +39,6 @@ import { PlazaHubFillLights } from "@/components/game/cube/meshes/PlazaHubFillLi
 import {
   goldIconButtonStyle,
   plazaGlassCapsuleButtonStyle,
-  plazaPvpDockButtonStyle,
   hudBottomPanel,
   hudFont,
   hudMiniPanel,
@@ -272,7 +273,7 @@ export default function PlazaScene() {
   const [showAquariumShopModal, setShowAquariumShopModal] = useState(false);
   const [showBirdShopModal, setShowBirdShopModal] = useState(false);
   const [showPvpJoinModal, setShowPvpJoinModal] = useState(false);
-  const [multiplayerMenuOpen, setMultiplayerMenuOpen] = useState(false);
+  const [showMultiplayerModal, setShowMultiplayerModal] = useState(false);
   const [showVibeJamPortalModal, setShowVibeJamPortalModal] = useState(false);
   const [showMyVehiclesModal, setShowMyVehiclesModal] = useState(false);
 
@@ -325,12 +326,12 @@ export default function PlazaScene() {
     []
   );
 
-  const onPvpCreateRoom = useCallback(async () => {
+  const onPvpCreateRoom = useCallback(async (biomeChoice: SessionBiomeChoice) => {
     if (pvpLobbyBusy) return;
     setPvpLobbyBusy(true);
     try {
       await ensureSupabaseSession();
-      const id = await createPvpRoom("pvp");
+      const id = await createPvpRoom("pvp", biomeChoice);
       const p = new URLSearchParams();
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
@@ -343,12 +344,12 @@ export default function PlazaScene() {
     }
   }, [pvpLobbyBusy, playerVehicle, pushHudToast]);
 
-  const onPveCreateRoom = useCallback(async () => {
+  const onPveCreateRoom = useCallback(async (biomeChoice: SessionBiomeChoice) => {
     if (pvpLobbyBusy) return;
     setPvpLobbyBusy(true);
     try {
       await ensureSupabaseSession();
-      const id = await createPvpRoom("pve");
+      const id = await createPvpRoom("pve", biomeChoice);
       const p = new URLSearchParams();
       const v = vehicleIdForQueryString(playerVehicle);
       if (v) p.set("vehicle", v);
@@ -906,6 +907,7 @@ export default function PlazaScene() {
       showAquariumShopModal ||
       showBirdShopModal ||
       showPvpJoinModal ||
+      showMultiplayerModal ||
       showVibeJamPortalModal
     ) {
       return;
@@ -1028,6 +1030,7 @@ export default function PlazaScene() {
     showAquariumShopModal,
     showBirdShopModal,
     showPvpJoinModal,
+    showMultiplayerModal,
     showVibeJamPortalModal,
     inCooldown,
     chargeHud,
@@ -1089,6 +1092,7 @@ export default function PlazaScene() {
     showAquariumShopModal ||
     showBirdShopModal ||
     showPvpJoinModal ||
+    showMultiplayerModal ||
     showVibeJamPortalModal ||
     showMyVehiclesModal ||
     shotInFlight;
@@ -1100,6 +1104,7 @@ export default function PlazaScene() {
     showAquariumShopModal ||
     showBirdShopModal ||
     showPvpJoinModal ||
+    showMultiplayerModal ||
     showVibeJamPortalModal ||
     showMyVehiclesModal;
 
@@ -1298,187 +1303,21 @@ export default function PlazaScene() {
             aria-label="Open menu"
             onClick={() => {
               setShowProfileModal(false);
-              setMultiplayerMenuOpen(false);
+              setShowMultiplayerModal(false);
               setShowHelpModal(true);
             }}
             style={plazaGlassCapsuleButtonStyle()}
           >
             Menu
           </button>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              alignItems: "stretch",
-            }}
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setShowMultiplayerModal(true)}
+            style={plazaGlassCapsuleButtonStyle()}
           >
-            <button
-              type="button"
-              aria-expanded={multiplayerMenuOpen}
-              aria-controls="plaza-multiplayer-submenu"
-              onClick={() => setMultiplayerMenuOpen((v) => !v)}
-              style={plazaGlassCapsuleButtonStyle()}
-            >
-              Multiplayer
-            </button>
-            {multiplayerMenuOpen ? (
-              <div
-                id="plaza-multiplayer-submenu"
-                role="group"
-                aria-label="Multiplayer options"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  alignItems: "stretch",
-                }}
-              >
-                <button
-                  type="button"
-                  disabled={pvpLobbyBusy}
-                  aria-label="PvP: create room"
-                  onClick={() => {
-                    setMultiplayerMenuOpen(false);
-                    void onPvpCreateRoom();
-                  }}
-                  style={plazaPvpDockButtonStyle({
-                    variant: "create",
-                    disabled: pvpLobbyBusy,
-                  })}
-                >
-                  <span
-                    aria-hidden
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 18,
-                      height: 18,
-                      borderRadius: "50%",
-                      fontSize: 13,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      background:
-                        "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, rgba(0,80,100,0.35) 100%)",
-                      border: "1px solid rgba(255,255,255,0.75)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
-                    }}
-                  >
-                    +
-                  </span>
-                  New PvP
-                </button>
-                <button
-                  type="button"
-                  disabled={pvpLobbyBusy}
-                  aria-label="PvE: create room"
-                  onClick={() => {
-                    setMultiplayerMenuOpen(false);
-                    void onPveCreateRoom();
-                  }}
-                  style={plazaPvpDockButtonStyle({
-                    variant: "create",
-                    disabled: pvpLobbyBusy,
-                  })}
-                >
-                  <span
-                    aria-hidden
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 18,
-                      height: 18,
-                      borderRadius: "50%",
-                      fontSize: 13,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      background:
-                        "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, rgba(0,100,80,0.35) 100%)",
-                      border: "1px solid rgba(255,255,255,0.75)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
-                    }}
-                  >
-                    +
-                  </span>
-                  New PvE
-                </button>
-                <button
-                  type="button"
-                  disabled={pvpLobbyBusy}
-                  aria-label="PvP: join PvP"
-                  onClick={() => {
-                    setMultiplayerMenuOpen(false);
-                    setShowProfileModal(false);
-                    setShowHelpModal(false);
-                    setShowPvpJoinModal(true);
-                  }}
-                  style={plazaPvpDockButtonStyle({
-                    variant: "join",
-                    disabled: pvpLobbyBusy,
-                  })}
-                >
-                  <span
-                    aria-hidden
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      fontSize: 11,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      background:
-                        "radial-gradient(circle at 30% 25%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.18) 48%, rgba(0,60,120,0.35) 100%)",
-                      border: "1px solid rgba(255,255,255,0.78)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
-                    }}
-                  >
-                    #
-                  </span>
-                  Join PvP
-                </button>
-                <button
-                  type="button"
-                  disabled={pvpLobbyBusy}
-                  aria-label="PvP: quick match"
-                  onClick={() => {
-                    setMultiplayerMenuOpen(false);
-                    void onPvpQuickPlay();
-                  }}
-                  style={plazaPvpDockButtonStyle({
-                    variant: "quick",
-                    disabled: pvpLobbyBusy,
-                  })}
-                >
-                  <span
-                    aria-hidden
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 18,
-                      height: 18,
-                      borderRadius: "50%",
-                      fontSize: 11,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      background:
-                        "radial-gradient(circle at 30% 22%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.25) 42%, rgba(60,100,20,0.4) 100%)",
-                      border: "1px solid rgba(255,255,255,0.8)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
-                    }}
-                  >
-                    ▶
-                  </span>
-                  Quick match
-                </button>
-              </div>
-            ) : null}
-          </div>
+            Multiplayer
+          </button>
         </div>
       )}
       {!modalBlocksHud && (
@@ -1872,6 +1711,29 @@ export default function PlazaScene() {
           </svg>
         </button>
       </div>
+      <MultiplayerModal
+        open={showMultiplayerModal}
+        onClose={() => setShowMultiplayerModal(false)}
+        busy={pvpLobbyBusy}
+        onCreatePvp={(biomeChoice) => {
+          setShowMultiplayerModal(false);
+          void onPvpCreateRoom(biomeChoice);
+        }}
+        onCreatePve={(biomeChoice) => {
+          setShowMultiplayerModal(false);
+          void onPveCreateRoom(biomeChoice);
+        }}
+        onJoinPvp={() => {
+          setShowMultiplayerModal(false);
+          setShowProfileModal(false);
+          setShowHelpModal(false);
+          setShowPvpJoinModal(true);
+        }}
+        onQuickMatch={() => {
+          setShowMultiplayerModal(false);
+          void onPvpQuickPlay();
+        }}
+      />
       <PvpJoinRoomModal
         open={showPvpJoinModal}
         onClose={() => setShowPvpJoinModal(false)}

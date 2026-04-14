@@ -1130,6 +1130,9 @@ export function StartGameModal({
   const showWelcomeMusicBubble =
     !inProgress && !gameConfigOpen && welcomeStartMode === null;
 
+  const showWelcomeLandingHero =
+    isFirstVisitWelcome && !gameConfigOpen && welcomeStartMode === null;
+
   const rulesPanelContinue: CSSProperties = {
     ...rulesPanel,
     minHeight: 168,
@@ -1144,7 +1147,30 @@ export function StartGameModal({
       aria-labelledby="start-game-title"
       style={modalBackdrop}
     >
-      <div style={startModalShell}>
+      <div
+        style={{
+          ...startModalShell,
+          ...(showWelcomeLandingHero ? { paddingTop: 56 } : null),
+        }}
+      >
+        {showWelcomeLandingHero ? (
+          <img
+            alt=""
+            src="/img/car3.png"
+            draggable={false}
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: 0,
+              transform: "translate(-50%, -44%)",
+              width: "min(228px, 68vw)",
+              height: "auto",
+              zIndex: 1,
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          />
+        ) : null}
         <div
           aria-hidden
           style={{
@@ -1306,9 +1332,8 @@ export function StartGameModal({
               fontWeight: 800,
               letterSpacing: "-0.03em",
               lineHeight: 1.12,
-              color: hudColors.value,
-              textShadow:
-                "0 1px 0 rgba(255,255,255,0.95), 0 0 24px rgba(180, 240, 255, 0.5)",
+              color: "#ffffff",
+              textShadow: "-2px -2px 0 #000000, 2px -2px 0 #000000, -2px 2px 0 #000000, 2px 2px 0 #000000"
             }}
           >
             {title}

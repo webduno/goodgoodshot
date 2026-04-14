@@ -339,6 +339,24 @@ export function SessionEndModal({
               }}
             />
           </div>
+          <button
+            type="button"
+            aria-label="Go to plaza"
+            onClick={onGoToPlaza}
+            style={{
+              position: "absolute",
+              top: -20,
+              right: onOpenHelp ? 70 : 12,
+              zIndex: 3,
+              ...plazaHubButtonStyle({ variant: "compact" }),
+              padding: "8px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Go to Plaza 🌳
+          </button>
           {onOpenHelp ? (
             <button
               type="button"
@@ -569,16 +587,6 @@ export function SessionEndModal({
                   }}
                 >
                   Career & stats
-                </button>
-                <button
-                  type="button"
-                  onClick={onGoToPlaza}
-                  style={plazaHubButtonStyle({
-                    variant: "compact",
-                    fullWidth: true,
-                  })}
-                >
-                  Go to plaza
                 </button>
                 <button
                   type="button"

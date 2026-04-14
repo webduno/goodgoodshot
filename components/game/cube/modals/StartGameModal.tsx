@@ -354,11 +354,14 @@ function WelcomeModeFlow({
   goToPlaza,
   plazaButtonLabel,
   topMargin = 12,
+  onOpenGameConfig,
 }: {
   mode: WelcomeStartMode;
   onModeChange: (m: WelcomeStartMode) => void;
   /** Space below intro; use 0 when intro is hidden (drill-in views). */
   topMargin?: number;
+  /** Biome / vehicle / rules wizard — offered after picking single or multi, not on the mode tiles. */
+  onOpenGameConfig?: () => void;
   biomeChoice: SessionBiomeChoice;
   onStartSession: (
     battleCount: SessionBattleCount,
@@ -542,6 +545,15 @@ function WelcomeModeFlow({
         >
           New war — pick length
         </p>
+        {onOpenGameConfig ? (
+          <button
+            type="button"
+            onClick={onOpenGameConfig}
+            style={{ ...linkButtonStyle, alignSelf: "flex-start" }}
+          >
+            War setup (biome, vehicle, power-ups)
+          </button>
+        ) : null}
         <div
           style={{
             display: "flex",
@@ -647,6 +659,15 @@ function WelcomeModeFlow({
       >
         Create or join lobbies
       </p>
+      {onOpenGameConfig ? (
+        <button
+          type="button"
+          onClick={onOpenGameConfig}
+          style={{ ...linkButtonStyle, alignSelf: "flex-start" }}
+        >
+          War setup (biome, vehicle, power-ups)
+        </button>
+      ) : null}
       {pvpLobbyError ? (
         <p
           style={{
@@ -751,19 +772,36 @@ function WelcomeModeFlow({
 
 /** ~5 words per line — artillery / vehicle battles (Gunbound-style), not golf. */
 function WelcomePitchBlurb() {
-  const lines: { icon: string; text: string }[] = [
-    { icon: "🎯", text: "Aim angle and power, then shoot." },
-    { icon: "⚔️", text: "Win more battles than losses." },
+  const lines: { icon: string; text: ReactNode }[] = [
+    { icon: "🎯", text: "Aim, set power, then shoot." },
+    {
+      icon: "⚔️",
+      text: (
+        <>
+          Fight{" "}
+          <span style={{ color: hudColors.accent }}>solo</span>
+          {" or "}
+          <span style={{ color: "#9333ea" }}>multiplayer</span>
+          {" battles."}
+        </>
+      ),
+    },
     {
       icon: "🚀",
-      text: "Tap Singleplayer or Multiplayer below — then pick how to play.",
+      text: (
+        <>
+          Use <span style={{ color: "#da681c", textShadow: "1px 1px 0 #ffffff" }}>power-ups</span> to boost your
+          shots and accessories to customize your{" "}
+          <span style={{ color: "#da681c", textShadow: "1px 1px 0 #ffffff" }}>vehicle</span>.
+        </>
+      ),
     },
   ];
   return (
     <div>
       {lines.map((row, i) => (
         <div
-          key={row.text}
+          key={i}
           style={{
             display: "flex",
             alignItems: "center",
@@ -1472,36 +1510,15 @@ export function StartGameModal({
                   {welcomeStartMode === null ? (
                     <div style={welcomeIntroFlat}>
                       <WelcomePitchBlurb />
-                      <div
-                        style={{
-                          margin: "10px 0 0",
-                          fontSize: 11,
-                          lineHeight: 1.4,
-                          color: hudColors.muted,
-                          paddingTop: 10,
-                          borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setGameConfigOpen(true);
-                            setNewSessionStep(0);
-                          }}
-                          style={{
-                            ...linkButtonStyle,
-                            display: "inline",
-                            fontSize: 11,
-                          }}
-                        >
-                          Change Game Config
-                        </button>
-                      </div>
                     </div>
                   ) : null}
                   <WelcomeModeFlow
                     mode={welcomeStartMode}
                     onModeChange={setWelcomeStartMode}
+                    onOpenGameConfig={() => {
+                      setGameConfigOpen(true);
+                      setNewSessionStep(0);
+                    }}
                     topMargin={welcomeStartMode === null ? 12 : 0}
                     biomeChoice={biomeChoice}
                     onStartSession={onStartSession}
@@ -1521,33 +1538,6 @@ export function StartGameModal({
                 {welcomeStartMode === null ? (
                   <div style={{ ...welcomeIntroFlat, marginBottom: 14 }}>
                     <WelcomePitchBlurb />
-                    <div
-                      style={{
-                        margin: "10px 0 0",
-                        fontSize: 11,
-                        lineHeight: 1.4,
-                        color: hudColors.muted,
-                        paddingTop: 10,
-                        borderTop: "1px dashed rgba(0, 114, 188, 0.14)",
-                      }}
-                    >
-                      Tap <strong style={{ color: hudColors.value }}>i</strong>{" "}
-                      for full rules — or{" "}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGameConfigOpen(true);
-                          setNewSessionStep(0);
-                        }}
-                        style={{
-                          ...linkButtonStyle,
-                          display: "inline",
-                          fontSize: 11,
-                        }}
-                      >
-                        change game config
-                      </button>
-                    </div>
                   </div>
                 ) : null}
               </>
@@ -1874,6 +1864,10 @@ export function StartGameModal({
                 <WelcomeModeFlow
                   mode={welcomeStartMode}
                   onModeChange={setWelcomeStartMode}
+                  onOpenGameConfig={() => {
+                    setGameConfigOpen(true);
+                    setNewSessionStep(0);
+                  }}
                   topMargin={welcomeStartMode === null ? 12 : 0}
                   biomeChoice={biomeChoice}
                   onStartSession={onStartSession}
